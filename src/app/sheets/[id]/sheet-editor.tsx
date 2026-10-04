@@ -3,13 +3,23 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { saveCostSheetAction } from '@/app/sheets/actions'
+import { unlinkLine } from '@/lib/cost-lines'
 import { computeSheet, type Share } from '@/lib/sheet'
-import type { CostSheet, CostSheetInput, ManualLineInput } from '@/server/cost-sheets'
+import type { CostItem } from '@/server/cost-items'
+import type {
+  CostLineInput,
+  CostSheet,
+  CostSheetInput,
+  LinkedLine,
+  ManualLine,
+} from '@/server/cost-sheets'
 
 // The sheet editor. Edits are held here until the seller presses save; the figures are
 // worked out in the browser on every keystroke, with no server round trip.
 
-type DraftLine = ManualLineInput & { key: string }
+// A line as the editor holds it. A Linked Line carries its Cost Item's values for display and
+// the figures; only its Cost Item and Quantity Used are saved.
+type DraftLine = (Omit<ManualLine, 'id'> | Omit<LinkedLine, 'id'>) & { key: string }
 type Draft = Omit<CostSheetInput, 'lines'> & { lines: DraftLine[] }
 
 const LEAVE_WARNING = 'มีการแก้ไขที่ยังไม่บันทึก ออกจากหน้านี้เลยไหม'
@@ -24,12 +34,18 @@ function toDraft(sheet: CostSheet): Draft {
     sellingPrice: sheet.sellingPrice,
     gpPercent: sheet.gpPercent,
     vatPercent: sheet.vatPercent,
-    lines: sheet.lines.map(({ id: _, kind: __, ...line }) => ({ ...line, key: newKey() })),
+    lines: sheet.lines.map(({ id: _, ...line }) => ({ ...line, key: newKey() })),
   }
 }
 
+function toLineInput(line: DraftLine): CostLineInput {
+  if (line.kind === 'linked') return { costItemId: line.costItemId, quantityUsed: line.quantityUsed }
+  const { key: _, kind: __, ...manual } = line
+  return manual
+}
+
 function toInput(draft: Draft): CostSheetInput {
-  return { ...draft, lines: draft.lines.map(({ key: _, ...line }) => line) }
+  return { ...draft, lines: draft.lines.map(toLineInput) }
 }
 
 // What the seller has typed, as a number for the live figures. Anything that is not yet a
@@ -46,7 +62,7 @@ const percent = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFracti
 // A share is blank when its whole is zero, never an error or a 0%.
 const formatShare = (share: Share) => (share === null ? '' : percent.format(share))
 
-export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
+export function SheetEditor({ saved: initial, costItems }: { saved: CostSheet; costItems: CostItem[] }) {
   const [saved, setSaved] = useState(() => toDraft(initial))
   const [draft, setDraft] = useState(saved)
   const [error, setError] = useState<string | null>(null)
@@ -87,16 +103,36 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
 
   const unit = draft.saleUnit.trim() || 'ชิ้น'
   const set = (fields: Partial<Draft>) => setDraft((d) => ({ ...d, ...fields }))
-  const setLine = (key: string, fields: Partial<DraftLine>) =>
-    setDraft((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? { ...l, ...fields } : l)) }))
-  const addLine = () =>
-    setDraft((d) => ({
-      ...d,
-      lines: [
-        ...d.lines,
-        { key: newKey(), name: '', unitCost: '', unit: '', quantityUsed: '', categoryId: null },
-      ],
-    }))
+  const changeLine = (key: string, change: (line: DraftLine) => DraftLine) =>
+    setDraft((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? change(l) : l)) }))
+  // Only a Manual Line's own values are typed; a Linked Line's come from its Cost Item.
+  const setLine = (key: string, fields: { name?: string; unitCost?: string; unit?: string; quantityUsed?: string }) =>
+    changeLine(key, (l) => ({ ...l, ...fields }))
+  const appendLine = (line: DraftLine) => setDraft((d) => ({ ...d, lines: [...d.lines, line] }))
+  const addManualLine = (name: string) =>
+    appendLine({
+      key: newKey(),
+      kind: 'manual',
+      name,
+      unitCost: '',
+      unit: '',
+      quantityUsed: '',
+      categoryId: null,
+    })
+  const addLinkedLine = (item: CostItem) =>
+    appendLine({
+      key: newKey(),
+      kind: 'linked',
+      costItemId: item.id,
+      name: item.name,
+      unitCost: item.unitCost,
+      unit: item.unit,
+      categoryId: item.categoryId,
+      quantityUsed: '',
+    })
+  // The Manual Line holds the values the line shows now; it is saved with the sheet.
+  const unlink = (key: string) =>
+    changeLine(key, (l) => (l.kind === 'linked' ? { key: l.key, kind: 'manual', ...unlinkLine(l) } : l))
   const removeLine = (key: string) =>
     setDraft((d) => ({ ...d, lines: d.lines.filter((l) => l.key !== key) }))
 
@@ -201,9 +237,10 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
           <p className="text-muted">ยังไม่มีรายการ</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-left">
+            <table className="w-full min-w-[46rem] text-left">
               <thead className="text-sm text-muted">
                 <tr>
+                  <th className="pb-2 font-normal">ที่มา</th>
                   <th className="pb-2 font-normal">ชื่อ</th>
                   <th className="pb-2 font-normal">ต้นทุนต่อหน่วย (฿)</th>
                   <th className="pb-2 font-normal">หน่วย</th>
@@ -216,34 +253,56 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
               <tbody>
                 {draft.lines.map((line, index) => {
                   const costed = result.lines[index]
+                  const linked = line.kind === 'linked'
                   return (
-                    <tr key={line.key} className="align-middle">
+                    <tr key={line.key} className={linked ? 'bg-accent/5 align-middle' : 'align-middle'}>
                       <td className="py-1 pr-2">
-                        <input
-                          aria-label="ชื่อ"
-                          value={line.name}
-                          onChange={(e) => setLine(line.key, { name: e.target.value })}
-                          className={cell}
-                        />
+                        {linked ? (
+                          <span className="whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                            ลิงก์ลิสต์
+                          </span>
+                        ) : (
+                          <span className="whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs text-muted">
+                            พิมพ์เอง
+                          </span>
+                        )}
                       </td>
-                      <td className="py-1 pr-2">
-                        <input
-                          aria-label="ต้นทุนต่อหน่วย"
-                          value={line.unitCost}
-                          onChange={(e) => setLine(line.key, { unitCost: e.target.value })}
-                          inputMode="decimal"
-                          className={cell}
-                        />
-                      </td>
-                      <td className="py-1 pr-2">
-                        <input
-                          aria-label="หน่วย"
-                          value={line.unit}
-                          onChange={(e) => setLine(line.key, { unit: e.target.value })}
-                          placeholder="g, ml"
-                          className={cell}
-                        />
-                      </td>
+                      {linked ? (
+                        <>
+                          <td className="py-1 pr-2 pl-2">{line.name}</td>
+                          <td className="py-1 pr-2 pl-2 tabular-nums">{line.unitCost}</td>
+                          <td className="py-1 pr-2 pl-2">{line.unit}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-1 pr-2">
+                            <input
+                              aria-label="ชื่อ"
+                              value={line.name}
+                              onChange={(e) => setLine(line.key, { name: e.target.value })}
+                              className={cell}
+                            />
+                          </td>
+                          <td className="py-1 pr-2">
+                            <input
+                              aria-label="ต้นทุนต่อหน่วย"
+                              value={line.unitCost}
+                              onChange={(e) => setLine(line.key, { unitCost: e.target.value })}
+                              inputMode="decimal"
+                              className={cell}
+                            />
+                          </td>
+                          <td className="py-1 pr-2">
+                            <input
+                              aria-label="หน่วย"
+                              value={line.unit}
+                              onChange={(e) => setLine(line.key, { unit: e.target.value })}
+                              placeholder="g, ml"
+                              className={cell}
+                            />
+                          </td>
+                        </>
+                      )}
                       <td className="py-1 pr-2">
                         <input
                           aria-label={`ใช้ต่อ${unit}`}
@@ -257,7 +316,17 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
                       <td className="py-1 pr-2 text-right tabular-nums text-muted">
                         {formatShare(costed.shareOfCost)}
                       </td>
-                      <td className="py-1 text-right">
+                      <td className="whitespace-nowrap py-1 text-right">
+                        {linked && (
+                          <button
+                            type="button"
+                            onClick={() => unlink(line.key)}
+                            title="เปลี่ยนเป็นรายการพิมพ์เอง โดยเก็บค่าปัจจุบันไว้"
+                            className="mr-3 text-sm text-muted"
+                          >
+                            เลิกลิงก์
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeLine(line.key)}
@@ -273,9 +342,7 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
             </table>
           </div>
         )}
-        <button type="button" onClick={addLine} className="mt-3 rounded border border-line px-4 py-2">
-          + เพิ่มรายการพิมพ์เอง
-        </button>
+        <AddLine costItems={costItems} onPick={addLinkedLine} onAddManual={addManualLine} />
       </section>
 
       <section className="mt-6 rounded border border-line bg-card p-4">
@@ -302,6 +369,80 @@ export function SheetEditor({ saved: initial }: { saved: CostSheet }) {
         </dl>
       </section>
     </main>
+  )
+}
+
+const MAX_MATCHES = 8
+
+// The add-line control: searches the Cost List by name, ignoring case and surrounding spaces.
+// Picking an item adds a Linked Line; whatever is typed can always become a Manual Line instead.
+function AddLine({
+  costItems,
+  onPick,
+  onAddManual,
+}: {
+  costItems: CostItem[]
+  onPick: (item: CostItem) => void
+  onAddManual: (name: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const search = query.trim().toLowerCase()
+  const matches =
+    search === '' ? [] : costItems.filter((item) => item.name.toLowerCase().includes(search))
+
+  function done(add: () => void) {
+    add()
+    setQuery('')
+  }
+
+  return (
+    <div className="mt-4">
+      <label className="block">
+        <span className="text-sm text-muted">เพิ่มรายการ</span>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return
+            e.preventDefault()
+            if (matches.length === 1) done(() => onPick(matches[0]))
+          }}
+          placeholder="ค้นหาในลิสต์ต้นทุน หรือพิมพ์ชื่อใหม่"
+          className="mt-1 w-full rounded border border-line bg-card px-3 py-2"
+        />
+      </label>
+      <ul className="mt-2 flex flex-col gap-1">
+        {matches.slice(0, MAX_MATCHES).map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              onClick={() => done(() => onPick(item))}
+              className="flex w-full items-baseline justify-between rounded border border-line px-3 py-2 text-left hover:bg-accent/5"
+            >
+              <span>{item.name}</span>
+              <span className="text-sm tabular-nums text-muted">
+                {item.unitCost} ฿/{item.unit}
+              </span>
+            </button>
+          </li>
+        ))}
+        {matches.length > MAX_MATCHES && (
+          <li className="px-3 text-sm text-muted">
+            และอีก {matches.length - MAX_MATCHES} รายการ พิมพ์ให้เจาะจงขึ้น
+          </li>
+        )}
+        {search !== '' && matches.length === 0 && (
+          <li className="px-3 text-sm text-muted">ไม่พบในลิสต์ต้นทุน</li>
+        )}
+      </ul>
+      <button
+        type="button"
+        onClick={() => done(() => onAddManual(query.trim()))}
+        className="mt-2 rounded border border-line px-4 py-2"
+      >
+        {search === '' ? '+ เพิ่มรายการพิมพ์เอง' : `+ เพิ่ม "${query.trim()}" เป็นรายการพิมพ์เอง`}
+      </button>
+    </div>
   )
 }
 

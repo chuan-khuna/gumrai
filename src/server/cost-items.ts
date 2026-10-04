@@ -148,6 +148,18 @@ export async function updateCostItem(id: string, input: CostItemInput): Promise<
   return toCostItem(data)
 }
 
+/** How many Cost Sheets have a Linked Line to this Cost Item ("ใช้อยู่ใน N ชีต"). */
+export async function countSheetsUsingCostItem(id: string): Promise<number> {
+  if (!UUID.test(id)) return 0 // no such item, so no sheet uses it
+  const { data, error } = await createServerClient()
+    .from('cost_line')
+    .select('sheet_id')
+    .eq('cost_item_id', id)
+  if (error) throw error
+  // A sheet may link to the same item on more than one line; it is still one sheet.
+  return new Set(data.map((line) => line.sheet_id)).size
+}
+
 export async function deleteCostItem(id: string): Promise<void> {
   const { error } = await createServerClient().from('cost_item').delete().eq('id', id)
   if (error) throw error

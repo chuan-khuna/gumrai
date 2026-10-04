@@ -15,6 +15,14 @@ import {
   deleteCostCategory,
   type CostCategory,
 } from '@/server/cost-categories'
+import {
+  createCostItem,
+  deleteCostItem,
+  updateCostItem,
+  type CostItem,
+  type CostItemInput,
+} from '@/server/cost-items'
+import { unlinkLine } from '@/lib/cost-lines'
 
 // Each test makes sheets with names no other test (or the dev seed) uses, and deletes them.
 const made: CostSheet[] = []
@@ -27,9 +35,17 @@ async function make(label: string) {
   return sheet
 }
 const madeCategories: CostCategory[] = []
+const madeItems: CostItem[] = []
+async function makeItem(input: CostItemInput) {
+  const item = await createCostItem({ ...input, name: uniqueName(input.name) })
+  madeItems.push(item)
+  return item
+}
 
 afterEach(async () => {
   for (const sheet of made.splice(0)) await deleteCostSheet(sheet.id).catch(() => {})
+  // Sheets first: a Cost Item that a line still links to cannot be deleted.
+  for (const item of madeItems.splice(0)) await deleteCostItem(item.id).catch(() => {})
   for (const c of madeCategories.splice(0)) await deleteCostCategory(c.id).catch(() => {})
 })
 
@@ -202,5 +218,103 @@ describe('Cost Sheets', () => {
   it('finds no sheet for an unknown or malformed id', async () => {
     expect(await getCostSheet(randomUUID())).toBeNull()
     expect(await getCostSheet('not-an-id')).toBeNull()
+  })
+
+  describe('Linked Lines', () => {
+    it("saves a Linked Line, and a reload resolves it to its Cost Item's values", async () => {
+      const category = await createCostCategory(uniqueName('วัตถุดิบ'))
+      madeCategories.push(category)
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g', categoryId: category.id })
+      const sheet = await make('ลิงก์')
+
+      const saved = await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [
+          { costItemId: matcha.id, quantityUsed: '4' },
+          { name: 'แก้ว', unitCost: '3', unit: 'ชิ้น', quantityUsed: '1', categoryId: null },
+        ],
+      })
+
+      expect(await getCostSheet(sheet.id)).toEqual(saved)
+      expect(saved.lines.map(({ id: _, ...line }) => line)).toEqual([
+        {
+          kind: 'linked',
+          costItemId: matcha.id,
+          name: matcha.name,
+          unitCost: '4',
+          unit: 'g',
+          categoryId: category.id,
+          quantityUsed: '4',
+        },
+        { kind: 'manual', name: 'แก้ว', unitCost: '3', unit: 'ชิ้น', quantityUsed: '1', categoryId: null },
+      ])
+    })
+
+    it("shows a Cost Item's changed Unit Cost when the sheet is next loaded", async () => {
+      const milk = await makeItem({ name: 'นมสด', unitCost: '0.075', unit: 'ml' })
+      const sheet = await make('ราคาเปลี่ยน')
+      await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [{ costItemId: milk.id, quantityUsed: '150' }],
+      })
+
+      await updateCostItem(milk.id, { name: milk.name, unitCost: '0.08', unit: 'ml' })
+
+      expect((await getCostSheet(sheet.id))?.lines[0]).toMatchObject({
+        kind: 'linked',
+        costItemId: milk.id,
+        unitCost: '0.08',
+        quantityUsed: '150',
+      })
+    })
+
+    it('unlinks a Linked Line into a Manual Line holding its current values', async () => {
+      const category = await createCostCategory(uniqueName('วัตถุดิบ'))
+      madeCategories.push(category)
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g', categoryId: category.id })
+      const sheet = await make('เลิกลิงก์')
+      const saved = await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [{ costItemId: matcha.id, quantityUsed: '4' }],
+      })
+      const line = saved.lines[0]
+      if (line.kind !== 'linked') throw new Error('expected a Linked Line')
+
+      await saveCostSheet(sheet.id, { ...latte(sheet.name), lines: [unlinkLine(line)] })
+      // Now its own values: a later Cost Item change leaves it alone.
+      await updateCostItem(matcha.id, { name: matcha.name, unitCost: '5', unit: 'g' })
+
+      const reloaded = await getCostSheet(sheet.id)
+      expect(reloaded?.lines.map(({ id: _, ...line }) => line)).toEqual([
+        {
+          kind: 'manual',
+          name: matcha.name,
+          unitCost: '4',
+          unit: 'g',
+          quantityUsed: '4',
+          categoryId: category.id,
+        },
+      ])
+    })
+
+    it('says a Linked Line whose Cost Item does not exist cannot be saved', async () => {
+      const sheet = await make('ไม่มีรายการ')
+      for (const costItemId of [randomUUID(), 'not-an-id']) {
+        await expect(
+          saveCostSheet(sheet.id, { ...latte(sheet.name), lines: [{ costItemId, quantityUsed: '1' }] }),
+        ).rejects.toThrow('ไม่พบรายการต้นทุนนี้')
+      }
+    })
+
+    it("rejects a Linked Line's Quantity Used that is not a number", async () => {
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g' })
+      const sheet = await make('ตรวจลิงก์')
+      await expect(
+        saveCostSheet(sheet.id, {
+          ...latte(sheet.name),
+          lines: [{ costItemId: matcha.id, quantityUsed: 'สี่' }],
+        }),
+      ).rejects.toThrow('ปริมาณที่ใช้ต้องเป็นตัวเลข')
+    })
   })
 })

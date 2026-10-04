@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  countSheetsUsingCostItem,
   createCostItem,
   deleteCostItem,
   getCostItem,
@@ -15,6 +16,7 @@ import {
   deleteCostCategory,
   type CostCategory,
 } from '@/server/cost-categories'
+import { createCostSheet, deleteCostSheet, saveCostSheet, type CostSheet } from '@/server/cost-sheets'
 
 // Each test makes names no other test (or the dev seed) uses, and deletes what it made.
 const made: CostItem[] = []
@@ -33,7 +35,11 @@ async function makeCategory(label: string) {
   return category
 }
 
+const madeSheets: CostSheet[] = []
+
 afterEach(async () => {
+  // Sheets first: a Cost Item that a line still links to cannot be deleted.
+  for (const sheet of madeSheets.splice(0)) await deleteCostSheet(sheet.id).catch(() => {})
   for (const item of made.splice(0)) {
     await deleteCostItem(item.id).catch(() => {})
   }
@@ -237,6 +243,39 @@ describe('Cost Items', () => {
       const found = await listCostItems({ search: `10% ${tag}` })
       expect(found.map((i) => i.id)).toEqual([percent.id])
       expect(await listCostItems({ search: `10_ ${tag}` })).toEqual([])
+    })
+  })
+
+  describe('counting the sheets that use an item', () => {
+    async function sheetLinking(...items: CostItem[]) {
+      const sheet = await createCostSheet(uniqueName('ชีต'))
+      madeSheets.push(sheet)
+      await saveCostSheet(sheet.id, {
+        name: sheet.name,
+        saleUnit: 'แก้ว',
+        sellingPrice: '65',
+        gpPercent: '0',
+        vatPercent: '7',
+        lines: items.map((item) => ({ costItemId: item.id, quantityUsed: '1' })),
+      })
+    }
+
+    it('counts each sheet with a Linked Line to the item once', async () => {
+      const matcha = await make({ name: uniqueName('มัทฉะ'), unitCost: '4', unit: 'g' })
+      const milk = await make({ name: uniqueName('นมสด'), unitCost: '0.075', unit: 'ml' })
+      await sheetLinking(matcha, matcha)
+      await sheetLinking(matcha, milk)
+      await sheetLinking(milk)
+
+      expect(await countSheetsUsingCostItem(matcha.id)).toBe(2)
+      expect(await countSheetsUsingCostItem(milk.id)).toBe(2)
+    })
+
+    it('counts no sheets for an unused, unknown or malformed item', async () => {
+      const unused = await make({ name: uniqueName('น้ำแข็ง'), unitCost: '1', unit: 'g' })
+      expect(await countSheetsUsingCostItem(unused.id)).toBe(0)
+      expect(await countSheetsUsingCostItem(randomUUID())).toBe(0)
+      expect(await countSheetsUsingCostItem('not-an-id')).toBe(0)
     })
   })
 })

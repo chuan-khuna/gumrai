@@ -16,7 +16,23 @@ export type ManualLine = {
   categoryId: string | null
 }
 
-export type CostLine = ManualLine
+/**
+ * A Cost Line picked from the Cost List. Its name, Unit Cost, Unit and Cost Category are the
+ * Cost Item's current values, read when the sheet is loaded; only its Quantity Used is the
+ * sheet's own.
+ */
+export type LinkedLine = {
+  id: string
+  kind: 'linked'
+  costItemId: string
+  name: string
+  unitCost: string
+  unit: string
+  quantityUsed: string
+  categoryId: string | null
+}
+
+export type CostLine = ManualLine | LinkedLine
 
 export type CostSheet = {
   id: string
@@ -37,8 +53,13 @@ export type CostSheetSummary = {
 
 export type ManualLineInput = Omit<ManualLine, 'id' | 'kind'>
 
+/** A Linked Line as saved: which Cost Item, and how much of it. The rest comes from the item. */
+export type LinkedLineInput = Pick<LinkedLine, 'costItemId' | 'quantityUsed'>
+
+export type CostLineInput = ManualLineInput | LinkedLineInput
+
 /** Everything a save writes: the sheet's own fields and its lines, in order. */
-export type CostSheetInput = Omit<CostSheet, 'id' | 'lines'> & { lines: ManualLineInput[] }
+export type CostSheetInput = Omit<CostSheet, 'id' | 'lines'> & { lines: CostLineInput[] }
 
 // A rule of Cost Sheets was broken. The message is Thai and is shown to the seller as is.
 export class CostSheetError extends Error {
@@ -47,6 +68,7 @@ export class CostSheetError extends Error {
 
 const NOT_FOUND = 'ไม่พบชีตนี้ อาจถูกลบไปแล้ว'
 const CATEGORY_NOT_FOUND = 'ไม่พบหมวดนี้ อาจถูกลบไปแล้ว'
+const COST_ITEM_NOT_FOUND = 'ไม่พบรายการต้นทุนนี้ในลิสต์ อาจถูกลบไปแล้ว'
 const DEFAULT_SALE_UNIT = 'ชิ้น'
 const INVALID_TEXT_REPRESENTATION = '22P02' // an id that is not a uuid
 const FOREIGN_KEY_VIOLATION = '23503'
@@ -76,7 +98,7 @@ const sheetName = (name: string) => required(name, 'ต้องใส่ชื�
 // Read numeric as text so PostgREST never turns it into a float.
 // One literal, not concatenated, so supabase-js can type the result from it.
 const columns =
-  'id, name, sale_unit, selling_price::text, gp_percent::text, vat_percent::text, cost_line(id, position, quantity_used::text, cost_item_id, name, unit_cost::text, unit, cost_category_id)'
+  'id, name, sale_unit, selling_price::text, gp_percent::text, vat_percent::text, cost_line(id, position, quantity_used::text, cost_item_id, name, unit_cost::text, unit, cost_category_id, cost_item(name, unit_cost::text, unit, cost_category_id))'
 
 async function readSheet(id: string): Promise<CostSheet | null> {
   const { data, error } = await createServerClient()
@@ -96,8 +118,22 @@ async function readSheet(id: string): Promise<CostSheet | null> {
     gpPercent: data.gp_percent,
     vatPercent: data.vat_percent,
     lines: data.cost_line.map((line): CostLine => {
+      // A Linked Line resolves to its Cost Item's current values. The foreign key guarantees
+      // the item is there.
+      if (line.cost_item_id !== null) {
+        const item = line.cost_item!
+        return {
+          id: line.id,
+          kind: 'linked',
+          costItemId: line.cost_item_id,
+          name: item.name,
+          unitCost: item.unit_cost,
+          unit: item.unit,
+          quantityUsed: line.quantity_used,
+          categoryId: item.cost_category_id,
+        }
+      }
       // The cost_line_linked_or_manual check guarantees a Manual Line's values are present.
-      if (line.cost_item_id !== null) throw new Error(`Linked Lines are not supported yet (${line.id})`)
       return {
         id: line.id,
         kind: 'manual',
@@ -157,6 +193,13 @@ export async function saveCostSheet(id: string, input: CostSheetInput): Promise<
     vat_percent: decimal(input.vatPercent, 'VAT '),
   }
   const lines = input.lines.map((line) => {
+    if ('costItemId' in line) {
+      if (!UUID.test(line.costItemId)) throw new CostSheetError(COST_ITEM_NOT_FOUND)
+      return {
+        cost_item_id: line.costItemId,
+        quantity_used: decimal(line.quantityUsed, 'ปริมาณที่ใช้'),
+      }
+    }
     if (line.categoryId !== null && !UUID.test(line.categoryId)) {
       throw new CostSheetError(CATEGORY_NOT_FOUND)
     }
@@ -176,7 +219,11 @@ export async function saveCostSheet(id: string, input: CostSheetInput): Promise<
     p_lines: lines,
   })
   if (error?.code === NO_DATA_FOUND) throw new CostSheetError(NOT_FOUND)
-  if (error?.code === FOREIGN_KEY_VIOLATION) throw new CostSheetError(CATEGORY_NOT_FOUND)
+  if (error?.code === FOREIGN_KEY_VIOLATION) {
+    // Which reference was missing: the Cost Item of a Linked Line, or a Cost Category.
+    const missingItem = error.message.includes('cost_line_cost_item_id_fkey')
+    throw new CostSheetError(missingItem ? COST_ITEM_NOT_FOUND : CATEGORY_NOT_FOUND)
+  }
   if (error) throw error
 
   const saved = await readSheet(id)
