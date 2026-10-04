@@ -53,7 +53,7 @@ The Supabase CLI is a bun devDependency, so run it as `bunx supabase …`. It wa
 
 - `src/server/` is the server-side business rules module (ADR 0001), the only code that talks to Supabase. `supabase.ts` makes the client. Pages and components call the operations beside it and never import the client.
 - `src/app/` holds the pages. They do no business logic and no database calls of their own.
-- Design tokens (colours, fonts, radii, shadows, easings) live in the active theme preset, `src/styles/presets/bubblegum.css`, which `src/styles/globals.css` imports. Colours are OKLCH, and the preset is the only place a colour is written down. `DESIGN.html` illustrates the system.
+- Design tokens (colours, fonts, radii, shadows, easings) live in the active theme preset, `src/styles/presets/bubblegum.css`, which `src/styles/globals.css` imports. Colours are OKLCH. The preset is where the app reads them, and `DESIGN.md` (Stitch DESIGN.md format) mirrors them token for token in its front matter: change a value in both. Nowhere else writes a colour. `DESIGN.html` illustrates the system.
 - **Always use the alias, never a relative path.** `@/*` is `src/*`. It is declared in both `tsconfig.json` and `vitest.config.ts`. Change one, change the other.
 
 ## Tests
