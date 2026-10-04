@@ -31,7 +31,7 @@ This also installs the Supabase CLI as a devDependency, so you run it as `bunx s
 cp .env.example .env.local
 ```
 
-The values in it are the Supabase CLI's fixed local keys. They only work against the local Docker stack.
+Then fill in `SUPABASE_SECRET_KEY`. Once local Supabase is running (step 3), run `bunx supabase status` and copy its `SECRET_KEY` value into `.env.local`. It only works against the local Docker stack.
 
 ### 3. Start the local database
 
