@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gumrai design system</title>
+<meta name="description" content="The Gumrai (กำไร) design system: bubblegum colour, Thai type, parts, motion and voice." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* Hallmark · genre: playful · macrostructure: Workbench · nav: N3 side-rail · footer: Ft2 inline rule
+ * theme: custom (Hum-derived) · vibe: "bubblegum cream, chewy, exact to the satang"
+ * paper: oklch(97.5% 0.012 345) · accent: oklch(80% 0.12 350) bubblegum
+ * display: Mitr · body: IBM Plex Sans Thai Looped · axes: light / rounded-sans / multi (gum-pink 350)
+ * enrichment: Tier A CSS character (the gum bubble on the nikhahit of กำ)
+ * studied: no · context: user-provided (tone = Hum, gum) + inferred (audience, use)
+ */
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R4 V5 */
+
+:root {
+  /* paper & ink — every neutral leans toward the gum hue */
+  --color-paper:   oklch(97.5% 0.012 345);
+  --color-paper-2: oklch(95% 0.02 345);
+  --color-paper-3: oklch(91.5% 0.03 345);
+  --color-card:    oklch(99.4% 0.004 345);
+  --color-line:    oklch(88.5% 0.022 345);
+  --color-line-2:  oklch(92.5% 0.016 345);
+  --color-muted:   oklch(50% 0.03 340);
+  --color-ink-2:   oklch(38% 0.035 340);
+  --color-ink:     oklch(24% 0.035 340);
+
+  /* flavours */
+  --color-gum:        oklch(80% 0.12 350);
+  --color-gum-deep:   oklch(64% 0.17 354);
+  --color-gum-ink:    oklch(50% 0.19 356);
+  --color-gum-tint:   oklch(93.5% 0.04 350);
+  --color-gum-cast:   oklch(70% 0.14 350 / 0.4);
+  --color-mint:       oklch(86% 0.1 165);
+  --color-mint-deep:  oklch(70% 0.13 162);
+  --color-mint-ink:   oklch(47% 0.11 160);
+  --color-mint-tint:  oklch(94.5% 0.04 165);
+  --color-mint-cast:  oklch(70% 0.12 162 / 0.35);
+  --color-razz:       oklch(66% 0.15 248);
+  --color-razz-ink:   oklch(48% 0.16 255);
+  --color-razz-tint:  oklch(94.5% 0.03 245);
+  --color-cinnamon:      oklch(54% 0.19 34);
+  --color-cinnamon-tint: oklch(94% 0.035 40);
+  --color-grape:      oklch(62% 0.17 305);
+  --color-lemon:      oklch(90% 0.13 100);
+  --color-focus:      oklch(50% 0.19 356);
+
+  /* data: cost categories (slot 0–7) and the platform's share */
+  --color-category-0: oklch(68% 0.12 250);
+  --color-category-1: oklch(80% 0.13 90);
+  --color-category-2: oklch(64% 0.14 310);
+  --color-category-3: oklch(72% 0.1 185);
+  --color-category-4: oklch(62% 0.13 280);
+  --color-category-5: oklch(76% 0.13 120);
+  --color-category-6: oklch(74% 0.12 60);
+  --color-category-7: oklch(70% 0.1 215);
+  --color-category-none: oklch(80% 0.01 345);
+  --color-commission:     oklch(42% 0.03 330);
+  --color-commission-vat: oklch(60% 0.03 330);
+
+  /* type */
+  --font-display: "Mitr", "IBM Plex Sans Thai Looped", sans-serif;
+  --font-body: "IBM Plex Sans Thai Looped", "Noto Sans Thai Looped", sans-serif;
+  --font-code: "IBM Plex Mono", ui-monospace, monospace;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-num: clamp(2.5rem, 4vw + 1rem, 3.75rem);
+  --text-display: clamp(2.25rem, 3.4vw + 1rem, 3.5rem);
+  --text-mark: clamp(5rem, 15vw, 10.5rem);
+  --leading-thai: 1.7;
+  --leading-head: 1.35;
+
+  /* space — 4-pt */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  --page-gutter: clamp(1rem, 4vw, 2.5rem);
+
+  /* shape & depth */
+  --radius-card: 20px;
+  --radius-field: 12px;
+  --radius-chip: 999px;
+  --radius-pill: 999px;
+  --rule-hair: 1.5px;
+  --shadow-card: 0 1px 2px oklch(24% 0.035 340 / 0.06), 0 14px 30px -18px oklch(24% 0.035 340 / 0.22);
+  --shadow-lift: 0 2px 4px oklch(24% 0.035 340 / 0.06), 0 22px 40px -20px oklch(24% 0.035 340 / 0.3);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-press: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-press: 70ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-pop: 420ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { scroll-behavior: smooth; scroll-padding-top: var(--space-lg); }
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-thai);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: normal;
+  line-height: var(--leading-head);
+  margin: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+p { margin: 0; }
+code, .code { font-family: var(--font-code); font-size: 0.86em; }
+a { color: var(--color-razz-ink); text-underline-offset: 0.2em; text-decoration-thickness: 1.5px; }
+a:hover { color: var(--color-ink); }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; border-radius: 6px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- layout: side rail + content ---------- */
+.frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 82rem;
+  margin-inline: auto;
+}
+.rail {
+  padding: var(--space-md) var(--page-gutter) 0;
+}
+.rail__mark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-xl);
+  color: var(--color-ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+}
+.rail__mark small { font-family: var(--font-body); font-weight: 400; font-size: var(--text-sm); color: var(--color-muted); }
+.rail nav ul {
+  list-style: none; margin: var(--space-sm) 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: var(--space-2xs);
+}
+.rail nav a {
+  display: inline-block;
+  white-space: nowrap;
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-chip);
+  color: var(--color-ink-2);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  background: var(--color-paper-2);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.rail nav a:hover { background: var(--color-gum-tint); color: var(--color-ink); }
+.rail nav a[aria-current="true"] { background: var(--color-gum); color: var(--color-ink); }
+.main { min-width: 0; }
+
+@media (min-width: 64rem) {
+  .frame { grid-template-columns: 13rem minmax(0, 1fr); }
+  .rail {
+    position: sticky; top: 0; align-self: start; height: 100vh;
+    padding: var(--space-xl) var(--space-md) var(--space-lg) var(--page-gutter);
+    display: flex; flex-direction: column;
+  }
+  .rail nav ul { flex-direction: column; gap: var(--space-3xs); margin-top: var(--space-xl); }
+  .rail nav a { background: transparent; font-size: var(--text-base); padding: var(--space-3xs) var(--space-sm); }
+  .rail__foot { margin-top: auto; font-size: var(--text-xs); color: var(--color-muted); }
+}
+@media (max-width: 63.99rem) { .rail__foot { display: none; } }
+
+/* one shell: band supplies background + block padding only, content carries the gutter */
+.section { padding: var(--space-2xl) var(--page-gutter); }
+.section > * { max-width: 58rem; }
+.band { border-radius: var(--radius-card) 0 0 var(--radius-card); }
+.band--gum   { background: var(--color-gum-tint); }
+.band--mint  { background: var(--color-mint-tint); }
+.band--razz  { background: var(--color-razz-tint); }
+.band--paper { background: var(--color-paper-2); }
+@media (max-width: 63.99rem) { .band { border-radius: 0; } }
+
+.head { display: grid; gap: var(--space-2xs); margin-bottom: var(--space-lg); }
+.head h2 { font-size: var(--text-2xl); }
+.head p { color: var(--color-ink-2); max-width: 62ch; }
+.sub { font-size: var(--text-lg); margin: var(--space-xl) 0 var(--space-sm); }
+.sub:first-child { margin-top: 0; }
+.note { color: var(--color-muted); font-size: var(--text-sm); }
+
+/* ---------- hero ---------- */
+.hero {
+  padding: var(--space-xl) var(--page-gutter) var(--space-2xl);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-xl);
+  align-items: end;
+}
+@media (min-width: 52rem) {
+  .hero { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); padding-top: var(--space-3xl); }
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-mark);
+  line-height: 1.25;
+  letter-spacing: 0;
+  display: inline-block;
+  position: relative;
+  color: var(--color-ink);
+}
+.wordmark__kam { position: relative; display: inline-block; }
+
+/* the character: a gum bubble sitting on the nikhahit circle of กำ */
+.bubble {
+  position: absolute;
+  font-size: inherit;
+  left: var(--bubble-x, 0.36em);
+  top: var(--bubble-y, 0.12em);
+  width: var(--bubble-size, 0.3em);
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, var(--color-card) 0 14%, transparent 15%),
+    var(--color-gum);
+  box-shadow: inset -0.02em -0.03em 0 var(--color-gum-deep);
+  cursor: pointer;
+  transform-origin: 50% 70%;
+  animation: chew 4s var(--ease-in-out) infinite;
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+.bubble:hover { animation-play-state: paused; transform: scale(1.35); }
+.bubble.is-popped { animation: pop var(--dur-pop) var(--ease-out) forwards; }
+.bubble.is-regrow { animation: regrow 520ms var(--ease-spring) both; }
+@keyframes chew { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes pop { 0% { transform: scale(1.35); opacity: 1; } 40% { transform: scale(1.7); opacity: 0.7; } 100% { transform: scale(0); opacity: 0; } }
+@keyframes regrow { from { transform: scale(0); } to { transform: scale(1); } }
+
+.star-burst {
+  position: fixed;
+  width: 26px; height: 26px;
+  margin: -13px 0 0 -13px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 46%, var(--color-grape) 46% 54%, transparent 54%),
+    linear-gradient(0deg, transparent 46%, var(--color-grape) 46% 54%, transparent 54%);
+  border-radius: 2px;
+  animation: star-burst var(--dur-pop) var(--ease-out) forwards;
+  z-index: 10;
+}
+@keyframes star-burst {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  60% { transform: scale(1.2) rotate(35deg); opacity: 0.9; }
+  100% { transform: scale(1.45) rotate(45deg); opacity: 0; }
+}
+
+.hero__copy h1 { font-size: var(--text-display); max-width: 16ch; margin-top: var(--space-sm); }
+.hero__copy p { margin-top: var(--space-sm); max-width: 50ch; color: var(--color-ink-2); font-size: var(--text-lg); }
+.hero__copy .note { margin-top: var(--space-md); font-size: var(--text-sm); }
+
+/* the sample sheet, tilted off the grid: the one designed exception */
+.sample {
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lift);
+  padding: var(--space-md);
+  transform: rotate(-2deg);
+  transition: transform var(--dur-base) var(--ease-spring);
+  max-width: 26rem;
+  justify-self: start;
+}
+.sample:hover { transform: rotate(0deg) translateY(-4px); }
+@media (min-width: 52rem) { .sample { justify-self: end; margin-bottom: var(--space-lg); } }
+.sample__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-xs); }
+.sample__top h3 { font-size: var(--text-lg); }
+.sample dl { margin: var(--space-sm) 0 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3xs) var(--space-sm); font-size: var(--text-sm); }
+.sample dt { color: var(--color-ink-2); }
+.sample dd { margin: 0; text-align: right; }
+.sample__lines { margin-top: var(--space-sm); padding-top: var(--space-xs); border-top: var(--rule-hair) dashed var(--color-line); display: grid; gap: var(--space-3xs); font-size: var(--text-sm); }
+.sample__lines div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-2xs); align-items: center; }
+.sample__lines span:last-child { text-align: right; }
+
+/* ---------- colour ---------- */
+.pack { display: grid; gap: var(--space-2xs); }
+.stick {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 9rem) minmax(0, 1fr);
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.stick__swatch { background: var(--sw); min-height: 5.5rem; }
+.stick__body { padding: var(--space-xs) var(--space-md); display: grid; gap: 2px; align-content: center; min-width: 0; }
+.stick__body b { font-family: var(--font-display); font-weight: 500; font-size: var(--text-lg); }
+.stick__body b span { font-family: var(--font-body); font-weight: 400; color: var(--color-muted); font-size: var(--text-sm); margin-left: var(--space-2xs); }
+.stick__body .code { color: var(--color-ink-2); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.stick__body p { font-size: var(--text-sm); color: var(--color-ink-2); }
+@media (min-width: 40rem) {
+  .stick { grid-template-columns: 12rem minmax(0, 1fr); }
+}
+
+.money { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+@media (min-width: 40rem) { .money { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.money > div { border-radius: var(--radius-card); padding: var(--space-md); display: grid; gap: var(--space-3xs); }
+.money .is-profit { background: var(--color-mint-tint); }
+.money .is-loss { background: var(--color-cinnamon-tint); }
+.money .figure { font-family: var(--font-display); font-weight: 600; font-size: var(--text-3xl); line-height: 1.3; }
+.money .is-profit .figure { color: var(--color-mint-ink); }
+.money .is-loss .figure { color: var(--color-cinnamon); }
+
+.neutrals { display: flex; border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-card); }
+.neutrals div { flex: 1 1 0; min-width: 0; height: 4.5rem; background: var(--sw); display: flex; align-items: flex-end; padding: var(--space-2xs); }
+.neutrals span { font-family: var(--font-code); font-size: 0.6875rem; color: var(--color-ink); overflow-wrap: anywhere; }
+.neutrals div:nth-child(n+7) span { color: var(--color-paper); }
+@media (max-width: 40rem) { .neutrals span { display: none; } }
+
+.jar { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-md); }
+.gumball { display: grid; justify-items: center; gap: var(--space-3xs); font-size: var(--text-xs); color: var(--color-ink-2); width: 4.25rem; text-align: center; }
+.gumball i {
+  width: 3.25rem; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--color-card) 0 12%, transparent 13%), var(--sw);
+  box-shadow: inset -3px -4px 0 color-mix(in oklch, var(--color-ink) 12%, transparent);
+}
+
+/* ---------- type ---------- */
+.specimen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+@media (min-width: 48rem) { .specimen { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+.face { background: var(--color-card); border-radius: var(--radius-card); padding: var(--space-md); box-shadow: var(--shadow-card); display: grid; gap: var(--space-2xs); align-content: start; }
+.face__big { font-size: clamp(2.75rem, 6vw, 4.5rem); line-height: 1.3; }
+.face--display .face__big { font-family: var(--font-display); font-weight: 500; }
+.face--body .face__big { font-family: var(--font-body); font-weight: 500; }
+.face__meta { font-size: var(--text-sm); color: var(--color-muted); }
+
+.scale { width: 100%; border-collapse: collapse; }
+.scale td { padding: var(--space-xs) var(--space-sm) var(--space-xs) 0; border-top: var(--rule-hair) dashed var(--color-line); vertical-align: baseline; }
+.scale td:first-child { width: 7.5rem; font-size: var(--text-xs); color: var(--color-muted); }
+.scale-wrap { overflow-x: auto; }
+
+/* ---------- parts ---------- */
+.bench { background: var(--color-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-md); }
+.states { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); }
+@media (min-width: 36rem) { .states { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 60rem) { .states { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.state { display: grid; gap: var(--space-2xs); justify-items: start; padding: var(--space-sm); border-radius: var(--radius-field); background: var(--color-paper); }
+.state > span { font-size: var(--text-xs); color: var(--color-muted); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+
+/* button system: .btn (push) + --soft | --outline, colour --gum | --mint | --ink */
+.btn {
+  --btn-face: var(--color-gum); --btn-ink: var(--color-ink);
+  --btn-edge: var(--color-gum-deep); --btn-cast: var(--color-gum-cast);
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5em;
+  padding: 0.7rem 1.35rem;
+  font: inherit; font-family: var(--font-display); font-weight: 500; line-height: 1.4;
+  white-space: nowrap;
+  border: 0; border-radius: var(--radius-pill);
+  color: var(--btn-ink); background: var(--btn-face);
+  cursor: pointer; position: relative;
+  box-shadow: 0 4px 0 0 var(--btn-edge), 0 6px 12px -3px var(--btn-cast);
+  transform: translateY(0);
+  transition: transform var(--dur-fast) var(--ease-press), box-shadow var(--dur-fast) var(--ease-press), background-color 160ms var(--ease-out);
+}
+.btn:hover, .btn.is-hover { transform: translateY(-2px); box-shadow: 0 6px 0 0 var(--btn-edge), 0 12px 22px -4px var(--btn-cast); }
+.btn:active, .btn.is-active { transform: translateY(3px); box-shadow: 0 1px 0 0 var(--btn-edge), 0 2px 6px -2px var(--btn-cast); transition-duration: var(--dur-press); }
+.btn:focus-visible, .btn.is-focus { outline: 3px solid var(--color-focus); outline-offset: 4px; border-radius: var(--radius-pill); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 0 var(--btn-edge); }
+.btn[data-state="loading"] { cursor: progress; }
+.btn[data-state="loading"]::before {
+  content: ""; width: 1em; height: 1em; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: spin 700ms linear infinite;
+}
+.btn[data-state="error"] { --btn-face: var(--color-cinnamon-tint); --btn-edge: var(--color-cinnamon); --btn-cast: transparent; color: var(--color-cinnamon); }
+.btn[data-state="success"] { --btn-face: var(--color-mint); --btn-edge: var(--color-mint-deep); --btn-cast: var(--color-mint-cast); }
+.btn--mint { --btn-face: var(--color-mint); --btn-edge: var(--color-mint-deep); --btn-cast: var(--color-mint-cast); }
+.btn--soft { --btn-face: var(--color-card); box-shadow: var(--shadow-card); }
+.btn--soft:hover, .btn--soft.is-hover { box-shadow: var(--shadow-lift); }
+.btn--soft:active, .btn--soft.is-active { box-shadow: var(--shadow-card); }
+.btn--outline { --btn-face: transparent; box-shadow: inset 0 0 0 var(--rule-hair) var(--color-line); }
+.btn--outline:hover, .btn--outline.is-hover { --btn-face: var(--color-gum-tint); box-shadow: inset 0 0 0 var(--rule-hair) var(--color-gum-deep); }
+.btn--outline:active, .btn--outline.is-active { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-gum-deep); }
+.btn--danger { --btn-face: transparent; color: var(--color-cinnamon); box-shadow: inset 0 0 0 var(--rule-hair) var(--color-line); }
+.btn--danger:hover { --btn-face: var(--color-cinnamon-tint); box-shadow: inset 0 0 0 var(--rule-hair) var(--color-cinnamon); }
+.btn--sm { padding: 0.4rem 0.9rem; font-size: var(--text-sm); }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+/* fields */
+.fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+@media (min-width: 40rem) { .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field { display: grid; gap: var(--space-3xs); }
+.field > span { font-size: var(--text-sm); color: var(--color-ink-2); }
+.input {
+  display: flex; align-items: center;
+  background: var(--color-card);
+  border-radius: var(--radius-field);
+  box-shadow: inset 0 0 0 var(--rule-hair) var(--color-line);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+.input:hover { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-gum); }
+.input:focus-within, .input.is-focus { box-shadow: inset 0 0 0 2px var(--color-gum-deep), 0 0 0 4px var(--color-gum-tint); }
+.input input {
+  flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+  font: inherit; color: var(--color-ink); padding: 0.6rem 0.85rem;
+}
+.input--num input { text-align: right; font-variant-numeric: tabular-nums; }
+.input__suffix { padding-right: 0.85rem; color: var(--color-muted); font-size: var(--text-sm); }
+.field.is-error .input { box-shadow: inset 0 0 0 2px var(--color-cinnamon); background: var(--color-cinnamon-tint); }
+.field.is-error small { color: var(--color-cinnamon); font-size: var(--text-sm); }
+.field.is-disabled .input { background: var(--color-paper-2); box-shadow: none; }
+.field.is-disabled input { color: var(--color-muted); cursor: not-allowed; }
+
+/* chips, dots, flags */
+.chip {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  padding: 0.15rem 0.65rem; border-radius: var(--radius-chip);
+  font-size: var(--text-xs); white-space: nowrap; line-height: 1.6;
+}
+.chip--linked { background: var(--color-razz-tint); color: var(--color-razz-ink); }
+.chip--manual { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-line); color: var(--color-ink-2); }
+.chip--cat { background: var(--color-paper-2); color: var(--color-ink); }
+.dot { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: var(--sw); flex: none; }
+.unsaved { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--text-sm); color: var(--color-gum-ink); }
+.unsaved::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--color-gum-deep); }
+
+/* the profit readout */
+.readout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+@media (min-width: 40rem) { .readout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.figure-card { border-radius: var(--radius-card); padding: var(--space-md); display: grid; gap: var(--space-3xs); }
+.figure-card--profit { background: var(--color-mint-tint); }
+.figure-card--loss { background: var(--color-cinnamon-tint); }
+.figure-card__label { font-size: var(--text-sm); color: var(--color-ink-2); }
+.figure-card__num { font-family: var(--font-display); font-weight: 600; font-size: var(--text-num); line-height: 1.25; }
+.figure-card--profit .figure-card__num { color: var(--color-mint-ink); }
+.figure-card--loss .figure-card__num { color: var(--color-cinnamon); }
+.figure-card__num small { font-size: 0.4em; font-weight: 500; margin-left: 0.25em; }
+.hl {
+  background-image: linear-gradient(var(--color-lemon) 0 0);
+  background-repeat: no-repeat;
+  background-size: 100% 0.14em;
+  background-position: 0 88%;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+
+/* sheet row (sheets list) */
+.sheet-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2xs) var(--space-md); align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-card); border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  text-decoration: none; color: var(--color-ink);
+  transition: transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out);
+}
+.sheet-row:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); color: var(--color-ink); }
+.sheet-row b { font-family: var(--font-display); font-weight: 500; font-size: var(--text-lg); }
+.sheet-row .meta { font-size: var(--text-sm); color: var(--color-muted); }
+.sheet-row .amt { font-family: var(--font-display); font-weight: 500; text-align: right; }
+.sheet-row .amt.is-profit { color: var(--color-mint-ink); }
+.sheet-row .amt.is-loss { color: var(--color-cinnamon); }
+.rows { display: grid; gap: var(--space-xs); }
+
+/* cost table */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-card); background: var(--color-card); box-shadow: var(--shadow-card); }
+.cost-table { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: var(--text-sm); }
+.cost-table th { font-weight: 400; color: var(--color-muted); text-align: left; padding: var(--space-sm) var(--space-sm) var(--space-2xs); }
+.cost-table td { padding: var(--space-2xs) var(--space-sm); border-top: var(--rule-hair) dashed var(--color-line-2); }
+.cost-table .num { text-align: right; }
+.cost-table tr.is-linked td { background: color-mix(in oklch, var(--color-razz-tint) 55%, transparent); }
+.cost-table tfoot td { border-top: var(--rule-hair) solid var(--color-line); font-weight: 500; padding-block: var(--space-xs) var(--space-sm); }
+
+/* empty state & alert */
+.empty {
+  border-radius: var(--radius-card);
+  border: 2px dashed var(--color-line);
+  padding: var(--space-lg) var(--space-md);
+  display: grid; gap: var(--space-sm); justify-items: start;
+}
+.empty p { color: var(--color-ink-2); max-width: 46ch; }
+.alert { border-radius: var(--radius-field); padding: var(--space-xs) var(--space-sm); background: var(--color-cinnamon-tint); color: var(--color-cinnamon); font-size: var(--text-sm); }
+
+/* ---------- motion, voice, rules ---------- */
+.tokens { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.tokens td, .tokens th { text-align: left; padding: var(--space-2xs) var(--space-sm) var(--space-2xs) 0; border-top: var(--rule-hair) dashed var(--color-line); vertical-align: top; }
+.tokens th { font-weight: 400; color: var(--color-muted); border-top: 0; }
+.voice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); }
+.say { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-xs); background: var(--color-card); border-radius: var(--radius-card); padding: var(--space-sm) var(--space-md); box-shadow: var(--shadow-card); }
+@media (min-width: 44rem) { .say { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.say div { display: grid; gap: 2px; }
+.say small { font-size: var(--text-xs); color: var(--color-muted); }
+.say .no { color: var(--color-ink-2); text-decoration: line-through; text-decoration-color: var(--color-cinnamon); text-decoration-thickness: 1.5px; }
+.never { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2xs); }
+@media (min-width: 44rem) { .never { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-xl); } }
+.never li { padding: var(--space-2xs) 0; border-top: var(--rule-hair) dashed var(--color-line); }
+.never b { font-weight: 500; }
+
+.foot {
+  padding: var(--space-lg) var(--page-gutter) var(--space-xl);
+  display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); align-items: baseline;
+  font-size: var(--text-sm); color: var(--color-muted);
+  border-top: var(--rule-hair) dashed var(--color-line);
+  margin-inline: var(--page-gutter);
+  padding-inline: 0;
+}
+.foot b { font-family: var(--font-display); font-weight: 500; color: var(--color-ink); }
+
+.reveal { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .js .reveal { opacity: 0; transform: translateY(12px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); }
+  .js .reveal.is-in { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 120ms !important; scroll-behavior: auto !important; }
+  .bubble { animation: none !important; }
+  .btn:hover, .btn:active, .btn.is-hover, .btn.is-active, .sheet-row:hover, .sample:hover { transform: none; }
+  .sample { transform: rotate(-2deg); }
+  .star-burst { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="frame">
+  <aside class="rail">
+    <a class="rail__mark" href="#top" lang="th">กำไร <small lang="en">design system</small></a>
+    <nav aria-label="Sections">
+      <ul>
+        <li><a href="#flavours">Colour</a></li>
+        <li><a href="#type">Type</a></li>
+        <li><a href="#shape">Shape</a></li>
+        <li><a href="#parts">Parts</a></li>
+        <li><a href="#numbers">Money</a></li>
+        <li><a href="#motion">Motion</a></li>
+        <li><a href="#voice">Voice</a></li>
+        <li><a href="#rules">Never</a></li>
+      </ul>
+    </nav>
+    <p class="rail__foot">Source of truth: <code>DESIGN.md</code>. This page is its picture.</p>
+  </aside>
+
+  <main class="main" id="top">
+    <header class="hero">
+      <div class="hero__copy">
+        <span class="wordmark" lang="th">
+          <span class="visually-hidden">กำไร</span>
+          <span aria-hidden="true"><span class="wordmark__kam">กำ<button class="bubble" type="button" tabindex="-1" aria-hidden="true"></button></span>ไร</span>
+        </span>
+        <h1>Soft to touch. Exact to the satang.</h1>
+        <p>Gumrai is a bubblegum app for serious numbers. It reads like a sweet shop, so a seller enjoys opening it. Every baht in it is worked out to two decimals.</p>
+        <p class="note">Gumrai is a pun: <span lang="th">กำไร</span> (profit) is said "gum-rai". The pink circle on <span lang="th">กำ</span> is a bubble. Press it.</p>
+      </div>
+
+      <article class="sample" lang="th" aria-label="ตัวอย่างชีตต้นทุน">
+        <div class="sample__top">
+          <h3>มัทฉะลาเต้เย็น</h3>
+          <span class="chip chip--manual">ตัวอย่าง</span>
+        </div>
+        <dl>
+          <dt>ราคาขายต่อแก้ว</dt><dd>60.00 ฿</dd>
+          <dt>ส่วนที่แพลตฟอร์มหัก (GP 25% + VAT 7%)</dt><dd>−16.05 ฿</dd>
+          <dt>เงินที่ได้รับจริง</dt><dd>43.95 ฿</dd>
+        </dl>
+        <div class="sample__lines">
+          <div><i class="dot" style="--sw: var(--color-category-0)"></i><span>มัทฉะ 4 g</span><span>16.00</span></div>
+          <div><i class="dot" style="--sw: var(--color-category-0)"></i><span>นมสด 150 ml</span><span>9.00</span></div>
+          <div><i class="dot" style="--sw: var(--color-category-1)"></i><span>แก้วพร้อมฝา 1 ชิ้น</span><span>3.50</span></div>
+          <div><i class="dot" style="--sw: var(--color-category-0)"></i><span>น้ำแข็ง 1 ถุง</span><span>1.50</span></div>
+        </div>
+        <div class="figure-card figure-card--profit" style="margin-top: var(--space-sm)">
+          <span class="figure-card__label">กำไรสุทธิต่อแก้ว</span>
+          <span class="figure-card__num"><span class="hl">13.95</span><small>฿</small></span>
+        </div>
+      </article>
+    </header>
+
+    <!-- COLOUR -->
+    <section class="section band band--gum reveal" id="flavours">
+      <div class="head">
+        <h2>Colour is a pack of gum flavours</h2>
+        <p>Each flavour has one job, and the jobs never swap. Pink means action and brand. Mint means money left over. Blue raspberry means linked. Cinnamon means a loss. Grape is a single pop when something succeeds.</p>
+      </div>
+
+      <h3 class="sub">Flavours</h3>
+      <div class="pack">
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-gum)"></div><div class="stick__body"><b>Bubblegum<span lang="th">ชมพูหมากฝรั่ง</span></b><span class="code">--color-gum · oklch(80% 0.12 350) · edge --color-gum-deep · text --color-gum-ink</span><p>The primary button, the selected nav item, the bubble, the unsaved dot. Never a number.</p></div></div>
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-mint)"></div><div class="stick__body"><b>Spearmint<span lang="th">มิ้นต์</span></b><span class="code">--color-mint · oklch(86% 0.1 165) · text --color-mint-ink = profit</span><p>Profit, and the saved state. If it is mint, the seller keeps it.</p></div></div>
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-razz)"></div><div class="stick__body"><b>Blue raspberry<span lang="th">บลูราสเบอร์รี่</span></b><span class="code">--color-razz · oklch(66% 0.15 248) · text --color-razz-ink</span><p>Links, and Linked Lines that follow a Cost Item. Blue means "connected to something else".</p></div></div>
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-cinnamon)"></div><div class="stick__body"><b>Cinnamon<span lang="th">อบเชย</span></b><span class="code">--color-cinnamon · oklch(54% 0.19 34) = loss</span><p>Loss, errors, delete. It sits 44° of hue and 26% of lightness away from bubblegum, so pink never reads as a loss.</p></div></div>
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-grape)"></div><div class="stick__body"><b>Grape<span lang="th">องุ่น</span></b><span class="code">--color-grape · oklch(62% 0.17 305)</span><p>The star-burst when a save lands. It appears once per action and nowhere else.</p></div></div>
+        <div class="stick"><div class="stick__swatch" style="--sw: var(--color-lemon)"></div><div class="stick__body"><b>Lemon<span lang="th">เลมอน</span></b><span class="code">--color-lemon · oklch(90% 0.13 100)</span><p>A highlighter stroke under the one figure that matters on a screen. At most one per page.</p></div></div>
+      </div>
+
+      <h3 class="sub">Money colours</h3>
+      <div class="money" lang="th">
+        <div class="is-profit"><span>กำไรต่อแก้ว</span><span class="figure">13.95 ฿</span><span class="note" lang="en">--color-profit → mint-ink, on --color-mint-tint</span></div>
+        <div class="is-loss"><span>ขาดทุนต่อแก้ว</span><span class="figure">−0.70 ฿</span><span class="note" lang="en">--color-loss → cinnamon, on --color-cinnamon-tint</span></div>
+      </div>
+      <p class="note" style="margin-top: var(--space-xs)">A loss always carries the word <span lang="th">ขาดทุน</span> and a minus sign as well as the colour. Colour alone never tells the story.</p>
+
+      <h3 class="sub">Wrapper neutrals</h3>
+      <div class="neutrals" role="img" aria-label="Neutral ramp from paper to ink">
+        <div style="--sw: var(--color-card)"><span>card</span></div>
+        <div style="--sw: var(--color-paper)"><span>paper</span></div>
+        <div style="--sw: var(--color-paper-2)"><span>paper-2</span></div>
+        <div style="--sw: var(--color-paper-3)"><span>paper-3</span></div>
+        <div style="--sw: var(--color-line-2)"><span>line-2</span></div>
+        <div style="--sw: var(--color-line)"><span>line</span></div>
+        <div style="--sw: var(--color-muted)"><span>muted</span></div>
+        <div style="--sw: var(--color-ink-2)"><span>ink-2</span></div>
+        <div style="--sw: var(--color-ink)"><span>ink</span></div>
+      </div>
+      <p class="note" style="margin-top: var(--space-xs)">Every neutral leans a little toward pink (hue 340–345). The app has no pure white and no pure black.</p>
+
+      <h3 class="sub">Gumball jar: Cost Category slots</h3>
+      <div class="jar">
+        <span class="gumball"><i style="--sw: var(--color-category-0)"></i>slot 0</span>
+        <span class="gumball"><i style="--sw: var(--color-category-1)"></i>slot 1</span>
+        <span class="gumball"><i style="--sw: var(--color-category-2)"></i>slot 2</span>
+        <span class="gumball"><i style="--sw: var(--color-category-3)"></i>slot 3</span>
+        <span class="gumball"><i style="--sw: var(--color-category-4)"></i>slot 4</span>
+        <span class="gumball"><i style="--sw: var(--color-category-5)"></i>slot 5</span>
+        <span class="gumball"><i style="--sw: var(--color-category-6)"></i>slot 6</span>
+        <span class="gumball"><i style="--sw: var(--color-category-7)"></i>slot 7</span>
+        <span class="gumball" lang="th"><i style="--sw: var(--color-category-none)"></i>ไม่มีหมวด</span>
+        <span class="gumball"><i style="--sw: var(--color-commission)"></i>GP</span>
+        <span class="gumball"><i style="--sw: var(--color-commission-vat)"></i>VAT on GP</span>
+      </div>
+      <p class="note" style="margin-top: var(--space-sm)">The seller never picks these colours. The slots stay clear of bubblegum (330–10°), cinnamon (20–45°) and mint (135–170°), so a chart slice can't be confused with an action, a loss or a profit.</p>
+    </section>
+
+    <!-- TYPE -->
+    <section class="section reveal" id="type">
+      <div class="head">
+        <h2>Two Thai faces, both round</h2>
+        <p>Mitr has soft corners and loopless Thai letters, and it does the shouting. IBM Plex Sans Thai Looped does the reading. Its looped heads are the Thai most sellers learned at school, and its figures line up in tables.</p>
+      </div>
+      <div class="specimen" lang="th">
+        <div class="face face--display">
+          <span class="face__big">ต้นทุนต่อแก้ว 30.00 ฿</span>
+          <span class="face__meta" lang="en">Mitr 500 / 600 · display, headings, big figures, buttons</span>
+        </div>
+        <div class="face face--body">
+          <span class="face__big">ใช้ 4 g</span>
+          <span class="face__meta" lang="en">IBM Plex Sans Thai Looped 400 / 500 · body, labels, inputs, tables</span>
+        </div>
+      </div>
+
+      <h3 class="sub">Scale</h3>
+      <div class="scale-wrap">
+        <table class="scale" lang="th">
+          <tr><td lang="en">num · 40–60px</td><td style="font-family: var(--font-display); font-weight: 600; font-size: var(--text-num); line-height: 1.25">13.95</td></tr>
+          <tr><td lang="en">display · 36–56px</td><td style="font-family: var(--font-display); font-size: var(--text-display); line-height: 1.35">ชีตต้นทุน</td></tr>
+          <tr><td lang="en">2xl · 28px</td><td style="font-family: var(--font-display); font-size: var(--text-2xl)">รายการต้นทุน</td></tr>
+          <tr><td lang="en">lg · 18px</td><td style="font-family: var(--font-display); font-size: var(--text-lg)">มัทฉะลาเต้เย็น</td></tr>
+          <tr><td lang="en">base · 16px</td><td>ต้นทุนต่อหน่วยคือราคาของหนึ่งหน่วย เช่น มัทฉะ 4 ฿/g</td></tr>
+          <tr><td lang="en">sm · 14px</td><td style="font-size: var(--text-sm); color: var(--color-ink-2)">ราคาขายต่อแก้ว (฿)</td></tr>
+          <tr><td lang="en">xs · 13px</td><td style="font-size: var(--text-xs); color: var(--color-muted)">ไม่มีหมวด</td></tr>
+        </table>
+      </div>
+      <p class="note" style="margin-top: var(--space-sm)">Thai rules: line-height at least 1.35 on headings and 1.7 on body, or the tone marks clip. Letter-spacing stays at 0, because tracking pulls stacked vowels off their consonants. Thai has no capitals, so there are no uppercase labels and no italics.</p>
+    </section>
+
+    <!-- SHAPE -->
+    <section class="section band band--paper reveal" id="shape">
+      <div class="head">
+        <h2>Chewy, not glossy</h2>
+        <p>Everything is round, and nothing is glass. A card is a soft slab: a 20px radius and two quiet shadows, one for contact and one for air. Only things you can press lift off the paper.</p>
+      </div>
+      <div class="row" style="align-items: stretch">
+        <div class="bench" style="flex: 1 1 12rem"><b>card · 20px</b><p class="note">--shadow-card. Sections, sheets, the cost table.</p></div>
+        <div class="bench" style="flex: 1 1 12rem; box-shadow: var(--shadow-lift)"><b>lifted</b><p class="note">--shadow-lift. A pressable card on hover, and the tilted sample.</p></div>
+        <div class="bench" style="flex: 1 1 12rem; box-shadow: none; background: var(--color-paper)"><b>flat tint</b><p class="note">No shadow. Money cards and states sit on a tint instead.</p></div>
+      </div>
+      <p class="note" style="margin-top: var(--space-md)">Radii: card 20 · field 12 · chip and button 999. Dividers are dashed 1.5px hairlines in <code>--color-line</code>. Square corners don't exist here.</p>
+    </section>
+
+    <!-- PARTS -->
+    <section class="section reveal" id="parts">
+      <div class="head">
+        <h2>Parts</h2>
+        <p>The pieces the app is made of, shown working. Each one uses only the tokens above.</p>
+      </div>
+
+      <h3 class="sub">Button · push, in all eight states</h3>
+      <div class="bench">
+        <div class="states" lang="th">
+          <div class="state"><span lang="en">default</span><button class="btn" type="button">บันทึก</button></div>
+          <div class="state"><span lang="en">hover</span><button class="btn is-hover" type="button" tabindex="-1">บันทึก</button></div>
+          <div class="state"><span lang="en">focus</span><button class="btn is-focus" type="button" tabindex="-1">บันทึก</button></div>
+          <div class="state"><span lang="en">active (pressed)</span><button class="btn is-active" type="button" tabindex="-1">บันทึก</button></div>
+          <div class="state"><span lang="en">disabled</span><button class="btn" type="button" disabled>บันทึก</button></div>
+          <div class="state"><span lang="en">loading</span><button class="btn" type="button" data-state="loading" aria-busy="true" tabindex="-1">กำลังบันทึก</button></div>
+          <div class="state"><span lang="en">error</span><button class="btn" type="button" data-state="error" tabindex="-1">บันทึกไม่ได้ ลองอีกครั้ง</button></div>
+          <div class="state"><span lang="en">success</span><button class="btn" type="button" data-state="success" tabindex="-1">บันทึกแล้ว</button></div>
+        </div>
+        <p class="note" style="margin-top: var(--space-md)">Hover lifts it 2px. Pressing pushes it down 3px and the pink edge shrinks, so the press itself is the feedback. Try the live one:</p>
+        <div class="row" style="margin-top: var(--space-sm)" lang="th">
+          <button class="btn" type="button" id="save-demo">บันทึก</button>
+          <span class="unsaved" id="unsaved-demo">ยังไม่บันทึก</span>
+        </div>
+      </div>
+
+      <h3 class="sub">Button voices</h3>
+      <div class="bench">
+        <div class="row" lang="th">
+          <button class="btn" type="button">สร้างชีต</button>
+          <button class="btn btn--mint" type="button">บันทึกเข้าลิสต์ต้นทุน</button>
+          <button class="btn btn--soft" type="button">ทำสำเนา</button>
+          <button class="btn btn--outline" type="button">เปลี่ยนชื่อ</button>
+          <button class="btn btn--danger btn--sm" type="button">ลบชีต</button>
+        </div>
+        <p class="note" style="margin-top: var(--space-sm)">One pink push button per screen, for the main action. Mint push is for "keep this". Soft and outline are for everything else. Delete is a cinnamon outline, never a filled button.</p>
+      </div>
+
+      <h3 class="sub">Fields</h3>
+      <div class="bench">
+        <div class="fields" lang="th">
+          <label class="field"><span>ชื่อชีต</span><span class="input"><input value="มัทฉะลาเต้เย็น" /></span></label>
+          <label class="field"><span>ราคาขายต่อแก้ว</span><span class="input input--num"><input value="60.00" inputmode="decimal" /><span class="input__suffix">฿</span></span></label>
+          <label class="field is-error"><span>GP</span><span class="input input--num"><input value="120" inputmode="decimal" aria-invalid="true" aria-describedby="gp-err" /><span class="input__suffix">%</span></span><small id="gp-err">GP ต้องอยู่ระหว่าง 0 ถึง 100</small></label>
+          <label class="field is-disabled"><span>ต้นทุนต่อหน่วย (จากลิสต์ต้นทุน)</span><span class="input input--num"><input value="4.00" disabled /><span class="input__suffix">฿/g</span></span></label>
+        </div>
+        <p class="note" style="margin-top: var(--space-sm)">Numbers are right-aligned with the unit as a muted suffix. Focus draws a pink ring outside the field. An error tints the field cinnamon and says what to do in one line.</p>
+      </div>
+
+      <h3 class="sub">Chips &amp; flags</h3>
+      <div class="bench">
+        <div class="row" lang="th">
+          <span class="chip chip--linked">ลิงก์</span>
+          <span class="chip chip--manual">พิมพ์เอง</span>
+          <span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-0)"></i>วัตถุดิบ</span>
+          <span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-1)"></i>บรรจุภัณฑ์</span>
+          <span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-none)"></i>ไม่มีหมวด</span>
+          <span class="unsaved">ยังไม่บันทึก</span>
+        </div>
+      </div>
+
+      <h3 class="sub">Profit readout</h3>
+      <div class="readout" lang="th">
+        <div class="figure-card figure-card--profit"><span class="figure-card__label">กำไรสุทธิต่อแก้ว</span><span class="figure-card__num">13.95<small>฿</small></span><span class="note">23.25% ของราคาขาย</span></div>
+        <div class="figure-card figure-card--loss"><span class="figure-card__label">ขาดทุนต่อแก้ว</span><span class="figure-card__num">−0.70<small>฿</small></span><span class="note">ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน</span></div>
+      </div>
+
+      <h3 class="sub">Sheet rows</h3>
+      <div class="rows" lang="th">
+        <a class="sheet-row" href="#parts"><span><b>มัทฉะลาเต้เย็น</b><br /><span class="meta">GP 25% · 4 รายการ</span></span><span class="amt is-profit">+13.95 ฿<br /><span class="meta">ต่อแก้ว</span></span></a>
+        <a class="sheet-row" href="#parts"><span><b>โกโก้ปั่น (ขายผ่านแอป)</b><br /><span class="meta">GP 30% · 5 รายการ</span></span><span class="amt is-loss">−0.70 ฿<br /><span class="meta">ขาดทุนต่อแก้ว</span></span></a>
+      </div>
+
+      <h3 class="sub">Cost table</h3>
+      <div class="table-wrap" lang="th">
+        <table class="cost-table">
+          <thead><tr><th>ที่มา</th><th>ชื่อ</th><th>หมวด</th><th class="num">ต้นทุนต่อหน่วย</th><th class="num">ใช้ต่อแก้ว</th><th class="num">ต้นทุนต่อแก้ว</th></tr></thead>
+          <tbody>
+            <tr class="is-linked"><td><span class="chip chip--linked">ลิงก์</span></td><td>มัทฉะ</td><td><span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-0)"></i>วัตถุดิบ</span></td><td class="num">4.00 ฿/g</td><td class="num">4</td><td class="num">16.00</td></tr>
+            <tr class="is-linked"><td><span class="chip chip--linked">ลิงก์</span></td><td>นมสด</td><td><span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-0)"></i>วัตถุดิบ</span></td><td class="num">0.06 ฿/ml</td><td class="num">150</td><td class="num">9.00</td></tr>
+            <tr><td><span class="chip chip--manual">พิมพ์เอง</span></td><td>แก้วพร้อมฝา</td><td><span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-1)"></i>บรรจุภัณฑ์</span></td><td class="num">3.50 ฿/ชิ้น</td><td class="num">1</td><td class="num">3.50</td></tr>
+            <tr><td><span class="chip chip--manual">พิมพ์เอง</span></td><td>น้ำแข็ง</td><td><span class="chip chip--cat"><i class="dot" style="--sw: var(--color-category-none)"></i>ไม่มีหมวด</span></td><td class="num">1.50 ฿/ถุง</td><td class="num">1</td><td class="num">1.50</td></tr>
+          </tbody>
+          <tfoot><tr><td colspan="5">ต้นทุนรวมต่อแก้ว</td><td class="num">30.00</td></tr></tfoot>
+        </table>
+      </div>
+
+      <h3 class="sub">Empty state &amp; alert</h3>
+      <div class="readout" lang="th">
+        <div class="empty">
+          <p>ยังไม่มีชีตต้นทุน ตั้งชื่อสิ่งที่ขายเพื่อเริ่มคิดต้นทุนและกำไร</p>
+          <button class="btn" type="button">สร้างชีต</button>
+        </div>
+        <div style="display: grid; align-content: start; gap: var(--space-sm)">
+          <p class="alert" role="alert">บันทึกไม่ได้ เพราะชื่อนี้มีในลิสต์ต้นทุนแล้ว</p>
+          <p class="note" lang="en">An empty state says what's missing, then gives the one next step. An alert says what happened and why, in one sentence.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MONEY -->
+    <section class="section band band--mint reveal" id="numbers">
+      <div class="head">
+        <h2>Money is never decoration</h2>
+        <p>The cheerful look stops at the numbers. Figures are exact, aligned and labelled, and they only ever come from the seller's own data.</p>
+      </div>
+      <ul class="never">
+        <li><b>Two decimals, always.</b> Format with <code>Intl.NumberFormat('th-TH', {minimumFractionDigits: 2})</code>. Figures are stored as Postgres <code>numeric</code>, never as floats.</li>
+        <li><b>Tabular figures</b> everywhere a number can sit above another number. The body font does this by default.</li>
+        <li><b>Right-align</b> money and quantities in tables and inputs.</li>
+        <li><b>Name the Sale Unit</b> next to every per-sale figure, for example <span lang="th">กำไรต่อแก้ว</span>, never just <span lang="th">กำไร</span>.</li>
+        <li><b>A loss gets three signals:</b> the word <span lang="th">ขาดทุน</span>, a true minus sign (U+2212), and cinnamon.</li>
+        <li><b>The baht sign follows the number</b> as a small suffix: <code>13.95 ฿</code>, or <code>4 ฿/g</code> for a Unit Cost.</li>
+        <li><b>One big figure per screen</b>, the Net Profit, at <code>--text-num</code>. Everything else stays at body size.</li>
+        <li><b>Never invent a number.</b> Empty data reads <span lang="th">ยังไม่มี…</span>, not a made-up example.</li>
+      </ul>
+    </section>
+
+    <!-- MOTION -->
+    <section class="section reveal" id="motion">
+      <div class="head">
+        <h2>Motion: press, chew, pop</h2>
+        <p>Plain CSS, no motion library. The app moves in three ways only. Buttons press down, the bubble chews slowly, and a save pops a grape star. Everything else just changes colour.</p>
+      </div>
+      <div class="scale-wrap">
+        <table class="tokens">
+          <thead><tr><th>Moment</th><th>Motion</th><th>Tokens</th></tr></thead>
+          <tbody>
+            <tr><td>Button hover / press</td><td>lift 2px, then down 3px with the edge shrinking. No scale.</td><td><code>--ease-press</code> · <code>--dur-fast</code> / <code>--dur-press</code></td></tr>
+            <tr><td>Pressable card hover</td><td>lift 3–4px, shadow deepens</td><td><code>--ease-spring</code> · <code>--dur-base</code></td></tr>
+            <tr><td>The bubble</td><td>chews 1 → 1.08 every 4s. Hover inflates it, a click pops it and it grows back.</td><td><code>--ease-spring</code> · <code>--dur-pop</code></td></tr>
+            <tr><td>Save succeeds</td><td>grape star-burst from the button, fires once</td><td><code>--color-grape</code> · <code>--dur-pop</code></td></tr>
+            <tr><td>Field focus, chip, nav</td><td>colour and ring only</td><td><code>--ease-out</code> · <code>--dur-fast</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note" style="margin-top: var(--space-sm)">With <code>prefers-reduced-motion: reduce</code>, nothing moves position, the bubble holds still, and the star-burst is off. Colour changes stay, at 120ms or less. Focus rings show instantly and are never animated.</p>
+    </section>
+
+    <!-- VOICE -->
+    <section class="section band band--razz reveal" id="voice">
+      <div class="head">
+        <h2>Voice: a friend who's good with numbers</h2>
+        <p>Thai only, warm and short. Use the words from <code>CONTEXT.md</code> exactly. The playfulness is in the colour and the bubble, not in jokes on the buttons.</p>
+      </div>
+      <div class="voice" lang="th">
+        <div class="say"><div><small lang="en">say</small>กำไรสุทธิต่อแก้ว</div><div><small lang="en">not</small><span class="no">มาร์จิ้น</span></div></div>
+        <div class="say"><div><small lang="en">say</small>บันทึก</div><div><small lang="en">not</small><span class="no">เย้! บันทึกข้อมูลสำเร็จแล้วนะ 🎉</span></div></div>
+        <div class="say"><div><small lang="en">say</small>ยังไม่มีรายการต้นทุน เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g</div><div><small lang="en">not</small><span class="no">ไม่พบข้อมูล</span></div></div>
+        <div class="say"><div><small lang="en">say</small>ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน</div><div><small lang="en">not</small><span class="no">Error: negative profit</span></div></div>
+        <div class="say"><div><small lang="en">say</small>รายการต้นทุน (สิ่งที่ซื้อ)</div><div><small lang="en">not</small><span class="no">สินค้า (that's what is sold)</span></div></div>
+      </div>
+    </section>
+
+    <!-- RULES -->
+    <section class="section reveal" id="rules">
+      <div class="head">
+        <h2>Never</h2>
+      </div>
+      <ul class="never">
+        <li><b>Pink on a number.</b> Bubblegum is for actions. Money is mint or cinnamon.</li>
+        <li><b>Gradients between flavours.</b> Each flavour owns its own surface.</li>
+        <li><b>Pure white paper or pure black ink.</b></li>
+        <li><b>Square corners</b> on cards, fields, chips or buttons.</li>
+        <li><b>Italic or uppercase</b>, in Thai or English.</li>
+        <li><b>Tracking on Thai</b>, or a heading line-height under 1.35.</li>
+        <li><b>More than one bubble</b> or more than one pink push button per screen.</li>
+        <li><b>Emoji as icons</b>, or celebration toasts. The star-burst is the celebration.</li>
+        <li><b>A colour outside <code>globals.css</code>.</b> Components use the token utilities.</li>
+        <li><b>Glass, blur or neon glow.</b> Gum is matte.</li>
+      </ul>
+    </section>
+
+    <footer class="foot">
+      <b lang="th">กำไร</b>
+      <span>Design system, v1 · 2026-10-04</span>
+      <span>Light only. Thai UI only.</span>
+      <span>Rules live in <code>DESIGN.md</code>.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  document.documentElement.classList.add('js')
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const burst = (x, y) => {
+    if (still) return
+    const s = document.createElement('span')
+    s.className = 'star-burst'
+    s.style.left = x + 'px'
+    s.style.top = y + 'px'
+    document.body.append(s)
+    s.addEventListener('animationend', () => s.remove())
+  }
+
+  // the bubble: pop on click, grow back
+  const bubble = document.querySelector('.bubble')
+  bubble.addEventListener('click', () => {
+    if (bubble.classList.contains('is-popped')) return
+    const r = bubble.getBoundingClientRect()
+    burst(r.left + r.width / 2, r.top + r.height / 2)
+    bubble.classList.add('is-popped')
+    setTimeout(() => {
+      bubble.classList.remove('is-popped')
+      bubble.classList.add('is-regrow')
+      setTimeout(() => bubble.classList.remove('is-regrow'), 600)
+    }, still ? 200 : 900)
+  })
+
+  // the live save button: loading → success, star-burst from the button
+  const save = document.getElementById('save-demo')
+  const unsaved = document.getElementById('unsaved-demo')
+  save.addEventListener('click', () => {
+    if (save.dataset.state) return
+    save.dataset.state = 'loading'
+    save.setAttribute('aria-busy', 'true')
+    save.textContent = 'กำลังบันทึก'
+    setTimeout(() => {
+      save.dataset.state = 'success'
+      save.removeAttribute('aria-busy')
+      save.textContent = 'บันทึกแล้ว'
+      unsaved.hidden = true
+      const r = save.getBoundingClientRect()
+      burst(r.right - 12, r.top + 4)
+      setTimeout(() => {
+        delete save.dataset.state
+        save.textContent = 'บันทึก'
+        unsaved.hidden = false
+      }, 1800)
+    }, 700)
+  })
+
+  // section reveal + rail highlight
+  const links = new Map([...document.querySelectorAll('.rail nav a')].map(a => [a.hash.slice(1), a]))
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue
+      e.target.classList.add('is-in')
+      const link = links.get(e.target.id)
+      if (link) {
+        links.forEach(a => a.removeAttribute('aria-current'))
+        link.setAttribute('aria-current', 'true')
+      }
+    }
+  }, { rootMargin: '-30% 0px -60% 0px' })
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el))
+  // reveal anything already on screen at load
+  const io2 = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('is-in')), { threshold: 0.05 })
+  document.querySelectorAll('.reveal').forEach(el => io2.observe(el))
+})()
+</script>
+</body>
+</html>
