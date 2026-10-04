@@ -1,20 +1,30 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 /* The theme. Every token (colour, font, radius, shadow, easing) lives in the preset;
    switching theme means pointing this import at another file in presets/. */
 @import './presets/bubblegum.css';
 
-body {
-  background: var(--color-paper);
-  color: var(--color-ink);
-}
+/* Light only. shadcn components carry dark: classes; this keeps them behind a .dark class
+   the app never sets, instead of following the OS setting. */
+@custom-variant dark (&:is(.dark *));
 
-/* Thai needs room for its tone marks and stacked vowels: no tracking, generous leading. */
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-display);
-  line-height: 1.35;
-  letter-spacing: 0;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  /* Thai needs room for its tone marks and stacked vowels: no tracking, generous leading. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
 }

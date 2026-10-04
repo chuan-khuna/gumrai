@@ -3,14 +3,14 @@ version: alpha
 name: Gumrai Bubblegum
 description: Bubblegum on cream for a Thai profit calculator. Soft to touch, exact to the satang.
 colors:
-  # Mirrors src/styles/presets/bubblegum.css token for token (same names, same values).
+  # Generated from src/styles/presets/bubblegum.css: the palette, then the roles that point at it.
+  paper-0: "oklch(0.994 0.004 345)"
   paper: "oklch(0.975 0.012 345)"
   paper-2: "oklch(0.95 0.02 345)"
   paper-3: "oklch(0.915 0.03 345)"
-  card: "oklch(0.994 0.004 345)"
-  line: "oklch(0.885 0.022 345)"
   line-2: "oklch(0.925 0.016 345)"
-  muted: "oklch(0.5 0.03 340)"
+  line: "oklch(0.885 0.022 345)"
+  ink-3: "oklch(0.5 0.03 340)"
   ink-2: "oklch(0.38 0.035 340)"
   ink: "oklch(0.24 0.035 340)"
   gum: "oklch(0.8 0.12 350)"
@@ -28,10 +28,37 @@ colors:
   cinnamon-tint: "oklch(0.94 0.035 40)"
   grape: "oklch(0.62 0.17 305)"
   lemon: "oklch(0.9 0.13 100)"
-  accent: "{colors.gum-ink}"
+  background: "{colors.paper}"
+  foreground: "{colors.ink}"
+  card: "{colors.paper-0}"
+  card-foreground: "{colors.ink}"
+  popover: "{colors.paper-0}"
+  popover-foreground: "{colors.ink}"
+  primary: "{colors.gum}"
+  primary-foreground: "{colors.ink}"
+  primary-edge: "{colors.gum-deep}"
+  secondary: "{colors.paper-2}"
+  secondary-foreground: "{colors.ink}"
+  muted: "{colors.paper-2}"
+  muted-foreground: "{colors.ink-3}"
+  accent: "{colors.gum-tint}"
+  accent-foreground: "{colors.ink}"
+  destructive: "{colors.cinnamon}"
+  border: "{colors.line}"
+  input: "{colors.line}"
+  ring: "{colors.gum-ink}"
+  keep: "{colors.mint}"
+  keep-edge: "{colors.mint-deep}"
   profit: "{colors.mint-ink}"
+  profit-surface: "{colors.mint-tint}"
   loss: "{colors.cinnamon}"
-  focus: "{colors.gum-ink}"
+  loss-surface: "{colors.cinnamon-tint}"
+  link: "{colors.razz-ink}"
+  linked: "{colors.razz-tint}"
+  linked-foreground: "{colors.razz-ink}"
+  unsaved: "{colors.gum-ink}"
+  highlight: "{colors.lemon}"
+  pop: "{colors.grape}"
   category-0: "oklch(0.68 0.12 250)"
   category-1: "oklch(0.8 0.13 90)"
   category-2: "oklch(0.64 0.14 310)"
@@ -41,28 +68,13 @@ colors:
   category-6: "oklch(0.74 0.12 60)"
   category-7: "oklch(0.7 0.1 215)"
   category-none: "oklch(0.8 0.01 345)"
+  chart-1: "{colors.category-0}"
+  chart-2: "{colors.category-1}"
+  chart-3: "{colors.category-2}"
+  chart-4: "{colors.category-3}"
+  chart-5: "{colors.category-4}"
   commission: "oklch(0.42 0.03 330)"
   commission-vat: "oklch(0.6 0.03 330)"
-  # Spec role names, pointing at the flavours above.
-  primary: "{colors.gum}"
-  on-primary: "{colors.ink}"
-  primary-container: "{colors.gum-tint}"
-  secondary: "{colors.mint}"
-  on-secondary: "{colors.ink}"
-  secondary-container: "{colors.mint-tint}"
-  tertiary: "{colors.razz}"
-  on-tertiary: "{colors.ink}"
-  tertiary-container: "{colors.razz-tint}"
-  neutral: "{colors.paper}"
-  surface: "{colors.paper}"
-  surface-container-lowest: "{colors.card}"
-  on-surface: "{colors.ink}"
-  on-surface-variant: "{colors.ink-2}"
-  outline: "{colors.line}"
-  outline-variant: "{colors.line-2}"
-  error: "{colors.cinnamon}"
-  on-error: "{colors.card}"
-  error-container: "{colors.cinnamon-tint}"
 typography:
   number-display:
     fontFamily: Mitr
@@ -134,8 +146,12 @@ typography:
     lineHeight: 1.5
     letterSpacing: 0em
 rounded:
-  field: 12px
-  card: 20px
+  # Tailwind's radius names, set in the preset.
+  sm: 8px
+  md: 10px
+  lg: 12px
+  xl: 16px
+  2xl: 20px
   full: 9999px
 spacing:
   base: 4px
@@ -149,146 +165,165 @@ spacing:
   2xl: 64px
   3xl: 96px
   gutter: 16px
-  content-max: 896px
+  content-max: 768px
+  editor-max: 1024px
 components:
-  button-primary:
-    backgroundColor: "{colors.gum}"
-    textColor: "{colors.ink}"
+  # One entry per shadcn/ui component variant in src/components/ui, plus Gumrai's own.
+  button-default:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.full}"
-    padding: 12px
+    padding: 20px
     height: 44px
-  button-primary-disabled:
-    backgroundColor: "{colors.gum-tint}"
-    textColor: "{colors.muted}"
-  button-primary-error:
-    backgroundColor: "{colors.cinnamon-tint}"
-    textColor: "{colors.ink}"
-  button-primary-success:
-    backgroundColor: "{colors.mint}"
-    textColor: "{colors.ink}"
+  button-default-active:
+    backgroundColor: "{colors.primary}"
+  button-default-disabled:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.muted-foreground}"
   button-keep:
-    backgroundColor: "{colors.mint}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.keep}"
+    textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.full}"
-    padding: 12px
+    padding: 20px
     height: 44px
-  button-soft:
+  button-secondary:
     backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.full}"
-    padding: 12px
+    padding: 20px
     height: 44px
   button-outline:
     backgroundColor: transparent
-    textColor: "{colors.ink}"
+    textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.full}"
-    padding: 12px
+    padding: 20px
     height: 44px
   button-outline-hover:
-    backgroundColor: "{colors.gum-tint}"
-  button-danger:
+    backgroundColor: "{colors.accent}"
+  button-ghost-hover:
+    backgroundColor: "{colors.accent}"
+  button-destructive:
     backgroundColor: transparent
-    textColor: "{colors.cinnamon}"
+    textColor: "{colors.destructive}"
     typography: "{typography.button}"
     rounded: "{rounded.full}"
-    padding: 8px
-  button-danger-hover:
-    backgroundColor: "{colors.cinnamon-tint}"
-  input-field:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
+    padding: 16px
+    height: 36px
+  button-destructive-hover:
+    backgroundColor: "{colors.loss-surface}"
+  button-link:
+    textColor: "{colors.link}"
     typography: "{typography.body-md}"
-    rounded: "{rounded.field}"
+  input:
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
     padding: 12px
     height: 44px
-  input-field-error:
-    backgroundColor: "{colors.cinnamon-tint}"
-    textColor: "{colors.ink}"
-  input-field-disabled:
-    backgroundColor: "{colors.paper-2}"
-    textColor: "{colors.muted}"
-  input-label:
-    textColor: "{colors.ink-2}"
+  input-invalid:
+    backgroundColor: "{colors.loss-surface}"
+    textColor: "{colors.foreground}"
+  input-disabled:
+    backgroundColor: "{colors.muted}"
+    textColor: "{colors.muted-foreground}"
+  label:
+    textColor: "{colors.muted-foreground}"
     typography: "{typography.label-md}"
-  chip-linked:
-    backgroundColor: "{colors.razz-tint}"
-    textColor: "{colors.razz-ink}"
+  select-trigger:
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 12px
+    height: 44px
+  select-content:
+    backgroundColor: "{colors.popover}"
+    textColor: "{colors.popover-foreground}"
+    rounded: "{rounded.xl}"
+    padding: 4px
+  select-item-focus:
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.accent-foreground}"
+    rounded: "{rounded.lg}"
+  checkbox-checked:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-foreground}"
+    size: 20px
+  badge-linked:
+    backgroundColor: "{colors.linked}"
+    textColor: "{colors.linked-foreground}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.full}"
-    padding: 4px
-  chip-manual:
+    padding: 10px
+    height: 24px
+  badge-manual:
     backgroundColor: transparent
-    textColor: "{colors.ink-2}"
+    textColor: "{colors.muted-foreground}"
     typography: "{typography.label-sm}"
     rounded: "{rounded.full}"
-    padding: 4px
-  chip-category:
-    backgroundColor: "{colors.paper-2}"
-    textColor: "{colors.ink}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.full}"
-    padding: 4px
+    padding: 10px
+    height: 24px
   category-dot:
     size: 10px
     rounded: "{rounded.full}"
   card:
     backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.card}"
+    textColor: "{colors.card-foreground}"
+    rounded: "{rounded.2xl}"
     padding: 24px
-  card-profit:
-    backgroundColor: "{colors.mint-tint}"
-    textColor: "{colors.mint-ink}"
+  card-title:
+    typography: "{typography.title-md}"
+  card-empty:
+    backgroundColor: transparent
+    textColor: "{colors.muted-foreground}"
+    rounded: "{rounded.2xl}"
+    padding: 24px
+  net-profit:
+    backgroundColor: "{colors.profit-surface}"
+    textColor: "{colors.profit}"
     typography: "{typography.number-display}"
-    rounded: "{rounded.card}"
-    padding: 24px
-  card-loss:
-    backgroundColor: "{colors.cinnamon-tint}"
-    textColor: "{colors.cinnamon}"
+    rounded: "{rounded.2xl}"
+    padding: 20px
+  net-loss:
+    backgroundColor: "{colors.loss-surface}"
+    textColor: "{colors.loss}"
     typography: "{typography.number-display}"
-    rounded: "{rounded.card}"
-    padding: 24px
+    rounded: "{rounded.2xl}"
+    padding: 20px
   sheet-row:
     backgroundColor: "{colors.card}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.foreground}"
     typography: "{typography.title-md}"
-    rounded: "{rounded.card}"
-    padding: 16px
-  table-header:
-    textColor: "{colors.muted}"
+    rounded: "{rounded.2xl}"
+    padding: 20px
+  table-head:
+    textColor: "{colors.muted-foreground}"
     typography: "{typography.body-sm}"
+  table-row-hover:
+    backgroundColor: "{colors.accent}"
   table-row-linked:
-    backgroundColor: "{colors.razz-tint}"
+    backgroundColor: "{colors.linked}"
+  alert-dialog:
+    backgroundColor: "{colors.popover}"
+    textColor: "{colors.popover-foreground}"
+    rounded: "{rounded.2xl}"
+    padding: 24px
   alert:
-    backgroundColor: "{colors.cinnamon-tint}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.loss-surface}"
+    textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
-    rounded: "{rounded.field}"
+    rounded: "{rounded.lg}"
     padding: 12px
-  empty-state:
-    backgroundColor: transparent
-    textColor: "{colors.ink-2}"
-    rounded: "{rounded.card}"
-    padding: 32px
-  nav-link:
-    textColor: "{colors.ink-2}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.full}"
-    padding: 8px
-  nav-link-active:
-    backgroundColor: "{colors.gum}"
-    textColor: "{colors.ink}"
-  link:
-    textColor: "{colors.razz-ink}"
 ---
 
 # Gumrai (กำไร)
 
-`DESIGN.html` shows this system working: open it in a browser.
+`DESIGN.html` shows this system working: open it in a browser. The components are shadcn/ui (Radix base), restyled to this system, in `src/components/ui`.
 
 ## Overview
 
@@ -300,29 +335,33 @@ The UI is in Thai only and light only. The look derives from Hallmark's Hum them
 
 ## Colors
 
-The palette is a pack of gum flavours on a pink-leaning cream. Each flavour owns one job, and the jobs never swap.
+Colours come in two layers. The **palette** is a pack of gum flavours on a pink-leaning cream. The **roles** are shadcn/ui's names plus a few of Gumrai's own, and each one points at a palette colour. Components only ever use roles.
 
-- **Bubblegum (`gum`, `primary`):** action and brand. The primary push button fill (with `ink` text), the selected nav item, the focus ring (`gum-ink`), the unsaved dot, the bubble. `gum-deep` is the button's pressed edge. `gum-ink` is the deep pink used as `accent` wherever pink must be text or carry white text.
-- **Spearmint (`mint`, `secondary`):** money left over. `mint-ink` is `profit`. `mint` is the saved state and the "keep this" button.
-- **Blue raspberry (`razz`, `tertiary`):** connection. Links (`razz-ink`) and Linked Lines that follow a Cost Item (`razz-tint`).
-- **Cinnamon (`cinnamon`, `error`):** loss, errors and delete. It sits 44° of hue and 26% of lightness away from bubblegum, so pink never reads as a loss.
-- **Grape (`grape`):** the star-burst when a save lands. Nothing else.
-- **Lemon (`lemon`):** a highlighter stroke under the one figure that matters. At most one per screen.
-- **Wrapper neutrals:** `card`, `paper`, `paper-2`, `paper-3`, `line-2`, `line`, `muted`, `ink-2`, `ink`. All lean slightly pink (hue 340–345). There is no pure white and no pure black.
-- **Data:** `category-0`…`category-7` colour Cost Categories by slot. The seller never picks them. `category-none` is ไม่มีหมวด. `commission` and `commission-vat` are the platform's share in the split chart. Category hues stay clear of gum (330–10°), cinnamon (20–45°) and mint (135–170°).
+The flavours, and the job each one owns:
+
+- **Bubblegum (`gum`):** action and brand. It is `primary` (the push button, with `ink` text), and its edge is `gum-deep` (`primary-edge`). `gum-tint` is `accent`, the hover and highlight surface. `gum-ink` is `ring` (focus) and `unsaved`.
+- **Spearmint (`mint`):** money left over. `mint-ink` is `profit`, `mint-tint` is `profit-surface`, and `mint` is `keep`, the "keep this" button.
+- **Blue raspberry (`razz`):** connection. `razz-ink` is `link` and `linked-foreground`, and `razz-tint` is `linked`, the Linked Line surface.
+- **Cinnamon (`cinnamon`):** loss, errors and delete. It is `loss` and `destructive`, and `cinnamon-tint` is `loss-surface`. It sits 44° of hue and 26% of lightness away from bubblegum, so pink never reads as a loss.
+- **Grape (`grape`, `pop`):** the star-burst when a save lands. Nothing else.
+- **Lemon (`lemon`, `highlight`):** a highlighter stroke under the one figure that matters. At most one per screen.
+
+The neutrals run `paper-0` (cards) · `paper` (`background`) · `paper-2` (`muted`, `secondary`) · `paper-3` · `line-2` · `line` (`border`, `input`) · `ink-3` (`muted-foreground`) · `ink-2` · `ink` (`foreground`). All lean slightly pink (hue 340–345). There is no pure white and no pure black.
+
+Data colours: `category-0`…`category-7` colour Cost Categories by slot, and the seller never picks them. `category-none` is ไม่มีหมวด. `chart-1`…`chart-5` point at the first five slots for any shadcn chart. `commission` and `commission-vat` are the platform's share in the split chart. Category hues stay clear of gum (330–10°), cinnamon (20–45°) and mint (135–170°).
 
 ## Typography
 
-Two Thai faces, both round. **Mitr** (soft corners, loopless Thai) carries headings, big figures and buttons. **IBM Plex Sans Thai Looped** carries everything else. It has the looped Thai most sellers learned at school and tabular figures for tables. Both load through `next/font` in `src/app/layout.tsx`, and there is no third family.
+Two Thai faces, both round. **Mitr** (`font-heading`: soft corners, loopless Thai) carries headings, card titles, big figures and buttons. **IBM Plex Sans Thai Looped** (`font-sans`, the default) carries everything else. It has the looped Thai most sellers learned at school and tabular figures for tables. Both load through `next/font` in `src/app/layout.tsx`, and there is no third family.
 
 - **Headlines:** Mitr 500. Sentence case.
 - **Numbers:** `number-display` (Mitr 600, tabular) for the one big figure per screen, usually the Net Profit.
-- **Body and labels:** Plex Looped 400 at 16px. Labels are 14px in `ink-2` or `muted`.
-- **Thai rules:** heading line-height of at least 1.35 and body line-height around 1.7, or the tone marks clip. Letter-spacing stays at 0. Thai has no capitals, so there are no uppercase labels, and no italics in either language.
+- **Body and labels:** Plex Looped 400 at 16px. Labels are 14px in `muted-foreground`.
+- **Thai rules:** heading line-height of at least 1.35 and body line-height around 1.7, or the tone marks clip. Never use `leading-none` on Thai text. Letter-spacing stays at 0. Thai has no capitals, so there are no uppercase labels, and no italics in either language.
 
 ## Layout
 
-Single-column pages up to `content-max` (896px), centred, with a 16px gutter on phones. Spacing follows a 4px scale (`3xs` 4px through `3xl` 96px). Related fields sit together in one card with 24px padding. Cards stack with 24px between them. Tables scroll sideways inside their card on small screens, but the page itself never scrolls sideways.
+Single-column pages up to `content-max` (768px), centred, with a 16px gutter on phones. The sheet editor is wider (`editor-max`, 1024px) so its line table fits. Spacing follows a 4px scale (`3xs` 4px through `3xl` 96px). Related fields sit together in one card with 24px padding. Cards stack with 24px between them. Tables scroll sideways inside their card on small screens, but the page itself never scrolls sideways.
 
 Every screen must work at 320, 375, 414 and 768px. A form grid collapses to one column on phones. Buttons and nav links never wrap onto two lines.
 
@@ -330,11 +369,11 @@ Every screen must work at 320, 375, 414 and 768px. A form grid collapses to one 
 
 Chewy, not glossy. Depth comes from two quiet shadows and from tinted surfaces.
 
-- `shadow-card`: a 1px contact shadow plus a soft 30px ambient shadow, both in `ink` at low opacity. Used by cards, sheet rows and the cost table.
-- `shadow-lift`: a deeper version for a pressable card on hover.
-- `shadow-push`: the push button's solid `gum-deep` edge (4px, full width, never a negative spread) plus a soft pink cast.
-- Money cards, states and alerts sit on a tint (`mint-tint`, `cinnamon-tint`) with no shadow.
-- No glass, blur, glow or neon.
+- `shadow-card`: a 1px contact shadow plus a soft 30px ambient shadow, both in `ink` at low opacity. Cards, sheet rows, secondary buttons.
+- `shadow-lift`: a deeper version for a pressable card on hover, dialogs and select menus.
+- The push button's solid edge: `0 4px 0 0 primary-edge` (full width, never a negative spread). It grows to 6px on hover and shrinks to 1px on press.
+- Money cards and alerts sit on a tint (`profit-surface`, `loss-surface`) with no shadow. An empty state is a 2px dashed `border` with no fill.
+- No glass, blur, glow or neon. The dialog overlay is a plain `foreground` wash at 20%, with no blur.
 
 The shadow values live in `src/styles/presets/bubblegum.css`.
 
@@ -342,38 +381,47 @@ The shadow values live in `src/styles/presets/bubblegum.css`.
 
 Everything is round, and nothing is square.
 
-- Cards, sections and sheet rows: `rounded.card` (20px).
-- Inputs and alerts: `rounded.field` (12px).
-- Buttons, chips, nav links, category dots: `rounded.full`.
-- Dividers are dashed 1.5px hairlines in `line`. An empty state uses a 2px dashed `line` border.
+- Cards, sheet rows, dialogs and money cards: `rounded-2xl` (20px).
+- Select menus: `rounded-xl` (16px).
+- Inputs, select triggers, alerts and menu items: `rounded-lg` (12px).
+- Buttons, badges and category dots: `rounded-full`.
+- Table rows and card footers are divided by dashed hairlines in `border`.
 
 ## Components
 
-### Buttons
+All of them are shadcn/ui components in `src/components/ui`, restyled to this system. Add new ones with `bunx shadcn@<version> add <name>` (pin a CLI version that is at least 7 days old, per `bunfig.toml`), then restyle them to these tokens before use.
 
-- `button-primary`: the pink push button for the main action. There is one per screen. Hover lifts it 2px and its edge grows. Pressing pushes it down 3px and its edge shrinks, so the press itself is the feedback. There is no scaling.
-- Every button has eight states: default, hover, focus-visible (a 3px `focus` ring at a 4px offset, shown instantly), active, disabled, loading (spinner plus กำลังบันทึก), error (`button-primary-error`, บันทึกไม่ได้ ลองอีกครั้ง) and success (`button-primary-success`, บันทึกแล้ว).
-- `button-keep`: a mint push for "keep this" (บันทึกเข้าลิสต์ต้นทุน). `button-soft` and `button-outline` are for everything else. `button-danger` (ลบ) is a cinnamon outline, never a filled button.
+### Button
 
-### Inputs
+- `default`: the pink push button for the main action. There is one per screen. Hover lifts it 2px and its edge grows. Pressing pushes it down 3px and its edge shrinks, so the press itself is the feedback. There is no scaling.
+- `keep`: a mint push for "keep this" (ลิงก์กับรายการนี้แทน, บันทึกเข้าลิสต์ต้นทุน).
+- `secondary` (card plus shadow), `outline` (hairline that turns pink) and `ghost` are for everything else. `link` is blue raspberry text.
+- `destructive` (ลบ) is a cinnamon outline, never a filled button, and always goes through `ConfirmAction` (an `AlertDialog`) before anything is deleted.
+- Sizes: `default` 44px, `sm` 36px, `xs` 28px (inline table actions). Every button has default, hover, focus-visible (a 3px `ring` with an offset, shown instantly), active, disabled (50% opacity) and pending (its label changes to กำลัง…) states.
 
-`input-field` is a `card` surface with a hairline `line` ring. Hover turns the ring pink. Focus draws a 2px `gum-deep` ring with a `gum-tint` halo. `input-field-error` tints the field cinnamon and puts one line under it saying what to do. Numbers are right-aligned with the unit as a muted suffix (`฿`, `%`, `฿/g`). The label sits above the field in `input-label`.
+### Input, Select, Checkbox
 
-### Chips and dots
+`Input` and `Select` share one look: a `card` surface, a hairline `input` border that turns pink on hover, and on focus a `ring` border with an `accent` halo. An invalid field (`aria-invalid`) fills with `loss-surface`, and one line under it in `loss` says what to do. Numbers are right-aligned with tabular figures, and the unit sits in the label (ราคาขายต่อแก้ว (฿)).
 
-`chip-linked` (ลิงก์) marks a Linked Line. `chip-manual` (พิมพ์เอง) is a hairline outline. `chip-category` is a category name with its `category-dot`.
+Dropdowns are the shadcn `Select`, through `OptionSelect` (`src/components/option-select.tsx`). It shows category dots, maps ไม่มีหมวด's empty value safely, and posts its value with the form. Its menu is a `popover` card with `accent` highlighted items and a `ring`-coloured check. Never use a bare `<select>`, because its open menu can't be themed.
 
-### Cards and money
+`Field` (`src/components/field.tsx`) puts a `muted-foreground` label above any control. `Checkbox` is 20px with a `primary` fill when checked.
 
-`card-profit` and `card-loss` show the Net Profit: a label (กำไรสุทธิต่อแก้ว) above the `number-display` figure. `sheet-row` cards list the seller's sheets with the per-unit profit or loss on the right, and lift on hover.
+### Badge and dots
 
-### Tables
+`Badge` variant `linked` (ลิงก์ลิสต์) marks a Linked Line, and `manual` (พิมพ์เอง) is a hairline outline. A `CategoryDot` is a 10px gumball in the category's slot colour.
 
-The cost table sits inside a `card`. Its headers use `table-header`. Money and quantities are right-aligned with tabular figures. Linked Lines are tinted `table-row-linked`. The total row has a solid `line` rule above it.
+### Card and money
+
+`Card` is the container for every section: `CardTitle` is Mitr. A first-run card is dashed with no fill, and says what's missing above the one form to fill. The Net Profit is a `profit-surface` (or `loss-surface`) panel: a label (กำไรสุทธิต่อแก้ว or ขาดทุนต่อแก้ว) above the `number-display` figure and its share of the price. Sheet rows are cards that lift on hover.
+
+### Table
+
+`Table` holds the Cost List and a sheet's cost lines. Headers are `muted-foreground`, rows are divided by dashed hairlines, and hovering a row tints it `accent`. A whole-row link stretches the name link over the row. Money and quantities are right-aligned with tabular figures. Linked Lines are tinted `linked`.
 
 ### Feedback
 
-`empty-state` says what's missing and offers the one next step (ยังไม่มีชีตต้นทุน ตั้งชื่อสิ่งที่ขายเพื่อเริ่มคิดต้นทุนและกำไร). `alert` says what happened and why, in one line. There are no toasts: the button's own success state plus the grape star-burst are the confirmation.
+An error alert is one line of `foreground` text on `loss-surface`, saying what happened and why. There are no toasts: a button's own pending state, and the grape star-burst on save, are the confirmation.
 
 ### The bubble
 
@@ -384,32 +432,37 @@ The one character is a gum bubble covering the circle of กำ in the wordmark.
 - Do use one pink push button per screen, for the main action.
 - Do give a loss three signals: the word ขาดทุน, a true minus sign (−), and `loss`. Colour alone never carries meaning.
 - Do name the Sale Unit beside every per-sale figure: กำไรต่อแก้ว, never just กำไร.
-- Do show money to two decimals with `Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`, with the baht sign after the number (`13.95 ฿`, `4 ฿/g`).
+- Do show money to two decimals with `Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`, with the baht sign after the number (`13.95 ฿`, `4 ฿/g`). A Unit Cost keeps the precision the seller typed.
 - Do right-align numbers and use tabular figures wherever numbers stack.
-- Do keep WCAG AA contrast. White text goes only on `accent` (deep pink), never on `gum`. Small text on `cinnamon-tint` is `ink`; cinnamon text on a tint is for large figures only.
-- Don't put pink on a number. Money is mint or cinnamon.
+- Do keep WCAG AA contrast. `primary` always carries `primary-foreground` (ink) text. Small text on `loss-surface` is `foreground`; `loss` text on a tint is for large figures only.
+- Do use role utilities (`bg-primary`, `text-muted-foreground`, `text-profit`) in components, never palette ones (`bg-gum`).
+- Don't put pink on a number. Money is `profit` or `loss`.
 - Don't use gradients between flavours, pure white paper or pure black ink.
 - Don't use square corners, glass, blur or glow.
-- Don't use italics, uppercase or letter-spacing on Thai, or a heading line-height under 1.35.
+- Don't use italics, uppercase, `leading-none` or letter-spacing on Thai, or a heading line-height under 1.35.
+- Don't use `window.confirm` for a delete; use `ConfirmAction`.
 - Don't show an invented figure. Empty data reads ยังไม่มี…
-- Don't use emoji as icons or celebration toasts.
+- Don't use emoji as icons, or celebration toasts.
 - Don't write a colour anywhere except the preset and this file's front matter.
 
 ## Motion
 
-Plain CSS, no motion library. The app moves in three ways: press, chew, pop.
+Plain CSS plus `tw-animate-css` for shadcn's open and close animations. There is no motion library. The app moves in three ways: press, chew, pop.
 
-- Buttons use `ease-press` (`cubic-bezier(0.2, 0.7, 0.3, 1)`): 140ms on hover, 70ms on press.
-- Pressable cards lift 3–4px with `ease-spring` (`cubic-bezier(0.34, 1.56, 0.64, 1)`) over 220ms.
+- Buttons use `ease-press` (`cubic-bezier(0.2, 0.7, 0.3, 1)`): 150ms on hover, 75ms on press.
+- Pressable cards lift 2px with `ease-spring` (`cubic-bezier(0.34, 1.56, 0.64, 1)`) over 200ms.
+- Dialogs and menus fade and zoom in over 100ms.
 - The bubble chews from 1 to 1.08 every 4s. A save fires one grape star-burst in 420ms and never loops.
-- Everything else (focus, chips, nav) changes colour only.
+- Everything else (focus, badges, rows) changes colour only.
 - With `prefers-reduced-motion: reduce`, nothing moves position, the bubble holds still, the star-burst is off, and colour changes take 120ms or less.
 
 ## Voice
 
-Thai, warm and short: a friend who's good with numbers. Use the words in `CONTEXT.md` exactly (รายการต้นทุน, not สินค้า; กำไรสุทธิ, not มาร์จิ้น). Buttons are plain verbs: บันทึก, สร้างชีต, ทำสำเนา. Errors say what happened and what to do: ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน. The fun comes from the colour and the bubble, never from jokes.
+Thai, warm and short: a friend who's good with numbers. Use the words in `CONTEXT.md` exactly (รายการต้นทุน, not สินค้า; กำไรสุทธิ, not มาร์จิ้น). Buttons are plain verbs: บันทึก, สร้าง, ทำสำเนา. Errors say what happened and what to do: ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน. The fun comes from the colour and the bubble, never from jokes.
 
 ## Implementation
 
-- The front matter mirrors `src/styles/presets/bubblegum.css`, token for token, and `src/styles/globals.css` imports that preset. Change a value in both places, then update the matching swatch in `DESIGN.html`.
-- Components use the Tailwind utilities the preset generates (`bg-paper`, `text-profit`, `rounded-card`, `shadow-card`, `font-display`, `ease-press`), or `var(--color-…)` where a utility can't reach, as in chart code.
+- `src/styles/presets/bubblegum.css` holds every token, palette then roles, in Tailwind v4 `@theme` blocks. `src/styles/globals.css` imports Tailwind, `tw-animate-css`, `shadcn/tailwind.css` and the preset, and keeps shadcn's `dark:` classes behind a `.dark` class the app never sets.
+- This file's `colors` front matter is generated from the preset (palette, then roles, as `{colors.…}` references). Change a value in the preset, regenerate the block, then update the matching swatch in `DESIGN.html`.
+- Components use the role utilities (`bg-primary`, `text-muted-foreground`, `rounded-2xl`, `shadow-card`, `font-heading`, `ease-press`), or `var(--color-…)` where a utility can't reach, as in chart code.
+- Class merging uses `cn` (shadcn's package), re-exported from `src/lib/utils.ts`.

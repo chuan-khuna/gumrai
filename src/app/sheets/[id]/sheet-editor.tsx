@@ -5,6 +5,20 @@ import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'r
 import { CategoryDot } from '@/app/cost-list/category-dot'
 import { categoryLooks, CostRankingChart, PriceSplitChart } from '@/app/sheets/[id]/sheet-charts'
 import { saveCostSheetAction, saveManualLineToCostListAction } from '@/app/sheets/actions'
+import { Field } from '@/components/field'
+import { OptionSelect } from '@/components/option-select'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { linkLine, unlinkLine } from '@/lib/cost-lines'
 import { computeSheet, type Share } from '@/lib/sheet'
@@ -211,14 +225,13 @@ export function SheetEditor({
   const netProfit = result.netProfit
   const isLoss = netProfit < 0
   const profitSegment = result.priceSplit.find((s) => s.kind === (isLoss ? 'loss' : 'profit'))
-  const field = 'mt-1 w-full rounded border border-line bg-card px-3 py-2'
-  const cell = 'w-full rounded border border-line bg-card px-2 py-1'
+  const cell = 'h-9 px-2'
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12">
+    <main className="mx-auto max-w-5xl px-4 py-12">
       <Link
         href="/sheets"
-        className="text-sm text-muted"
+        className="text-sm text-muted-foreground hover:text-foreground"
         onNavigate={(event) => {
           if (dirty && !window.confirm(LEAVE_WARNING)) event.preventDefault()
         }}
@@ -227,211 +240,205 @@ export function SheetEditor({
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-semibold">{draft.name.trim() || 'ชีตต้นทุน'}</h1>
-        {dirty && <span className="text-sm text-loss">● ยังไม่บันทึก</span>}
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !dirty}
-          className="ml-auto rounded bg-accent px-4 py-2 font-medium text-card disabled:opacity-60"
-        >
+        <h1 className="text-3xl">{draft.name.trim() || 'ชีตต้นทุน'}</h1>
+        {dirty && (
+          <span className="flex items-center gap-1.5 text-sm text-unsaved">
+            <span aria-hidden className="size-2 rounded-full bg-primary-edge" />
+            ยังไม่บันทึก
+          </span>
+        )}
+        <Button type="button" onClick={save} disabled={saving || !dirty} className="ml-auto">
           {saving ? 'กำลังบันทึก…' : 'บันทึก'}
-        </button>
+        </Button>
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-loss">
+        <p role="alert" className="mt-3 rounded-lg bg-loss-surface px-4 py-3 text-sm text-foreground">
           {error}
         </p>
       )}
 
-      <section className="mt-6 grid gap-3 rounded border border-line bg-card p-4 sm:grid-cols-5">
-        <label className="block sm:col-span-2">
-          <span className="text-sm text-muted">ชื่อชีต</span>
-          <input value={draft.name} onChange={(e) => set({ name: e.target.value })} className={field} />
-        </label>
-        <label className="block">
-          <span className="text-sm text-muted">หน่วยขาย</span>
-          <input
-            value={draft.saleUnit}
-            onChange={(e) => set({ saleUnit: e.target.value })}
-            placeholder="แก้ว, กล่อง"
-            className={field}
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm text-muted">ราคาขายต่อ{unit} (฿)</span>
-          <input
-            value={draft.sellingPrice}
-            onChange={(e) => set({ sellingPrice: e.target.value })}
-            inputMode="decimal"
-            className={field}
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-sm text-muted">GP (%)</span>
-            <input
-              value={draft.gpPercent}
-              onChange={(e) => set({ gpPercent: e.target.value })}
-              inputMode="decimal"
-              className={field}
+      <Card className="mt-6">
+        <CardContent className="grid gap-4 sm:grid-cols-5">
+          <Field label="ชื่อชีต" className="sm:col-span-2">
+            <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} />
+          </Field>
+          <Field label="หน่วยขาย">
+            <Input
+              value={draft.saleUnit}
+              onChange={(e) => set({ saleUnit: e.target.value })}
+              placeholder="แก้ว, กล่อง"
             />
-          </label>
-          <label className="block">
-            <span className="text-sm text-muted">VAT (%)</span>
-            <input
-              value={draft.vatPercent}
-              onChange={(e) => set({ vatPercent: e.target.value })}
+          </Field>
+          <Field label={`ราคาขายต่อ${unit} (฿)`}>
+            <Input
+              value={draft.sellingPrice}
+              onChange={(e) => set({ sellingPrice: e.target.value })}
               inputMode="decimal"
-              className={field}
+              className="text-right tabular-nums"
             />
-          </label>
-        </div>
-      </section>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="GP (%)">
+              <Input
+                value={draft.gpPercent}
+                onChange={(e) => set({ gpPercent: e.target.value })}
+                inputMode="decimal"
+                className="text-right tabular-nums"
+              />
+            </Field>
+            <Field label="VAT (%)">
+              <Input
+                value={draft.vatPercent}
+                onChange={(e) => set({ vatPercent: e.target.value })}
+                inputMode="decimal"
+                className="text-right tabular-nums"
+              />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
 
-      <section className="mt-6 rounded border border-line bg-card p-4">
-        <h2 className="mb-3 font-medium">รายการต้นทุน</h2>
-        {draft.lines.length === 0 ? (
-          <p className="text-muted">ยังไม่มีรายการ</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[54rem] text-left">
-              <thead className="text-sm text-muted">
-                <tr>
-                  <th className="pb-2 font-normal">ที่มา</th>
-                  <th className="pb-2 font-normal">ชื่อ</th>
-                  <th className="pb-2 font-normal">ต้นทุนต่อหน่วย (฿)</th>
-                  <th className="pb-2 font-normal">หน่วย</th>
-                  <th className="pb-2 font-normal">หมวด</th>
-                  <th className="pb-2 font-normal">ใช้ต่อ{unit}</th>
-                  <th className="pb-2 text-right font-normal">ต้นทุนต่อ{unit}</th>
-                  <th className="pb-2 text-right font-normal">สัดส่วน</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>รายการต้นทุน</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {draft.lines.length === 0 ? (
+            <p className="text-muted-foreground">ยังไม่มีรายการ</p>
+          ) : (
+            <Table className="min-w-[54rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ที่มา</TableHead>
+                  <TableHead>ชื่อ</TableHead>
+                  <TableHead>ต้นทุนต่อหน่วย (฿)</TableHead>
+                  <TableHead>หน่วย</TableHead>
+                  <TableHead>หมวด</TableHead>
+                  <TableHead>ใช้ต่อ{unit}</TableHead>
+                  <TableHead className="text-right">ต้นทุนต่อ{unit}</TableHead>
+                  <TableHead className="text-right">สัดส่วน</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {draft.lines.map((line, index) => {
                   const costed = result.lines[index]
                   const linked = line.kind === 'linked'
                   const notice = lineNotices[line.key]
                   return (
                     <Fragment key={line.key}>
-                      <tr className={linked ? 'bg-accent/5 align-middle' : 'align-middle'}>
-                        <td className="py-1 pr-2">
+                      <TableRow className={linked ? 'bg-linked/40 hover:bg-linked/60' : undefined}>
+                        <TableCell>
                           {linked ? (
-                            <span className="whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
-                              ลิงก์ลิสต์
-                            </span>
+                            <Badge variant="linked">ลิงก์ลิสต์</Badge>
                           ) : (
-                            <span className="whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs text-muted">
-                              พิมพ์เอง
-                            </span>
+                            <Badge variant="manual">พิมพ์เอง</Badge>
                           )}
-                        </td>
+                        </TableCell>
                         {linked ? (
                           <>
-                            <td className="py-1 pr-2 pl-2">{line.name}</td>
-                            <td className="py-1 pr-2 pl-2 tabular-nums">{line.unitCost}</td>
-                            <td className="py-1 pr-2 pl-2">{line.unit}</td>
+                            <TableCell>{line.name}</TableCell>
+                            <TableCell className="tabular-nums">{line.unitCost}</TableCell>
+                            <TableCell>{line.unit}</TableCell>
                             {/* A Linked Line's Cost Category is its Cost Item's. */}
-                            <td className="py-1 pr-2 pl-2">
-                              <span className="flex items-center gap-2 whitespace-nowrap">
+                            <TableCell>
+                              <span className="flex items-center gap-2">
                                 <CategoryDot colourSlot={look(line.categoryId).colourSlot} />
                                 {look(line.categoryId).name}
                               </span>
-                            </td>
+                            </TableCell>
                           </>
                         ) : (
                           <>
-                            <td className="py-1 pr-2">
-                              <input
+                            <TableCell>
+                              <Input
                                 aria-label="ชื่อ"
                                 value={line.name}
                                 onChange={(e) => setLine(line.key, { name: e.target.value })}
                                 className={cell}
                               />
-                            </td>
-                            <td className="py-1 pr-2">
-                              <input
+                            </TableCell>
+                            <TableCell>
+                              <Input
                                 aria-label="ต้นทุนต่อหน่วย"
                                 value={line.unitCost}
                                 onChange={(e) => setLine(line.key, { unitCost: e.target.value })}
                                 inputMode="decimal"
-                                className={cell}
+                                className={`${cell} text-right tabular-nums`}
                               />
-                            </td>
-                            <td className="py-1 pr-2">
-                              <input
+                            </TableCell>
+                            <TableCell>
+                              <Input
                                 aria-label="หน่วย"
                                 value={line.unit}
                                 onChange={(e) => setLine(line.key, { unit: e.target.value })}
                                 placeholder="g, ml"
                                 className={cell}
                               />
-                            </td>
-                            <td className="py-1 pr-2">
-                              <select
+                            </TableCell>
+                            <TableCell>
+                              <OptionSelect
+                                size="sm"
                                 aria-label="หมวด"
                                 value={line.categoryId ?? ''}
-                                onChange={(e) => setLine(line.key, { categoryId: e.target.value || null })}
-                                className={cell}
-                              >
-                                <option value="">{UNCATEGORISED}</option>
-                                {categories.map((category) => (
-                                  <option key={category.id} value={category.id}>
-                                    {category.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
+                                onValueChange={(value) => setLine(line.key, { categoryId: value || null })}
+                                options={[
+                                  { value: '', label: UNCATEGORISED, dot: null },
+                                  ...categories.map((c) => ({ value: c.id, label: c.name, dot: c.colourSlot })),
+                                ]}
+                                className="w-full"
+                              />
+                            </TableCell>
                           </>
                         )}
-                        <td className="py-1 pr-2">
-                          <input
+                        <TableCell>
+                          <Input
                             aria-label={`ใช้ต่อ${unit}`}
                             value={line.quantityUsed}
                             onChange={(e) => setLine(line.key, { quantityUsed: e.target.value })}
                             inputMode="decimal"
-                            className={cell}
+                            className={`${cell} text-right tabular-nums`}
                           />
-                        </td>
-                        <td className="py-1 pr-2 text-right tabular-nums">{baht.format(costed.cost)}</td>
-                        <td className="py-1 pr-2 text-right tabular-nums text-muted">
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{baht.format(costed.cost)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">
                           {formatShare(costed.shareOfCost)}
-                        </td>
-                        <td className="whitespace-nowrap py-1 text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           {linked ? (
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="xs"
                               onClick={() => unlink(line.key)}
                               title="เปลี่ยนเป็นรายการพิมพ์เอง โดยเก็บค่าปัจจุบันไว้"
-                              className="mr-3 text-sm text-muted"
                             >
                               เลิกลิงก์
-                            </button>
+                            </Button>
                           ) : (
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="xs"
                               onClick={() => saveLineToList(line)}
                               disabled={savingLineKey !== null}
                               title="สร้างรายการในลิสต์ต้นทุนจากบรรทัดนี้ แล้วลิงก์บรรทัดนี้กับรายการนั้น"
-                              className="mr-3 text-sm text-accent disabled:opacity-60"
+                              className="text-link"
                             >
                               {savingLineKey === line.key ? 'กำลังบันทึก…' : 'บันทึกเข้าลิสต์'}
-                            </button>
+                            </Button>
                           )}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="xs"
                             onClick={() => removeLine(line.key)}
-                            className="text-sm text-loss"
+                            className="text-destructive hover:bg-loss-surface"
                           >
                             ลบ
-                          </button>
-                        </td>
-                      </tr>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                       {notice && (
-                        <tr>
-                          <td colSpan={9} className="pb-2">
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={9} className="whitespace-normal pb-3">
                             {notice.kind === 'error' ? (
                               <p role="alert" className="text-sm text-loss">
                                 {notice.error}
@@ -439,7 +446,7 @@ export function SheetEditor({
                             ) : (
                               <div
                                 role="alert"
-                                className="flex flex-wrap items-center gap-3 rounded border border-line px-3 py-2 text-sm"
+                                className="flex flex-wrap items-center gap-3 rounded-lg bg-linked px-4 py-3 text-sm"
                               >
                                 <span>
                                   มี &ldquo;{notice.item.name}&rdquo; ในลิสต์ต้นทุนอยู่แล้ว:{' '}
@@ -448,83 +455,94 @@ export function SheetEditor({
                                   </span>
                                   , หมวด {look(notice.item.categoryId).name}
                                 </span>
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="keep"
+                                  size="sm"
                                   onClick={() => linkTo(line.key, notice.item)}
-                                  className="rounded bg-accent px-3 py-1 font-medium text-card"
                                 >
                                   ลิงก์กับรายการนี้แทน
-                                </button>
-                                <button
-                                  type="button"
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setLineNotice(line.key, null)}
-                                  className="text-muted"
                                 >
                                   ไม่ต้อง
-                                </button>
+                                </Button>
                               </div>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )}
                     </Fragment>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <AddLine costItems={costItems} onPick={addLinkedLine} onAddManual={addManualLine} />
-      </section>
+              </TableBody>
+            </Table>
+          )}
+          <AddLine costItems={costItems} onPick={addLinkedLine} onAddManual={addManualLine} />
+        </CardContent>
+      </Card>
 
-      <section className="mt-6 rounded border border-line bg-card p-4">
-        <h2 className="mb-3 font-medium">ผลลัพธ์ต่อ{unit}</h2>
-        <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 tabular-nums">
-          <Figure label={`ต้นทุนรวมต่อ${unit}`} value={result.totalCost} />
-          <Figure
-            label={`ค่าคอม GP ต่อ${unit}`}
-            value={result.platform.commission}
-            share={result.priceSplit.find((s) => s.kind === 'commission')?.shareOfPrice ?? null}
-          />
-          <Figure
-            label={`VAT ของค่าคอมต่อ${unit}`}
-            value={result.platform.commissionVat}
-            share={result.priceSplit.find((s) => s.kind === 'commissionVat')?.shareOfPrice ?? null}
-          />
-          <Figure label={`เงินที่ได้รับจริงต่อ${unit}`} value={result.platform.netReceipt} />
-          <Figure
-            label={isLoss ? `ขาดทุนต่อ${unit}` : `กำไรต่อ${unit}`}
-            value={Math.abs(netProfit)}
-            share={profitSegment?.shareOfPrice ?? null}
-            tone={isLoss ? 'loss' : 'profit'}
-          />
-        </dl>
-      </section>
+      <div className="mt-6 grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>ผลลัพธ์ต่อ{unit}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 tabular-nums">
+              <Figure label={`ต้นทุนรวมต่อ${unit}`} value={result.totalCost} />
+              <Figure
+                label={`ค่าคอม GP ต่อ${unit}`}
+                value={result.platform.commission}
+                share={result.priceSplit.find((s) => s.kind === 'commission')?.shareOfPrice ?? null}
+              />
+              <Figure
+                label={`VAT ของค่าคอมต่อ${unit}`}
+                value={result.platform.commissionVat}
+                share={result.priceSplit.find((s) => s.kind === 'commissionVat')?.shareOfPrice ?? null}
+              />
+              <Figure label={`เงินที่ได้รับจริงต่อ${unit}`} value={result.platform.netReceipt} />
+            </dl>
+            <NetProfit
+              label={isLoss ? `ขาดทุนต่อ${unit}` : `กำไรสุทธิต่อ${unit}`}
+              value={netProfit}
+              share={profitSegment?.shareOfPrice ?? null}
+            />
+          </CardContent>
+        </Card>
 
-      <section className="mt-6 rounded border border-line bg-card p-4">
-        <h2 className="mb-3 font-medium">ต้นทุนต่อ{unit} แยกตามหมวด</h2>
-        {result.categories.length === 0 ? (
-          <p className="text-muted">ยังไม่มีรายการ</p>
-        ) : (
-          <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 tabular-nums">
-            {result.rankedCategories.map((c) => (
-              <Fragment key={c.categoryId ?? 'none'}>
-                <dt className="flex items-center gap-2">
-                  <CategoryDot colourSlot={look(c.categoryId).colourSlot} />
-                  {look(c.categoryId).name}
-                </dt>
-                <dd className="text-right">{baht.format(c.cost)} ฿</dd>
-                <dd className="text-right text-sm text-muted">{formatShare(c.shareOfCost)}</dd>
-              </Fragment>
-            ))}
-          </dl>
-        )}
-      </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>ต้นทุนต่อ{unit} แยกตามหมวด</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {result.categories.length === 0 ? (
+              <p className="text-muted-foreground">ยังไม่มีรายการ</p>
+            ) : (
+              <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 tabular-nums">
+                {result.rankedCategories.map((c) => (
+                  <Fragment key={c.categoryId ?? 'none'}>
+                    <dt className="flex items-center gap-2">
+                      <CategoryDot colourSlot={look(c.categoryId).colourSlot} />
+                      {look(c.categoryId).name}
+                    </dt>
+                    <dd className="text-right">{baht.format(c.cost)} ฿</dd>
+                    <dd className="text-right text-sm text-muted-foreground">{formatShare(c.shareOfCost)}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-      <section className="mt-6 grid gap-6 rounded border border-line bg-card p-4">
-        <PriceSplitChart result={result} look={look} unit={unit} />
-        <CostRankingChart result={result} look={look} unit={unit} />
-      </section>
+      <Card className="mt-6">
+        <CardContent className="grid gap-8">
+          <PriceSplitChart result={result} look={look} unit={unit} />
+          <CostRankingChart result={result} look={look} unit={unit} />
+        </CardContent>
+      </Card>
     </main>
   )
 }
@@ -553,10 +571,9 @@ function AddLine({
   }
 
   return (
-    <div className="mt-4">
-      <label className="block">
-        <span className="text-sm text-muted">เพิ่มรายการ</span>
-        <input
+    <div className="mt-6">
+      <Field label="เพิ่มรายการ">
+        <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -565,61 +582,71 @@ function AddLine({
             if (matches.length === 1) done(() => onPick(matches[0]))
           }}
           placeholder="ค้นหาในลิสต์ต้นทุน หรือพิมพ์ชื่อใหม่"
-          className="mt-1 w-full rounded border border-line bg-card px-3 py-2"
         />
-      </label>
+      </Field>
       <ul className="mt-2 flex flex-col gap-1">
         {matches.slice(0, MAX_MATCHES).map((item) => (
           <li key={item.id}>
             <button
               type="button"
               onClick={() => done(() => onPick(item))}
-              className="flex w-full items-baseline justify-between rounded border border-line px-3 py-2 text-left hover:bg-accent/5"
+              className="flex w-full items-baseline justify-between rounded-lg px-3 py-2 text-left outline-none transition-colors hover:bg-linked focus-visible:bg-linked focus-visible:ring-3 focus-visible:ring-ring"
             >
               <span>{item.name}</span>
-              <span className="text-sm tabular-nums text-muted">
+              <span className="text-sm tabular-nums text-muted-foreground">
                 {item.unitCost} ฿/{item.unit}
               </span>
             </button>
           </li>
         ))}
         {matches.length > MAX_MATCHES && (
-          <li className="px-3 text-sm text-muted">
+          <li className="px-3 text-sm text-muted-foreground">
             และอีก {matches.length - MAX_MATCHES} รายการ พิมพ์ให้เจาะจงขึ้น
           </li>
         )}
         {search !== '' && matches.length === 0 && (
-          <li className="px-3 text-sm text-muted">ไม่พบในลิสต์ต้นทุน</li>
+          <li className="px-3 text-sm text-muted-foreground">ไม่พบในลิสต์ต้นทุน</li>
         )}
       </ul>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => done(() => onAddManual(query.trim()))}
-        className="mt-2 rounded border border-line px-4 py-2"
+        className="mt-2"
       >
         {search === '' ? '+ เพิ่มรายการพิมพ์เอง' : `+ เพิ่ม "${query.trim()}" เป็นรายการพิมพ์เอง`}
-      </button>
+      </Button>
     </div>
   )
 }
 
-function Figure({
-  label,
-  value,
-  share = null,
-  tone,
-}: {
-  label: string
-  value: number
-  share?: Share
-  tone?: 'profit' | 'loss'
-}) {
-  const colour = tone === 'loss' ? 'text-loss' : tone === 'profit' ? 'text-profit' : ''
+function Figure({ label, value, share = null }: { label: string; value: number; share?: Share }) {
   return (
     <>
-      <dt className={tone ? `font-medium ${colour}` : 'text-muted'}>{label}</dt>
-      <dd className={`text-right ${tone ? `font-semibold ${colour}` : ''}`}>{baht.format(value)} ฿</dd>
-      <dd className="text-right text-sm text-muted">{formatShare(share)}</dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right">{baht.format(value)} ฿</dd>
+      <dd className="text-right text-sm text-muted-foreground">{formatShare(share)}</dd>
     </>
+  )
+}
+
+// The one big figure on the sheet: mint for a profit, cinnamon for a loss. A loss also says
+// ขาดทุน in its label and carries a minus sign, so colour never carries it alone.
+function NetProfit({ label, value, share }: { label: string; value: number; share: Share }) {
+  const isLoss = value < 0
+  return (
+    <div className={`grid gap-1 rounded-2xl p-5 ${isLoss ? 'bg-loss-surface' : 'bg-profit-surface'}`}>
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span
+        className={`font-heading text-5xl leading-tight font-semibold tabular-nums ${isLoss ? 'text-loss' : 'text-profit'}`}
+      >
+        {isLoss ? '−' : ''}
+        {baht.format(Math.abs(value))}
+        <span className="ml-1 text-xl font-medium">฿</span>
+      </span>
+      {share !== null && (
+        <span className="text-sm text-muted-foreground">{formatShare(share)} ของราคาขาย</span>
+      )}
+    </div>
   )
 }

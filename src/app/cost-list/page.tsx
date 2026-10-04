@@ -2,6 +2,19 @@ import Link from 'next/link'
 import { createCostItemAction } from '@/app/cost-list/actions'
 import { CategoryDot } from '@/app/cost-list/category-dot'
 import { CostItemForm } from '@/app/cost-list/cost-item-form'
+import { OptionSelect } from '@/components/option-select'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { listCostCategories, type CostCategory } from '@/server/cost-categories'
 import { listCostItems, type CostItem } from '@/server/cost-items'
@@ -39,107 +52,121 @@ export default async function CostListPage({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/" className="text-sm text-muted">
+      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
         ← กำไร
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold">ลิสต์ต้นทุน</h1>
+      <h1 className="mt-2 text-3xl">ลิสต์ต้นทุน</h1>
 
-      <section className="mt-8 rounded border border-line bg-card p-4">
-        {firstRun ? (
-          <>
-            <h2 className="font-medium">เพิ่มรายการต้นทุนแรก</h2>
-            <p className="mb-3 text-sm text-muted">
+      <Card className={firstRun ? 'mt-8 border-2 border-dashed bg-transparent shadow-none' : 'mt-8'}>
+        <CardHeader>
+          <CardTitle>{firstRun ? 'เพิ่มรายการต้นทุนแรก' : 'เพิ่มรายการต้นทุน'}</CardTitle>
+          {firstRun && (
+            <CardDescription>
               ยังไม่มีรายการต้นทุน เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g
-            </p>
-          </>
-        ) : (
-          <h2 className="mb-3 font-medium">เพิ่มรายการต้นทุน</h2>
-        )}
-        <CostItemForm
-          action={createCostItemAction}
-          initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
-          categories={categories}
-          submitLabel="เพิ่ม"
-        />
-        <Link href="/cost-list/categories" className="mt-3 inline-block text-sm text-accent">
-          จัดการหมวดต้นทุน
-        </Link>
-      </section>
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent>
+          <CostItemForm
+            action={createCostItemAction}
+            initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
+            categories={categories}
+            submitLabel="เพิ่ม"
+          />
+          <Button asChild variant="link" size="sm" className="mt-4">
+            <Link href="/cost-list/categories">จัดการหมวดต้นทุน</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {!firstRun && (
-        <form className="mt-8 flex flex-wrap items-center gap-2" role="search">
-          <input
+        <form className="mt-8 flex flex-wrap items-center gap-3" role="search">
+          <Input
             name="q"
             type="search"
             defaultValue={search}
             placeholder="ค้นหาชื่อ"
             aria-label="ค้นหาชื่อ"
-            className="min-w-0 flex-1 rounded border border-line bg-card px-3 py-2"
+            className="flex-1 basis-48"
           />
-          <select
+          <OptionSelect
             name="category"
-            defaultValue={filter}
             aria-label="หมวด"
-            className="rounded border border-line bg-card px-3 py-2"
-          >
-            <option value="">ทุกหมวด</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-            <option value={NONE}>{UNCATEGORISED}</option>
-          </select>
+            defaultValue={filter}
+            options={[
+              { value: '', label: 'ทุกหมวด' },
+              ...categories.map((c) => ({ value: c.id, label: c.name, dot: c.colourSlot })),
+              { value: NONE, label: UNCATEGORISED, dot: null },
+            ]}
+            className="min-w-40"
+          />
           <label className="flex items-center gap-2 px-1">
-            <input type="checkbox" name="group" value="1" defaultChecked={grouped} />
+            <Checkbox name="group" value="1" defaultChecked={grouped} />
             จัดกลุ่มตามหมวด
           </label>
-          <button type="submit" className="rounded border border-line px-4 py-2">
+          <Button type="submit" variant="secondary">
             ค้นหา
-          </button>
+          </Button>
         </form>
       )}
 
       {firstRun ? null : items.length === 0 ? (
-        <p className="mt-6 text-muted">
+        <p className="mt-6 text-muted-foreground">
           {filter ? 'ไม่พบรายการในหมวดนี้' : `ไม่พบรายการที่ชื่อมี "${search.trim()}"`}
         </p>
       ) : (
         groups.map((g) => (
           <section key={g.category?.id ?? NONE} className="mt-6">
             {grouped && (
-              <h2 className="mb-2 flex items-center gap-2 font-medium">
+              <h2 className="mb-2 flex items-center gap-2 text-lg">
                 <CategoryDot colourSlot={g.category?.colourSlot ?? null} />
                 {g.category?.name ?? UNCATEGORISED}
-                <span className="text-sm font-normal text-muted">{g.items.length} รายการ</span>
+                <span className="font-sans text-sm text-muted-foreground">
+                  {g.items.length} รายการ
+                </span>
               </h2>
             )}
-            <ul className="divide-y divide-line rounded border border-line bg-card">
-              {g.items.map((item) => {
-                const itemCategory = item.categoryId ? categoryOf.get(item.categoryId) : undefined
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={`/cost-list/${item.id}`}
-                      className="flex items-baseline justify-between gap-4 px-4 py-3"
-                    >
-                      <span className="flex items-baseline gap-2">
-                        <CategoryDot colourSlot={itemCategory?.colourSlot ?? null} />
-                        {item.name}
+            <Card className="gap-0 py-2">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">ชื่อ</TableHead>
+                    {!grouped && <TableHead>หมวด</TableHead>}
+                    <TableHead className="pr-6 text-right">ต้นทุนต่อหน่วย</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {g.items.map((item) => {
+                    const itemCategory = item.categoryId ? categoryOf.get(item.categoryId) : undefined
+                    return (
+                      // The name links to the item; its ::after stretches over the whole row.
+                      <TableRow key={item.id} className="relative hover:bg-accent focus-within:bg-accent">
+                        <TableCell className="pl-6 text-base">
+                          <Link
+                            href={`/cost-list/${item.id}`}
+                            className="outline-none after:absolute after:inset-0 focus-visible:underline"
+                          >
+                            {item.name}
+                          </Link>
+                        </TableCell>
                         {!grouped && (
-                          <span className="text-sm text-muted">
-                            {itemCategory?.name ?? UNCATEGORISED}
-                          </span>
+                          <TableCell>
+                            <span className="flex items-center gap-2 text-muted-foreground">
+                              <CategoryDot colourSlot={itemCategory?.colourSlot ?? null} />
+                              {itemCategory?.name ?? UNCATEGORISED}
+                            </span>
+                          </TableCell>
                         )}
-                      </span>
-                      <span className="whitespace-nowrap text-muted">
-                        {item.unitCost} ฿/{item.unit}
-                      </span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+                        <TableCell className="pr-6 text-right text-base tabular-nums">
+                          {item.unitCost}
+                          <span className="ml-1 text-sm text-muted-foreground">฿/{item.unit}</span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
           </section>
         ))
       )}

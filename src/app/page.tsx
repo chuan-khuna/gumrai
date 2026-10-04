@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { getAppStatus } from '@/server/app-status'
 
 // Read on every request, so the page always reflects the database.
@@ -9,19 +11,21 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="text-3xl font-semibold">กำไร</h1>
-      <p className="mt-2 text-muted">คำนวณต้นทุนและกำไรของสิ่งที่คุณขาย</p>
-      <p className="mt-8 rounded border border-line bg-card px-4 py-3">
-        <span className="mr-2 inline-block size-2 rounded-full bg-profit align-middle" />
-        {status}
-      </p>
-      <nav className="mt-6 flex gap-6">
-        <Link href="/cost-list" className="text-accent underline">
-          ลิสต์ต้นทุน
-        </Link>
-        <Link href="/sheets" className="text-accent underline">
-          ชีตต้นทุน
-        </Link>
+      <h1 className="text-5xl font-semibold">กำไร</h1>
+      <p className="mt-2 text-muted-foreground">คำนวณต้นทุนและกำไรของสิ่งที่คุณขาย</p>
+      <Card size="sm" className="mt-8">
+        <CardContent className="flex items-center gap-3">
+          <span className="inline-block size-2.5 shrink-0 rounded-full bg-profit" />
+          {status}
+        </CardContent>
+      </Card>
+      <nav className="mt-8 flex flex-wrap gap-4">
+        <Button asChild>
+          <Link href="/sheets">ชีตต้นทุน</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/cost-list">ลิสต์ต้นทุน</Link>
+        </Button>
       </nav>
     </main>
   )

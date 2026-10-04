@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react'
 import { createCostSheetAction } from '@/app/sheets/actions'
+import { Field } from '@/components/field'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 // Names a new Cost Sheet and opens it.
 export function CreateSheetForm() {
@@ -12,25 +15,20 @@ export function CreateSheetForm() {
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
-      <label className="block min-w-0 flex-1">
-        <span className="text-sm text-muted">ชื่อชีต</span>
-        <input
+      <Field label="ชื่อชีต" className="flex-1 basis-56">
+        <Input
           name="name"
           required
           placeholder="เช่น มัทฉะลาเต้"
           defaultValue={state.name}
-          className="mt-1 w-full rounded border border-line bg-card px-3 py-2"
+          aria-invalid={state.error ? true : undefined}
         />
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-accent px-4 py-2 font-medium text-card disabled:opacity-60"
-      >
-        สร้าง
-      </button>
+      </Field>
+      <Button type="submit" disabled={pending}>
+        {pending ? 'กำลังสร้าง…' : 'สร้าง'}
+      </Button>
       {state.error && (
-        <p role="alert" className="w-full text-loss">
+        <p role="alert" className="w-full text-sm text-loss">
           {state.error}
         </p>
       )}

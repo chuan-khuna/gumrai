@@ -1,21 +1,23 @@
 /* Bubblegum: Gumrai's theme. Hum-derived (Hallmark), bubblegum pink on cream.
-   This is the only place a colour is written down, always in OKLCH. globals.css loads it.
-   Components use the Tailwind utilities these tokens generate (bg-paper, text-ink …).
-   The rules for using them live in DESIGN.md. */
+   The app reads its colours here, always in OKLCH; DESIGN.md mirrors them token for token.
+   Two layers: the palette (paper, ink, the gum flavours), then the roles shadcn/ui and our
+   own components use (background, primary, muted-foreground, profit …), which only point at
+   the palette. Components use role utilities (bg-primary, text-muted-foreground, text-profit),
+   never palette ones. */
 
 @theme {
-  /* Paper and ink. Every neutral leans toward the gum hue: no pure white, no pure black. */
+  /* Palette: paper and ink. Every neutral leans toward the gum hue: no pure white or black. */
+  --color-paper-0: oklch(0.994 0.004 345);
   --color-paper: oklch(0.975 0.012 345);
   --color-paper-2: oklch(0.95 0.02 345);
   --color-paper-3: oklch(0.915 0.03 345);
-  --color-card: oklch(0.994 0.004 345);
-  --color-line: oklch(0.885 0.022 345);
   --color-line-2: oklch(0.925 0.016 345);
-  --color-muted: oklch(0.5 0.03 340);
+  --color-line: oklch(0.885 0.022 345);
+  --color-ink-3: oklch(0.5 0.03 340);
   --color-ink-2: oklch(0.38 0.035 340);
   --color-ink: oklch(0.24 0.035 340);
 
-  /* Flavours. Each owns one job: gum = action, mint = profit, razz = linked,
+  /* Palette: the flavours. Each owns one job: gum = action, mint = profit, razz = linked,
      cinnamon = loss, grape = the save pop, lemon = the one highlighted figure. */
   --color-gum: oklch(0.8 0.12 350);
   --color-gum-deep: oklch(0.64 0.17 354);
@@ -33,23 +35,58 @@
   --color-grape: oklch(0.62 0.17 305);
   --color-lemon: oklch(0.9 0.13 100);
 
-  /* Roles. Accent is the deep gum so white text on it and accent text on paper stay legible;
-     the light bubblegum fill (--color-gum) carries ink text. */
-  --color-accent: var(--color-gum-ink);
+  /* Roles: shadcn/ui's names. */
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-paper-0);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-paper-0);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-gum);
+  --color-primary-foreground: var(--color-ink);
+  --color-primary-edge: var(--color-gum-deep);
+  --color-secondary: var(--color-paper-2);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: var(--color-paper-2);
+  --color-muted-foreground: var(--color-ink-3);
+  --color-accent: var(--color-gum-tint);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: var(--color-cinnamon);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-gum-ink);
+
+  /* Roles: Gumrai's own. */
+  --color-keep: var(--color-mint);
+  --color-keep-edge: var(--color-mint-deep);
   --color-profit: var(--color-mint-ink);
+  --color-profit-surface: var(--color-mint-tint);
   --color-loss: var(--color-cinnamon);
-  --color-focus: var(--color-gum-ink);
+  --color-loss-surface: var(--color-cinnamon-tint);
+  --color-link: var(--color-razz-ink);
+  --color-linked: var(--color-razz-tint);
+  --color-linked-foreground: var(--color-razz-ink);
+  --color-unsaved: var(--color-gum-ink);
+  --color-highlight: var(--color-lemon);
+  --color-pop: var(--color-grape);
 
   /* Type. The variables come from next/font in src/app/layout.tsx. */
   --font-sans: var(--font-plex-looped), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-mitr), var(--font-plex-looped), ui-sans-serif, sans-serif;
+  --font-heading: var(--font-mitr), var(--font-plex-looped), ui-sans-serif, sans-serif;
 
-  /* Shape and depth: round everything, two quiet shadows, nothing glossy. */
-  --radius-card: 20px;
-  --radius-field: 12px;
+  /* Shape: round everything. Fields are rounded-lg, cards rounded-2xl, buttons and chips
+     rounded-full. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
+
+  /* Depth: two quiet shadows, and the push button's solid edge. Nothing glossy. */
   --shadow-card: 0 1px 2px oklch(0.24 0.035 340 / 0.06), 0 14px 30px -18px oklch(0.24 0.035 340 / 0.22);
   --shadow-lift: 0 2px 4px oklch(0.24 0.035 340 / 0.06), 0 22px 40px -20px oklch(0.24 0.035 340 / 0.3);
-  --shadow-push: 0 4px 0 0 var(--color-gum-deep), 0 6px 12px -3px oklch(0.7 0.14 350 / 0.4);
 
   /* Motion: press, chew, pop. */
   --ease-press: cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -72,6 +109,13 @@
   --color-category-7: oklch(0.7 0.1 215);
   /* ไม่มีหมวด */
   --color-category-none: oklch(0.8 0.01 345);
+
+  /* shadcn's chart roles, for any shadcn chart: the first five category slots. */
+  --color-chart-1: var(--color-category-0);
+  --color-chart-2: var(--color-category-1);
+  --color-chart-3: var(--color-category-2);
+  --color-chart-4: var(--color-category-3);
+  --color-chart-5: var(--color-category-4);
 }
 
 /* The platform's parts of the Selling Price split chart: its GP, and the VAT on that GP.

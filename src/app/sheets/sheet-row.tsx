@@ -7,9 +7,10 @@ import {
   duplicateCostSheetAction,
   renameCostSheetAction,
 } from '@/app/sheets/actions'
+import { ConfirmAction } from '@/components/confirm-action'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { CostSheetSummary } from '@/server/cost-sheets'
-
-const button = 'rounded border border-line px-3 py-1 text-sm disabled:opacity-60'
 
 // One Cost Sheet in the list: open it, rename it in place, duplicate it, or delete it after
 // asking.
@@ -17,39 +18,35 @@ export function SheetRow({ sheet }: { sheet: CostSheetSummary }) {
   const [renaming, setRenaming] = useState(false)
 
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-center gap-3 rounded-2xl bg-card px-5 py-4 shadow-card transition-[transform,box-shadow] duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-lift motion-reduce:hover:translate-y-0">
       {renaming ? (
         <RenameForm sheet={sheet} onDone={() => setRenaming(false)} />
       ) : (
         <>
           <Link
             href={`/sheets/${sheet.id}`}
-            className="flex min-w-0 flex-1 items-baseline justify-between gap-4"
+            className="flex min-w-0 flex-1 basis-48 items-baseline justify-between gap-4 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring"
           >
-            <span>{sheet.name}</span>
-            <span className="text-sm text-muted">ต่อ{sheet.saleUnit}</span>
+            <span className="font-heading text-lg">{sheet.name}</span>
+            <span className="text-sm text-muted-foreground">ต่อ{sheet.saleUnit}</span>
           </Link>
-          <button type="button" onClick={() => setRenaming(true)} className={button}>
-            เปลี่ยนชื่อ
-          </button>
-          <form action={duplicateCostSheetAction.bind(null, sheet.id)}>
-            <button type="submit" className={button}>
-              ทำสำเนา
-            </button>
-          </form>
-          <form action={deleteCostSheetAction.bind(null, sheet.id)}>
-            <button
-              type="submit"
-              onClick={(event) => {
-                if (!window.confirm(`ลบชีต "${sheet.name}"? ลบแล้วกู้คืนไม่ได้`)) {
-                  event.preventDefault()
-                }
-              }}
-              className="rounded border border-loss px-3 py-1 text-sm text-loss"
-            >
-              ลบ
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setRenaming(true)}>
+              เปลี่ยนชื่อ
+            </Button>
+            <form action={duplicateCostSheetAction.bind(null, sheet.id)}>
+              <Button type="submit" variant="outline" size="sm">
+                ทำสำเนา
+              </Button>
+            </form>
+            <ConfirmAction
+              action={deleteCostSheetAction.bind(null, sheet.id)}
+              trigger="ลบ"
+              title={`ลบชีต "${sheet.name}"?`}
+              description="ลบแล้วกู้คืนไม่ได้"
+              confirmLabel="ลบชีต"
+            />
+          </div>
         </>
       )}
     </li>
@@ -68,22 +65,23 @@ function RenameForm({ sheet, onDone }: { sheet: CostSheetSummary; onDone: () => 
 
   return (
     <form action={formAction} className="flex flex-1 flex-wrap items-center gap-2">
-      <input
+      <Input
         name="name"
         required
         autoFocus
         aria-label="ชื่อชีต"
         defaultValue={state.name}
-        className="min-w-0 flex-1 rounded border border-line bg-card px-3 py-1"
+        aria-invalid={state.error ? true : undefined}
+        className="h-9 flex-1 basis-48"
       />
-      <button type="submit" disabled={pending} className={button}>
+      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
         บันทึกชื่อ
-      </button>
-      <button type="button" onClick={onDone} className={button}>
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onDone}>
         ยกเลิก
-      </button>
+      </Button>
       {state.error && (
-        <p role="alert" className="w-full text-loss">
+        <p role="alert" className="w-full text-sm text-loss">
           {state.error}
         </p>
       )}

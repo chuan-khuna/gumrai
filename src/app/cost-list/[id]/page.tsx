@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteCostItemAction, updateCostItemAction } from '@/app/cost-list/actions'
 import { CostItemForm, DeleteCostItemButton } from '@/app/cost-list/cost-item-form'
+import { Card, CardContent } from '@/components/ui/card'
 import { listCostCategories } from '@/server/cost-categories'
 import { countSheetsUsingCostItem, getCostItem } from '@/server/cost-items'
 
@@ -16,26 +17,28 @@ export default async function EditCostItemPage({ params }: { params: Promise<{ i
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/cost-list" className="text-sm text-muted">
+      <Link href="/cost-list" className="text-sm text-muted-foreground hover:text-foreground">
         ← ลิสต์ต้นทุน
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold">แก้ไขรายการต้นทุน</h1>
+      <h1 className="mt-2 text-3xl">แก้ไขรายการต้นทุน</h1>
       {/* A changed Unit Cost reaches every one of these sheets (ADR 0002). */}
-      <p className="mt-2 text-muted">ใช้อยู่ใน {sheetCount} ชีต</p>
+      <p className="mt-2 text-muted-foreground">ใช้อยู่ใน {sheetCount} ชีต</p>
 
-      <section className="mt-8 rounded border border-line bg-card p-4">
-        <CostItemForm
-          action={updateCostItemAction.bind(null, item.id)}
-          initial={{
-            name: item.name,
-            unitCost: item.unitCost,
-            unit: item.unit,
-            categoryId: item.categoryId,
-          }}
-          categories={categories}
-          submitLabel="บันทึก"
-        />
-      </section>
+      <Card className="mt-8">
+        <CardContent>
+          <CostItemForm
+            action={updateCostItemAction.bind(null, item.id)}
+            initial={{
+              name: item.name,
+              unitCost: item.unitCost,
+              unit: item.unit,
+              categoryId: item.categoryId,
+            }}
+            categories={categories}
+            submitLabel="บันทึก"
+          />
+        </CardContent>
+      </Card>
 
       <div className="mt-8">
         <DeleteCostItemButton

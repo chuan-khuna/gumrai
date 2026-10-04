@@ -5,6 +5,7 @@ import { scaleBand } from '@tanstack/charts/scales/band'
 import { scaleLinear } from '@tanstack/charts/scales/linear'
 import { Chart } from '@tanstack/react-charts'
 import { useMemo, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { categoryColour, UNCATEGORISED } from '@/lib/category-colours'
 import type { PriceSegment, Share, SheetResult } from '@/lib/sheet'
 import type { CostCategory } from '@/server/cost-categories'
@@ -92,25 +93,27 @@ export function CostRankingChart({
 
   const empty = result.lines.length === 0 || result.totalCost <= 0
   const tab = (value: typeof by, label: string) => (
-    <button
+    <Button
       type="button"
+      size="xs"
+      variant={by === value ? 'secondary' : 'ghost'}
       onClick={() => setBy(value)}
       aria-pressed={by === value}
-      className={`rounded px-3 py-1 text-sm ${by === value ? 'bg-accent text-card' : 'border border-line text-muted'}`}
+      className="aria-pressed:bg-accent aria-pressed:shadow-none"
     >
       {label}
-    </button>
+    </Button>
   )
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h3 className="mr-auto font-medium">ต้นทุนต่อ{unit} จากแพงไปถูก</h3>
+        <h3 className="mr-auto text-lg">ต้นทุนต่อ{unit} จากแพงไปถูก</h3>
         {tab('line', 'ตามรายการ')}
         {tab('category', 'ตามหมวด')}
       </div>
       {empty ? (
-        <p className="text-muted">ยังไม่มีต้นทุนให้จัดอันดับ</p>
+        <p className="text-muted-foreground">ยังไม่มีต้นทุนให้จัดอันดับ</p>
       ) : (
         <Chart
           definition={definition}
@@ -210,9 +213,9 @@ export function PriceSplitChart({
 
   return (
     <div>
-      <h3 className="mb-3 font-medium">ราคาขายต่อ{unit} ไปไหนบ้าง</h3>
+      <h3 className="mb-3 text-lg">ราคาขายต่อ{unit} ไปไหนบ้าง</h3>
       {empty ? (
-        <p className="text-muted">ใส่ราคาขายและรายการต้นทุน แล้วจะเห็นว่าราคาขายไปไหนบ้าง</p>
+        <p className="text-muted-foreground">ใส่ราคาขายและรายการต้นทุน แล้วจะเห็นว่าราคาขายไปไหนบ้าง</p>
       ) : (
         <>
           <Chart
@@ -235,7 +238,7 @@ export function PriceSplitChart({
                 />
                 <span className="mr-auto">{row.label}</span>
                 <span className="tabular-nums">{baht.format(row.amount)} ฿</span>
-                <span className="w-14 text-right tabular-nums text-muted">{formatShare(row.share)}</span>
+                <span className="w-14 text-right tabular-nums text-muted-foreground">{formatShare(row.share)}</span>
               </li>
             ))}
           </ul>
