@@ -11,8 +11,8 @@ import type { PriceSegment, Share, SheetResult } from '@/lib/sheet'
 import type { CostCategory } from '@/server/cost-categories'
 
 // The sheet's two charts, drawn from the calculation module's output (@/lib/sheet) and nothing
-// else: costs ranked dearest first, and where the Selling Price goes. Exact figures are in the
-// tables beside them; the charts only show proportion.
+// else: costs ranked dearest first, and where the Selling Price goes, both in baht. Exact
+// figures are in the tables beside them.
 
 const baht = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const percent = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFractionDigits: 1 })
@@ -66,8 +66,9 @@ export function CostRankingChart({
     const dearest = Math.max(0, ...rows.map((row) => row.cost)) || 1
     return defineChart({
       marks: [
-        barX(rows, { x: 'cost', y: 'key', fill: (row) => row.colour, radius: { end: 3 } }),
+        barX(rows, { key: 'key', x: 'cost', y: 'key', fill: (row) => row.colour }),
         text(rows, {
+          key: 'key',
           x: 'cost',
           y: 'key',
           text: (row) => `${baht.format(row.cost)} ฿`,
@@ -128,6 +129,8 @@ export function CostRankingChart({
 type SplitRow = { key: string; label: string; amount: number; share: number; x1: number; x2: number; colour: string }
 
 const PRICE_ROW = 'ราคาขาย'
+// A thin row above the bar, where the Selling Price line is labelled.
+const LABEL_ROW = 'label'
 
 function segmentLook(
   segment: PriceSegment,
@@ -160,6 +163,10 @@ export function PriceSplitChart({
   // show against it.
   const empty = result.paidOutShare === null || result.lines.length === 0
 
+  // The Selling Price: what is paid out plus the Net Profit (less the loss, when there is one).
+  const price = result.paidOut + result.netProfit
+
+  // Laid end to end in baht along the price; a loss runs on past it.
   const { rows, loss } = useMemo(() => {
     let end = 0
     const rows: SplitRow[] = []
@@ -171,23 +178,24 @@ export function PriceSplitChart({
       if (segment.kind === 'loss') {
         // Not a length of its own: how far everything paid out runs past the price.
         if (segment.amount > 0) {
-          loss = { key, label: name, amount: segment.amount, share, x1: 1, x2: 1 + share, colour }
+          loss = { key, label: name, amount: segment.amount, share, x1: price, x2: price + segment.amount, colour }
         }
         continue
       }
-      rows.push({ key, label: name, amount: segment.amount, share, x1: end, x2: end + share, colour })
-      end += share
+      rows.push({ key, label: name, amount: segment.amount, share, x1: end, x2: end + segment.amount, colour })
+      end += segment.amount
     }
     return { rows, loss }
-  }, [result, look])
+  }, [result, look, price])
 
   const definition = useMemo(() => {
     const drawn = rows.filter((row) => row.amount > 0)
-    const right = Math.max(1, loss?.x2 ?? 1)
+    const right = Math.max(price, loss?.x2 ?? price)
     return defineChart({
       marks: [
-        barX(drawn, { x1: 'x1', x2: 'x2', y: () => PRICE_ROW, fill: (row) => row.colour }),
+        barX(drawn, { key: 'key', x1: 'x1', x2: 'x2', y: () => PRICE_ROW, fill: (row) => row.colour }),
         barX(loss ? [loss] : [], {
+          key: 'key',
           x1: 'x1',
           x2: 'x2',
           y: () => PRICE_ROW,
@@ -196,20 +204,35 @@ export function PriceSplitChart({
           strokeWidth: 2,
           strokeDasharray: '5 3',
         }),
-        // The Selling Price itself: 100%.
-        ruleX([1], { stroke: 'var(--color-ink)', strokeOpacity: 1, strokeWidth: 2 }),
+        // The Selling Price itself: a dashed line through the bar, labelled above it.
+        ruleX([price], {
+          stroke: 'var(--color-foreground)',
+          strokeOpacity: 1,
+          strokeWidth: 2,
+          strokeDasharray: '6 4',
+        }),
+        text([price], {
+          x: (value) => value,
+          y: () => LABEL_ROW,
+          text: (value) => `ราคาขาย ${baht.format(value)} ฿`,
+          anchor: 'end',
+          dx: -6,
+          fontSize: 12,
+          fontWeight: 500,
+          fill: 'var(--color-foreground)',
+        }),
       ],
       scales: {
         x: {
           scale: scaleLinear().domain([0, right]),
           nice: true,
           grid: true,
-          axis: { ticks: { format: (value: number) => percent.format(value) } },
+          axis: { ticks: { format: (value: number) => baht.format(value) } },
         },
-        y: { scale: scaleBand<string>().domain([PRICE_ROW]).padding(0.15), axis: false },
+        y: { scale: scaleBand<string>().domain([LABEL_ROW, PRICE_ROW]).padding(0.1), axis: false },
       },
     })
-  }, [rows, loss])
+  }, [rows, loss, price])
 
   return (
     <div>
@@ -220,12 +243,12 @@ export function PriceSplitChart({
         <>
           <Chart
             definition={definition}
-            height={96}
+            height={140}
             ariaLabel="ราคาขายแบ่งเป็นต้นทุนแต่ละหมวด ค่าคอม GP VAT ของค่าคอม และกำไรสุทธิ"
           />
           {loss && (
             <p className="mt-1 text-sm text-loss">
-              ต้นทุนและค่าแพลตฟอร์มเกินราคาขาย {percent.format(loss.share)} (เส้นประเลยเส้น 100%)
+              ต้นทุนและค่าแพลตฟอร์มเกินราคาขาย {baht.format(loss.amount)} ฿ (เส้นประเลยเส้นราคาขาย)
             </p>
           )}
           <ul className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
