@@ -36,18 +36,37 @@ export type Database = {
                   Relationships: [
                     
                   ]
-                },"cost_item": {
+                },"cost_category": {
                   Row: {
-                    "created_at": string,"id": string,"name": string,"owner": string | null,"unit": string,"unit_cost": number
+                    "colour_slot": number,"created_at": string,"id": string,"name": string,"owner": string | null,"sort_order": number
                   }
                   Insert: {
-                    "created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"unit": string,"unit_cost": number
+                    "colour_slot": number,"created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"sort_order": number
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"unit"?: string,"unit_cost"?: number
+                    "colour_slot"?: number,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"sort_order"?: number
                   }
                   Relationships: [
                     
+                  ]
+                },"cost_item": {
+                  Row: {
+                    "cost_category_id": string | null,"created_at": string,"id": string,"name": string,"owner": string | null,"unit": string,"unit_cost": number
+                  }
+                  Insert: {
+                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"unit": string,"unit_cost": number
+                  }
+                  Update: {
+                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"unit"?: string,"unit_cost"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cost_item_cost_category_id_fkey"
+      columns: ["cost_category_id"]
+isOneToOne: false
+      referencedRelation: "cost_category"
+      referencedColumns: ["id"]
+    }
                   ]
                 }
           }

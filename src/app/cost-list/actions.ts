@@ -19,7 +19,14 @@ export type CostItemFormState = {
 
 function readForm(formData: FormData): CostItemInput {
   const text = (key: string) => String(formData.get(key) ?? '')
-  return { name: text('name'), unitCost: text('unitCost'), unit: text('unit') }
+  // The form's "ไม่มีหมวด" option sends an empty value.
+  const categoryId = text('categoryId')
+  return {
+    name: text('name'),
+    unitCost: text('unitCost'),
+    unit: text('unit'),
+    categoryId: categoryId === '' ? null : categoryId,
+  }
 }
 
 export async function createCostItemAction(
@@ -34,7 +41,7 @@ export async function createCostItemAction(
     throw error
   }
   revalidatePath('/cost-list')
-  return { values: { name: '', unitCost: '', unit: '' }, error: null }
+  return { values: { name: '', unitCost: '', unit: '', categoryId: null }, error: null }
 }
 
 export async function updateCostItemAction(

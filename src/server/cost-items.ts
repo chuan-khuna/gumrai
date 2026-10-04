@@ -7,12 +7,17 @@ export type CostItem = {
   name: string
   unitCost: string
   unit: string
+  // Its Cost Category, or null for ไม่มีหมวด.
+  categoryId: string | null
 }
 
 export type CostItemInput = {
   name: string
   unitCost: string
   unit: string
+  // null puts the item in ไม่มีหมวด. Left out, a new item has none and an update keeps
+  // the item's current Cost Category.
+  categoryId?: string | null
 }
 
 // A rule of the Cost List was broken. The message is Thai and is shown to the seller as is.
@@ -21,23 +26,41 @@ export class CostListError extends Error {
 }
 
 const DUPLICATE_NAME = 'มีรายการชื่อนี้อยู่แล้ว ตั้งชื่อให้ต่างกัน เช่น "นมสด (Makro)"'
+const CATEGORY_NOT_FOUND = 'ไม่พบหมวดนี้ อาจถูกลบไปแล้ว'
 const UNIQUE_VIOLATION = '23505'
+const FOREIGN_KEY_VIOLATION = '23503'
 const INVALID_TEXT_REPRESENTATION = '22P02'
 
-// The database enforces unique names (cost_item_owner_name_key); this turns its refusal
-// into the seller-facing message.
-function rejectDuplicate(error: { code?: string }): never {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// The database enforces unique names (cost_item_owner_name_key) and that a Cost Category
+// exists (cost_item_cost_category_id_fkey); this turns its refusal into the seller-facing
+// message.
+function rejectBrokenRule(error: { code?: string }): never {
   if (error.code === UNIQUE_VIOLATION) throw new CostListError(DUPLICATE_NAME)
+  if (error.code === FOREIGN_KEY_VIOLATION) throw new CostListError(CATEGORY_NOT_FOUND)
   throw error
 }
 
 // Read numeric as text so PostgREST never turns it into a float.
-const columns = 'id, name, unit_cost::text, unit'
+const columns = 'id, name, unit_cost::text, unit, cost_category_id'
 
-type Row = { id: string; name: string; unit_cost: string; unit: string }
+type Row = {
+  id: string
+  name: string
+  unit_cost: string
+  unit: string
+  cost_category_id: string | null
+}
 
 function toCostItem(row: Row): CostItem {
-  return { id: row.id, name: row.name, unitCost: row.unit_cost, unit: row.unit }
+  return {
+    id: row.id,
+    name: row.name,
+    unitCost: row.unit_cost,
+    unit: row.unit,
+    categoryId: row.cost_category_id,
+  }
 }
 
 // Plain decimals only: "4", "0.075", ".5", "-2". Not "1e3", "0x10" or "4 บาท".
@@ -54,11 +77,16 @@ function toRow(input: CostItemInput) {
     throw new CostListError('ต้นทุนต่อหน่วยติดลบไม่ได้')
   }
   if (unit === '') throw new CostListError('ต้องใส่หน่วย')
+  const { categoryId } = input
+  if (typeof categoryId === 'string' && !UUID.test(categoryId)) {
+    throw new CostListError(CATEGORY_NOT_FOUND)
+  }
   return {
     name,
     // PostgREST casts the decimal string straight to numeric; the generated type says number.
     unit_cost: unitCost as unknown as number,
     unit,
+    ...(categoryId !== undefined && { cost_category_id: categoryId }),
   }
 }
 
@@ -68,11 +96,20 @@ function escapeLike(text: string) {
 }
 
 // The Cost List, by name. `search` keeps only names containing it, ignoring case and
-// surrounding spaces.
-export async function listCostItems(options: { search?: string } = {}): Promise<CostItem[]> {
+// surrounding spaces. `categoryId` keeps only one Cost Category's items, or with null only
+// the items in ไม่มีหมวด.
+export async function listCostItems(
+  options: { search?: string; categoryId?: string | null } = {},
+): Promise<CostItem[]> {
   let query = createServerClient().from('cost_item').select(columns)
   const search = options.search?.trim()
   if (search) query = query.ilike('name', `%${escapeLike(search)}%`)
+  const { categoryId } = options
+  if (categoryId === null) query = query.is('cost_category_id', null)
+  else if (categoryId !== undefined) {
+    if (!UUID.test(categoryId)) return [] // no such category, so nothing is in it
+    query = query.eq('cost_category_id', categoryId)
+  }
   const { data, error } = await query.order('name')
   if (error) throw error
   return data.map(toCostItem)
@@ -95,7 +132,7 @@ export async function createCostItem(input: CostItemInput): Promise<CostItem> {
     .insert(toRow(input))
     .select(columns)
     .single()
-  if (error) rejectDuplicate(error)
+  if (error) rejectBrokenRule(error)
   return toCostItem(data)
 }
 
@@ -106,7 +143,7 @@ export async function updateCostItem(id: string, input: CostItemInput): Promise<
     .eq('id', id)
     .select(columns)
     .maybeSingle()
-  if (error) rejectDuplicate(error)
+  if (error) rejectBrokenRule(error)
   if (!data) throw new CostListError('ไม่พบรายการนี้ อาจถูกลบไปแล้ว')
   return toCostItem(data)
 }

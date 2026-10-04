@@ -8,22 +8,37 @@ import {
   updateCostItem,
   CostListError,
   type CostItem,
+  type CostItemInput,
 } from '@/server/cost-items'
+import {
+  createCostCategory,
+  deleteCostCategory,
+  type CostCategory,
+} from '@/server/cost-categories'
 
 // Each test makes names no other test (or the dev seed) uses, and deletes what it made.
 const made: CostItem[] = []
 function uniqueName(label: string) {
   return `${label} ${randomUUID()}`
 }
-async function make(input: { name: string; unitCost: string; unit: string }) {
+async function make(input: CostItemInput) {
   const item = await createCostItem(input)
   made.push(item)
   return item
+}
+const madeCategories: CostCategory[] = []
+async function makeCategory(label: string) {
+  const category = await createCostCategory(uniqueName(label))
+  madeCategories.push(category)
+  return category
 }
 
 afterEach(async () => {
   for (const item of made.splice(0)) {
     await deleteCostItem(item.id).catch(() => {})
+  }
+  for (const category of madeCategories.splice(0)) {
+    await deleteCostCategory(category.id).catch(() => {})
   }
 })
 
@@ -108,7 +123,7 @@ describe('Cost Items', () => {
 
     const updated = await updateCostItem(item.id, { name, unitCost: '4.25', unit: 'กรัม' })
 
-    expect(updated).toEqual({ id: item.id, name, unitCost: '4.25', unit: 'กรัม' })
+    expect(updated).toEqual({ id: item.id, name, unitCost: '4.25', unit: 'กรัม', categoryId: null })
     expect((await listCostItems()).find((i) => i.id === item.id)).toEqual(updated)
   })
 
@@ -151,6 +166,52 @@ describe('Cost Items', () => {
     const again = await make({ name, unitCost: '0.6', unit: 'ชิ้น' })
 
     expect(again.name).toBe(name)
+  })
+
+  describe('Cost Category', () => {
+    it('is none unless one is picked', async () => {
+      const item = await make({ name: uniqueName('น้ำแข็ง'), unitCost: '0.02', unit: 'g' })
+      expect(item.categoryId).toBeNull()
+    })
+
+    it('can be picked on create, changed on update, and cleared back to none', async () => {
+      const ingredients = await makeCategory('วัตถุดิบ')
+      const packaging = await makeCategory('บรรจุภัณฑ์')
+      const input = { name: uniqueName('ฝาโดม'), unitCost: '1.2', unit: 'ชิ้น' }
+
+      const item = await make({ ...input, categoryId: ingredients.id })
+      expect(item.categoryId).toBe(ingredients.id)
+
+      const moved = await updateCostItem(item.id, { ...input, categoryId: packaging.id })
+      expect(moved.categoryId).toBe(packaging.id)
+      expect(await getCostItem(item.id)).toEqual(moved)
+
+      const cleared = await updateCostItem(item.id, { ...input, categoryId: null })
+      expect(cleared.categoryId).toBeNull()
+    })
+
+    it('rejects a Cost Category that does not exist, with a Thai message', async () => {
+      const gone = await makeCategory('ลบแล้ว')
+      await deleteCostCategory(gone.id)
+      const input = { name: uniqueName('x'), unitCost: '1', unit: 'g' }
+
+      for (const categoryId of [gone.id, 'not-an-id']) {
+        await expect(make({ ...input, categoryId })).rejects.toThrow('ไม่พบหมวดนี้ อาจถูกลบไปแล้ว')
+      }
+    })
+
+    it('filters the list to one Cost Category, or to ไม่มีหมวด', async () => {
+      const tag = randomUUID()
+      const syrups = await makeCategory('ไซรัป')
+      const vanilla = await make({ name: `วานิลลา ${tag}`, unitCost: '0.4', unit: 'ml', categoryId: syrups.id })
+      const ice = await make({ name: `น้ำแข็ง ${tag}`, unitCost: '0.02', unit: 'g' })
+
+      const inSyrups = await listCostItems({ categoryId: syrups.id })
+      expect(inSyrups).toEqual([vanilla])
+
+      const uncategorised = await listCostItems({ search: tag, categoryId: null })
+      expect(uncategorised).toEqual([ice])
+    })
   })
 
   describe('searching by name', () => {

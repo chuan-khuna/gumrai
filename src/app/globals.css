@@ -15,6 +15,23 @@
   --font-sans: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Cost Category colours, indexed by a category's colour slot (src/lib/category-colours.ts
+   reads them by number and wraps past the last). Hues steer clear of profit green and loss
+   red. `static` emits every one, since they are looked up by slot, not named in a class.
+   Adding or removing one means changing CATEGORY_PALETTE_SIZE too. */
+@theme static {
+  --color-category-0: oklch(0.68 0.12 250);
+  --color-category-1: oklch(0.74 0.13 75);
+  --color-category-2: oklch(0.66 0.13 320);
+  --color-category-3: oklch(0.7 0.1 195);
+  --color-category-4: oklch(0.62 0.13 285);
+  --color-category-5: oklch(0.74 0.12 115);
+  --color-category-6: oklch(0.7 0.12 0);
+  --color-category-7: oklch(0.7 0.13 50);
+  /* ไม่มีหมวด */
+  --color-category-none: oklch(0.78 0.005 120);
+}
+
 body {
   background: var(--color-paper);
   color: var(--color-ink);

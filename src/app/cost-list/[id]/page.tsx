@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteCostItemAction, updateCostItemAction } from '@/app/cost-list/actions'
 import { CostItemForm } from '@/app/cost-list/cost-item-form'
+import { listCostCategories } from '@/server/cost-categories'
 import { getCostItem } from '@/server/cost-items'
 
 export default async function EditCostItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const item = await getCostItem(id)
+  const [item, categories] = await Promise.all([getCostItem(id), listCostCategories()])
   if (!item) notFound()
 
   return (
@@ -19,7 +20,13 @@ export default async function EditCostItemPage({ params }: { params: Promise<{ i
       <section className="mt-8 rounded border border-line bg-card p-4">
         <CostItemForm
           action={updateCostItemAction.bind(null, item.id)}
-          initial={{ name: item.name, unitCost: item.unitCost, unit: item.unit }}
+          initial={{
+            name: item.name,
+            unitCost: item.unitCost,
+            unit: item.unit,
+            categoryId: item.categoryId,
+          }}
+          categories={categories}
           submitLabel="บันทึก"
         />
       </section>
