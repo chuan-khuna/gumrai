@@ -36,6 +36,19 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"cost_item": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"owner": string | null,"unit": string,"unit_cost": number
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"unit": string,"unit_cost": number
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"unit"?: string,"unit_cost"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {

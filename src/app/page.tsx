@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getAppStatus } from '@/server/app-status'
 
 // Read on every request, so the page always reflects the database.
@@ -14,6 +15,9 @@ export default async function HomePage() {
         <span className="mr-2 inline-block size-2 rounded-full bg-profit align-middle" />
         {status}
       </p>
+      <Link href="/cost-list" className="mt-6 inline-block text-accent underline">
+        ลิสต์ต้นทุน
+      </Link>
     </main>
   )
 }
