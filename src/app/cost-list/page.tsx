@@ -25,6 +25,8 @@ export default async function CostListPage({
     }),
     listCostCategories(),
   ])
+  // First run: the Cost List itself is empty, not just this search or filter.
+  const firstRun = items.length === 0 && search === '' && filter === ''
   const categoryOf = new Map(categories.map((c) => [c.id, c]))
 
   // Grouped view: one section per Cost Category in its listed order, then ไม่มีหมวด.
@@ -43,7 +45,16 @@ export default async function CostListPage({
       <h1 className="mt-2 text-3xl font-semibold">ลิสต์ต้นทุน</h1>
 
       <section className="mt-8 rounded border border-line bg-card p-4">
-        <h2 className="mb-3 font-medium">เพิ่มรายการต้นทุน</h2>
+        {firstRun ? (
+          <>
+            <h2 className="font-medium">เพิ่มรายการต้นทุนแรก</h2>
+            <p className="mb-3 text-sm text-muted">
+              ยังไม่มีรายการต้นทุน เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g
+            </p>
+          </>
+        ) : (
+          <h2 className="mb-3 font-medium">เพิ่มรายการต้นทุน</h2>
+        )}
         <CostItemForm
           action={createCostItemAction}
           initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
@@ -55,45 +66,43 @@ export default async function CostListPage({
         </Link>
       </section>
 
-      <form className="mt-8 flex flex-wrap items-center gap-2" role="search">
-        <input
-          name="q"
-          type="search"
-          defaultValue={search}
-          placeholder="ค้นหาชื่อ"
-          aria-label="ค้นหาชื่อ"
-          className="min-w-0 flex-1 rounded border border-line bg-card px-3 py-2"
-        />
-        <select
-          name="category"
-          defaultValue={filter}
-          aria-label="หมวด"
-          className="rounded border border-line bg-card px-3 py-2"
-        >
-          <option value="">ทุกหมวด</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-          <option value={NONE}>{UNCATEGORISED}</option>
-        </select>
-        <label className="flex items-center gap-2 px-1">
-          <input type="checkbox" name="group" value="1" defaultChecked={grouped} />
-          จัดกลุ่มตามหมวด
-        </label>
-        <button type="submit" className="rounded border border-line px-4 py-2">
-          ค้นหา
-        </button>
-      </form>
+      {!firstRun && (
+        <form className="mt-8 flex flex-wrap items-center gap-2" role="search">
+          <input
+            name="q"
+            type="search"
+            defaultValue={search}
+            placeholder="ค้นหาชื่อ"
+            aria-label="ค้นหาชื่อ"
+            className="min-w-0 flex-1 rounded border border-line bg-card px-3 py-2"
+          />
+          <select
+            name="category"
+            defaultValue={filter}
+            aria-label="หมวด"
+            className="rounded border border-line bg-card px-3 py-2"
+          >
+            <option value="">ทุกหมวด</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+            <option value={NONE}>{UNCATEGORISED}</option>
+          </select>
+          <label className="flex items-center gap-2 px-1">
+            <input type="checkbox" name="group" value="1" defaultChecked={grouped} />
+            จัดกลุ่มตามหมวด
+          </label>
+          <button type="submit" className="rounded border border-line px-4 py-2">
+            ค้นหา
+          </button>
+        </form>
+      )}
 
-      {items.length === 0 ? (
+      {firstRun ? null : items.length === 0 ? (
         <p className="mt-6 text-muted">
-          {filter
-            ? 'ไม่พบรายการในหมวดนี้'
-            : search
-              ? `ไม่พบรายการที่ชื่อมี "${search.trim()}"`
-              : 'ยังไม่มีรายการต้นทุน'}
+          {filter ? 'ไม่พบรายการในหมวดนี้' : `ไม่พบรายการที่ชื่อมี "${search.trim()}"`}
         </p>
       ) : (
         groups.map((g) => (
