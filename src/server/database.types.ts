@@ -121,6 +121,9 @@ isOneToOne: false
             "delete_cost_item":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"duplicate_cost_sheet":
+{ Args: { "p_name": string,"p_sheet_id": string }; Returns: string
+                           },
 "save_cost_sheet":
 { Args: { "p_lines": Json,"p_sheet": Json,"p_sheet_id": string }; Returns: undefined
                            }

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CreateSheetForm } from '@/app/sheets/create-sheet-form'
+import { SheetRow } from '@/app/sheets/sheet-row'
 import { listCostSheets } from '@/server/cost-sheets'
 
 // Read on every request, so the list always reflects the database.
@@ -25,15 +26,7 @@ export default async function SheetsPage() {
       ) : (
         <ul className="mt-6 divide-y divide-line rounded border border-line bg-card">
           {sheets.map((sheet) => (
-            <li key={sheet.id}>
-              <Link
-                href={`/sheets/${sheet.id}`}
-                className="flex items-baseline justify-between gap-4 px-4 py-3"
-              >
-                <span>{sheet.name}</span>
-                <span className="text-sm text-muted">ต่อ{sheet.saleUnit}</span>
-              </Link>
-            </li>
+            <SheetRow key={sheet.id} sheet={sheet} />
           ))}
         </ul>
       )}

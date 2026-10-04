@@ -10,6 +10,9 @@ import {
 import {
   CostSheetError,
   createCostSheet,
+  deleteCostSheet,
+  duplicateCostSheet,
+  renameCostSheet,
   saveCostSheet,
   type CostSheet,
   type CostSheetInput,
@@ -65,4 +68,38 @@ export async function saveManualLineToCostListAction(
     if (error instanceof CostListError) return { outcome: 'error', error: error.message }
     throw error
   }
+}
+
+export type RenameSheetState = { name: string; error: string | null }
+
+export async function renameCostSheetAction(
+  id: string,
+  _previous: RenameSheetState,
+  formData: FormData,
+): Promise<RenameSheetState> {
+  const name = String(formData.get('name') ?? '')
+  try {
+    const sheet = await renameCostSheet(id, name)
+    revalidatePath('/sheets')
+    revalidatePath(`/sheets/${id}`)
+    return { name: sheet.name, error: null }
+  } catch (error) {
+    if (error instanceof CostSheetError) return { name, error: error.message }
+    throw error
+  }
+}
+
+// A sheet deleted meanwhile has nothing to copy; the refreshed list no longer shows it.
+export async function duplicateCostSheetAction(id: string): Promise<void> {
+  try {
+    await duplicateCostSheet(id)
+  } catch (error) {
+    if (!(error instanceof CostSheetError)) throw error
+  }
+  revalidatePath('/sheets')
+}
+
+export async function deleteCostSheetAction(id: string): Promise<void> {
+  await deleteCostSheet(id)
+  revalidatePath('/sheets')
 }

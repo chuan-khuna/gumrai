@@ -236,3 +236,41 @@ export async function deleteCostSheet(id: string): Promise<void> {
   const { error } = await createServerClient().from('cost_sheet').delete().eq('id', id)
   if (error && error.code !== INVALID_TEXT_REPRESENTATION) throw error
 }
+
+/** Renames a Cost Sheet, leaving its fields and lines as they are. */
+export async function renameCostSheet(id: string, name: string): Promise<CostSheet> {
+  const newName = sheetName(name)
+  if (!UUID.test(id)) throw new CostSheetError(NOT_FOUND)
+  const { data, error } = await createServerClient()
+    .from('cost_sheet')
+    .update({ name: newName, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new CostSheetError(NOT_FOUND)
+  const renamed = await readSheet(id)
+  if (!renamed) throw new CostSheetError(NOT_FOUND)
+  return renamed
+}
+
+/**
+ * Copies a Cost Sheet into a new, independent one named with a "(สำเนา)" suffix: same Sale
+ * Unit, Selling Price, GP and VAT, with its Manual Lines copied and its Linked Lines still
+ * linked to the same Cost Items. Used to compare selling channels.
+ */
+export async function duplicateCostSheet(id: string): Promise<CostSheet> {
+  const original = UUID.test(id) ? await readSheet(id) : null
+  if (!original) throw new CostSheetError(NOT_FOUND)
+
+  const { data: copyId, error } = await createServerClient().rpc('duplicate_cost_sheet', {
+    p_sheet_id: id,
+    p_name: `${original.name} (สำเนา)`,
+  })
+  if (error?.code === NO_DATA_FOUND) throw new CostSheetError(NOT_FOUND)
+  if (error) throw error
+
+  const copy = await readSheet(copyId)
+  if (!copy) throw new CostSheetError(NOT_FOUND)
+  return copy
+}

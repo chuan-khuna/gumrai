@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   createCostSheet,
   deleteCostSheet,
+  duplicateCostSheet,
   getCostSheet,
   listCostSheets,
+  renameCostSheet,
   saveCostSheet,
   CostSheetError,
   type CostSheet,
@@ -315,6 +317,114 @@ describe('Cost Sheets', () => {
           lines: [{ costItemId: matcha.id, quantityUsed: 'สี่' }],
         }),
       ).rejects.toThrow('ปริมาณที่ใช้ต้องเป็นตัวเลข')
+    })
+  })
+
+  describe('Sheet management', () => {
+    const withoutIds = (sheet: CostSheet) => sheet.lines.map(({ id: _, ...line }) => line)
+
+    it('renames a sheet, trimmed, and keeps everything else', async () => {
+      const sheet = await make('ชื่อเดิม')
+      const saved = await saveCostSheet(sheet.id, latte(sheet.name))
+      const name = uniqueName('ชื่อใหม่')
+
+      const renamed = await renameCostSheet(sheet.id, `  ${name}  `)
+
+      expect(renamed).toEqual({ ...saved, name })
+      expect(await getCostSheet(sheet.id)).toEqual(renamed)
+    })
+
+    it('rejects a blank name, and a sheet that no longer exists', async () => {
+      const sheet = await make('ชื่อว่าง')
+      await expect(renameCostSheet(sheet.id, '   ')).rejects.toThrow('ต้องใส่ชื่อชีต')
+      await expect(renameCostSheet(randomUUID(), 'x')).rejects.toThrow('ไม่พบชีตนี้')
+      await expect(renameCostSheet('not-an-id', 'x')).rejects.toThrow('ไม่พบชีตนี้')
+    })
+
+    it('duplicates a sheet as "(สำเนา)", its Manual Lines copied and Linked Lines still linked', async () => {
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g' })
+      const sheet = await make('หน้าร้าน')
+      const original = await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [
+          { costItemId: matcha.id, quantityUsed: '4' },
+          { name: 'นมสด', unitCost: '0.075', unit: 'ml', quantityUsed: '150', categoryId: null },
+        ],
+      })
+
+      const copy = await duplicateCostSheet(sheet.id)
+      made.push(copy)
+
+      expect(copy.id).not.toBe(original.id)
+      expect(copy).toMatchObject({
+        name: `${original.name} (สำเนา)`,
+        saleUnit: original.saleUnit,
+        sellingPrice: original.sellingPrice,
+        gpPercent: original.gpPercent,
+        vatPercent: original.vatPercent,
+      })
+      expect(withoutIds(copy)).toEqual(withoutIds(original))
+      expect(copy.lines[0]).toMatchObject({ kind: 'linked', costItemId: matcha.id })
+      expect(copy.lines[1]).toMatchObject({ kind: 'manual' })
+      expect(await getCostSheet(copy.id)).toEqual(copy)
+      expect((await listCostSheets()).map((s) => s.id)).toContain(copy.id)
+    })
+
+    it('editing a duplicate leaves the original untouched', async () => {
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g' })
+      const sheet = await make('หน้าร้าน')
+      const original = await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [
+          { costItemId: matcha.id, quantityUsed: '4' },
+          { name: 'นมสด', unitCost: '0.075', unit: 'ml', quantityUsed: '150', categoryId: null },
+        ],
+      })
+      const copy = await duplicateCostSheet(sheet.id)
+      made.push(copy)
+
+      await saveCostSheet(copy.id, {
+        name: uniqueName('Grab'),
+        saleUnit: 'กล่อง',
+        sellingPrice: '79',
+        gpPercent: '30',
+        vatPercent: '7',
+        lines: [{ costItemId: matcha.id, quantityUsed: '5' }],
+      })
+      await renameCostSheet(copy.id, uniqueName('Grab อีกชื่อ'))
+
+      expect(await getCostSheet(sheet.id)).toEqual(original)
+    })
+
+    it("a duplicate's Linked Lines still follow Unit Cost changes", async () => {
+      const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g' })
+      const sheet = await make('หน้าร้าน')
+      await saveCostSheet(sheet.id, {
+        ...latte(sheet.name),
+        lines: [{ costItemId: matcha.id, quantityUsed: '4' }],
+      })
+      const copy = await duplicateCostSheet(sheet.id)
+      made.push(copy)
+
+      await updateCostItem(matcha.id, { name: matcha.name, unitCost: '4.5', unit: 'g' })
+
+      expect((await getCostSheet(copy.id))!.lines[0]).toMatchObject({
+        kind: 'linked',
+        unitCost: '4.5',
+      })
+      expect((await getCostSheet(sheet.id))!.lines[0]).toMatchObject({ unitCost: '4.5' })
+    })
+
+    it('says a sheet that no longer exists cannot be duplicated', async () => {
+      await expect(duplicateCostSheet(randomUUID())).rejects.toThrow('ไม่พบชีตนี้')
+      await expect(duplicateCostSheet('not-an-id')).rejects.toThrow('ไม่พบชีตนี้')
+    })
+
+    it('deletes a sheet, and deleting a missing one does nothing', async () => {
+      const sheet = await make('ลบ')
+      await deleteCostSheet(sheet.id)
+      expect(await getCostSheet(sheet.id)).toBeNull()
+      await expect(deleteCostSheet(sheet.id)).resolves.toBeUndefined()
     })
   })
 })
