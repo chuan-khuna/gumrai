@@ -129,6 +129,13 @@ describe('where the Selling Price goes', () => {
     expect(paidOut).toBeCloseTo(1 + lossShare, 10)
   })
 
+  it('splits a price with ไม่มีหมวด in it into parts that add up to exactly the price', () => {
+    // 26.25 + 5.25 + 0.5 cost · 30 commission · 3 VAT · 35 profit = 100
+    const split = computeSheet(latte).priceSplit.filter((s) => s.kind !== 'loss')
+    expect(split.find((s) => s.kind === 'category' && s.categoryId === null)?.amount).toBe(0.5)
+    expect(split.reduce((sum, s) => sum + s.amount, 0)).toBeCloseTo(100, 10)
+  })
+
   it('reports shares of a zero price as blank, not as infinities', () => {
     const free = computeSheet({ ...latte, sellingPrice: 0 })
     expect(free.priceSplit.every((s) => s.shareOfPrice === null)).toBe(true)
@@ -190,6 +197,15 @@ describe('what one Sale Unit costs', () => {
     expect(categories.map((c) => c.categoryId)).toEqual([INGREDIENTS, PACKAGING, null])
     expect(categories.map((c) => c.cost)).toEqual([26.25, 5.25, 0.5])
     expect(categories.map((c) => c.shareOfCost)).toEqual([0.8203125, 0.1640625, 0.015625])
+  })
+
+  it('gathers a sheet with no Cost Categories into a single ไม่มีหมวด, holding all of the cost', () => {
+    const { categories, rankedCategories } = computeSheet({
+      ...latte,
+      lines: latte.lines.map((line) => ({ ...line, categoryId: null })),
+    })
+    expect(categories).toEqual([{ categoryId: null, cost: 32, shareOfCost: 1 }])
+    expect(rankedCategories).toEqual(categories)
   })
 
   it('lists the Cost Categories in the order their first line appears', () => {

@@ -2,9 +2,13 @@
 
 import Link from 'next/link'
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { CategoryDot } from '@/app/cost-list/category-dot'
+import { categoryLooks, CostRankingChart, PriceSplitChart } from '@/app/sheets/[id]/sheet-charts'
 import { saveCostSheetAction, saveManualLineToCostListAction } from '@/app/sheets/actions'
+import { UNCATEGORISED } from '@/lib/category-colours'
 import { linkLine, unlinkLine } from '@/lib/cost-lines'
 import { computeSheet, type Share } from '@/lib/sheet'
+import type { CostCategory } from '@/server/cost-categories'
 import type { CostItem } from '@/server/cost-items'
 import type {
   CostLineInput,
@@ -65,7 +69,16 @@ const percent = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFracti
 // A share is blank when its whole is zero, never an error or a 0%.
 const formatShare = (share: Share) => (share === null ? '' : percent.format(share))
 
-export function SheetEditor({ saved: initial, costItems: initialItems }: { saved: CostSheet; costItems: CostItem[] }) {
+export function SheetEditor({
+  saved: initial,
+  costItems: initialItems,
+  categories,
+}: {
+  saved: CostSheet
+  costItems: CostItem[]
+  categories: CostCategory[]
+}) {
+  const look = useMemo(() => categoryLooks(categories), [categories])
   const [saved, setSaved] = useState(() => toDraft(initial))
   const [draft, setDraft] = useState(saved)
   const [error, setError] = useState<string | null>(null)
@@ -117,7 +130,10 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
   const changeLine = (key: string, change: (line: DraftLine) => DraftLine) =>
     setDraft((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? change(l) : l)) }))
   // Only a Manual Line's own values are typed; a Linked Line's come from its Cost Item.
-  const setLine = (key: string, fields: { name?: string; unitCost?: string; unit?: string; quantityUsed?: string }) =>
+  const setLine = (
+    key: string,
+    fields: { name?: string; unitCost?: string; unit?: string; quantityUsed?: string; categoryId?: string | null },
+  ) =>
     changeLine(key, (l) => ({ ...l, ...fields }))
   const appendLine = (line: DraftLine) => setDraft((d) => ({ ...d, lines: [...d.lines, line] }))
   const addManualLine = (name: string) =>
@@ -279,13 +295,14 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
           <p className="text-muted">ยังไม่มีรายการ</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-left">
+            <table className="w-full min-w-[54rem] text-left">
               <thead className="text-sm text-muted">
                 <tr>
                   <th className="pb-2 font-normal">ที่มา</th>
                   <th className="pb-2 font-normal">ชื่อ</th>
                   <th className="pb-2 font-normal">ต้นทุนต่อหน่วย (฿)</th>
                   <th className="pb-2 font-normal">หน่วย</th>
+                  <th className="pb-2 font-normal">หมวด</th>
                   <th className="pb-2 font-normal">ใช้ต่อ{unit}</th>
                   <th className="pb-2 text-right font-normal">ต้นทุนต่อ{unit}</th>
                   <th className="pb-2 text-right font-normal">สัดส่วน</th>
@@ -316,6 +333,13 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
                             <td className="py-1 pr-2 pl-2">{line.name}</td>
                             <td className="py-1 pr-2 pl-2 tabular-nums">{line.unitCost}</td>
                             <td className="py-1 pr-2 pl-2">{line.unit}</td>
+                            {/* A Linked Line's Cost Category is its Cost Item's. */}
+                            <td className="py-1 pr-2 pl-2">
+                              <span className="flex items-center gap-2 whitespace-nowrap">
+                                <CategoryDot colourSlot={look(line.categoryId).colourSlot} />
+                                {look(line.categoryId).name}
+                              </span>
+                            </td>
                           </>
                         ) : (
                           <>
@@ -344,6 +368,21 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
                                 placeholder="g, ml"
                                 className={cell}
                               />
+                            </td>
+                            <td className="py-1 pr-2">
+                              <select
+                                aria-label="หมวด"
+                                value={line.categoryId ?? ''}
+                                onChange={(e) => setLine(line.key, { categoryId: e.target.value || null })}
+                                className={cell}
+                              >
+                                <option value="">{UNCATEGORISED}</option>
+                                {categories.map((category) => (
+                                  <option key={category.id} value={category.id}>
+                                    {category.name}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                           </>
                         )}
@@ -392,7 +431,7 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
                       </tr>
                       {notice && (
                         <tr>
-                          <td colSpan={8} className="pb-2">
+                          <td colSpan={9} className="pb-2">
                             {notice.kind === 'error' ? (
                               <p role="alert" className="text-sm text-loss">
                                 {notice.error}
@@ -407,6 +446,7 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
                                   <span className="tabular-nums">
                                     {notice.item.unitCost} ฿/{notice.item.unit}
                                   </span>
+                                  , หมวด {look(notice.item.categoryId).name}
                                 </span>
                                 <button
                                   type="button"
@@ -459,6 +499,31 @@ export function SheetEditor({ saved: initial, costItems: initialItems }: { saved
             tone={isLoss ? 'loss' : 'profit'}
           />
         </dl>
+      </section>
+
+      <section className="mt-6 rounded border border-line bg-card p-4">
+        <h2 className="mb-3 font-medium">ต้นทุนต่อ{unit} แยกตามหมวด</h2>
+        {result.categories.length === 0 ? (
+          <p className="text-muted">ยังไม่มีรายการ</p>
+        ) : (
+          <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 tabular-nums">
+            {result.rankedCategories.map((c) => (
+              <Fragment key={c.categoryId ?? 'none'}>
+                <dt className="flex items-center gap-2">
+                  <CategoryDot colourSlot={look(c.categoryId).colourSlot} />
+                  {look(c.categoryId).name}
+                </dt>
+                <dd className="text-right">{baht.format(c.cost)} ฿</dd>
+                <dd className="text-right text-sm text-muted">{formatShare(c.shareOfCost)}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        )}
+      </section>
+
+      <section className="mt-6 grid gap-6 rounded border border-line bg-card p-4">
+        <PriceSplitChart result={result} look={look} unit={unit} />
+        <CostRankingChart result={result} look={look} unit={unit} />
       </section>
     </main>
   )

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { SheetEditor } from '@/app/sheets/[id]/sheet-editor'
+import { listCostCategories } from '@/server/cost-categories'
 import { listCostItems } from '@/server/cost-items'
 import { getCostSheet } from '@/server/cost-sheets'
 
@@ -8,9 +9,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function SheetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [sheet, costItems] = await Promise.all([getCostSheet(id), listCostItems()])
+  const [sheet, costItems, categories] = await Promise.all([
+    getCostSheet(id),
+    listCostItems(),
+    listCostCategories(),
+  ])
   if (!sheet) notFound()
 
   // Keyed by id so opening another sheet starts a fresh editor.
-  return <SheetEditor key={sheet.id} saved={sheet} costItems={costItems} />
+  return <SheetEditor key={sheet.id} saved={sheet} costItems={costItems} categories={categories} />
 }
