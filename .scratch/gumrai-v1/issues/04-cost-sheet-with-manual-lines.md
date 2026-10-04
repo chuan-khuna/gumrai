@@ -15,3 +15,7 @@
 - [ ] Sheets list and open. Saving replaces the sheet's lines as one unit.
 - [ ] A "● ยังไม่บันทึก" marker shows while there are unsaved edits, and the seller is asked before leaving with unsaved edits.
 - [ ] Integration tests cover create, save, reload, and round-tripping decimal values exactly.
+
+## Comments
+
+- 2026-10-04 (orchestrator): Source for the port confirmed by the user: `D:\code\matcha-cafe\src\domain\` — `sheet.ts`, `delivery.ts` and their tests (`sheet.test.ts`, `delivery.test.ts`). Use them as references and port the code into this repo (copied, then adapted; no shared package).
