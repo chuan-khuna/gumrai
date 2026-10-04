@@ -148,6 +148,51 @@ export async function updateCostItem(id: string, input: CostItemInput): Promise<
   return toCostItem(data)
 }
 
+/**
+ * What saving a Manual Line into the Cost List did: `created` made a new Cost Item from the
+ * line; `clash` made nothing, because the item already holds that name, and is offered for the
+ * line to link to instead.
+ */
+export type SavedManualLine = { outcome: 'created'; item: CostItem } | { outcome: 'clash'; item: CostItem }
+
+// The Cost Item whose name matches, ignoring case and surrounding spaces, as the unique index
+// cost_item_owner_name_key does.
+async function findByName(name: string): Promise<CostItem | null> {
+  const { data, error } = await createServerClient()
+    .from('cost_item')
+    .select(columns)
+    .ilike('name', escapeLike(name.trim()))
+    .maybeSingle()
+  if (error) throw error
+  return data && toCostItem(data)
+}
+
+/**
+ * Saves a Manual Line's name, Unit Cost, Unit and Cost Category into the Cost List as a new
+ * Cost Item, at once and whether or not its sheet is saved. Turning the line into a Linked
+ * Line is the sheet's edit (see linkLine in @/lib/cost-lines). On a name clash nothing is
+ * created and the existing item is returned.
+ */
+export async function saveManualLineToCostList(line: CostItemInput): Promise<SavedManualLine> {
+  const row = toRow({
+    name: line.name,
+    unitCost: line.unitCost,
+    unit: line.unit,
+    categoryId: line.categoryId ?? null,
+  })
+  const { data, error } = await createServerClient()
+    .from('cost_item')
+    .insert(row)
+    .select(columns)
+    .single()
+  if (error?.code === UNIQUE_VIOLATION) {
+    const existing = await findByName(row.name)
+    if (existing) return { outcome: 'clash', item: existing }
+  }
+  if (error) rejectBrokenRule(error)
+  return { outcome: 'created', item: toCostItem(data) }
+}
+
 /** How many Cost Sheets have a Linked Line to this Cost Item ("ใช้อยู่ใน N ชีต"). */
 export async function countSheetsUsingCostItem(id: string): Promise<number> {
   if (!UUID.test(id)) return 0 // no such item, so no sheet uses it

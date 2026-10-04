@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { saveCostSheetAction } from '@/app/sheets/actions'
-import { unlinkLine } from '@/lib/cost-lines'
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { saveCostSheetAction, saveManualLineToCostListAction } from '@/app/sheets/actions'
+import { linkLine, unlinkLine } from '@/lib/cost-lines'
 import { computeSheet, type Share } from '@/lib/sheet'
 import type { CostItem } from '@/server/cost-items'
 import type {
@@ -21,6 +21,9 @@ import type {
 // the figures; only its Cost Item and Quantity Used are saved.
 type DraftLine = (Omit<ManualLine, 'id'> | Omit<LinkedLine, 'id'>) & { key: string }
 type Draft = Omit<CostSheetInput, 'lines'> & { lines: DraftLine[] }
+
+// What saving a Manual Line into the Cost List left to show under the line.
+type LineNotice = { kind: 'clash'; item: CostItem } | { kind: 'error'; error: string }
 
 const LEAVE_WARNING = 'มีการแก้ไขที่ยังไม่บันทึก ออกจากหน้านี้เลยไหม'
 
@@ -62,11 +65,19 @@ const percent = new Intl.NumberFormat('th-TH', { style: 'percent', maximumFracti
 // A share is blank when its whole is zero, never an error or a 0%.
 const formatShare = (share: Share) => (share === null ? '' : percent.format(share))
 
-export function SheetEditor({ saved: initial, costItems }: { saved: CostSheet; costItems: CostItem[] }) {
+export function SheetEditor({ saved: initial, costItems: initialItems }: { saved: CostSheet; costItems: CostItem[] }) {
   const [saved, setSaved] = useState(() => toDraft(initial))
   const [draft, setDraft] = useState(saved)
   const [error, setError] = useState<string | null>(null)
   const [saving, startSaving] = useTransition()
+  // The Cost List grows when a Manual Line is saved into it, so the add-line search finds it.
+  const [costItems, setCostItems] = useState(initialItems)
+  // Saving a Manual Line into the Cost List: which line is in flight, and what each line's
+  // last attempt left to show (a name clash to resolve, or an error).
+  const [savingLineKey, setSavingLineKey] = useState<string | null>(null)
+  const [lineNotices, setLineNotices] = useState<Record<string, LineNotice>>({})
+  const setLineNotice = (key: string, notice: LineNotice | null) =>
+    setLineNotices(({ [key]: _, ...rest }) => (notice ? { ...rest, [key]: notice } : rest))
 
   const dirty = JSON.stringify(toInput(draft)) !== JSON.stringify(toInput(saved))
   const dirtyRef = useRef(dirty)
@@ -133,8 +144,38 @@ export function SheetEditor({ saved: initial, costItems }: { saved: CostSheet; c
   // The Manual Line holds the values the line shows now; it is saved with the sheet.
   const unlink = (key: string) =>
     changeLine(key, (l) => (l.kind === 'linked' ? { key: l.key, kind: 'manual', ...unlinkLine(l) } : l))
-  const removeLine = (key: string) =>
+  const removeLine = (key: string) => {
+    setLineNotice(key, null)
     setDraft((d) => ({ ...d, lines: d.lines.filter((l) => l.key !== key) }))
+  }
+  // The switch to a Linked Line is a draft edit, persisted when the sheet is saved.
+  const linkTo = (key: string, item: CostItem) => {
+    setLineNotice(key, null)
+    changeLine(key, (l) => (l.kind === 'manual' ? { key: l.key, ...linkLine(l, item) } : l))
+  }
+
+  // "บันทึกเข้าลิสต์": the Cost Item is created at once, even if the sheet is unsaved.
+  async function saveLineToList(line: DraftLine) {
+    if (line.kind !== 'manual') return
+    setLineNotice(line.key, null)
+    setSavingLineKey(line.key)
+    try {
+      const { key: _, kind: __, ...manual } = line
+      const saved = await saveManualLineToCostListAction(manual)
+      if (saved.outcome === 'created') {
+        setCostItems((items) =>
+          [...items, saved.item].sort((a, b) => a.name.localeCompare(b.name)),
+        )
+        linkTo(line.key, saved.item)
+      } else if (saved.outcome === 'clash') {
+        setLineNotice(line.key, { kind: 'clash', item: saved.item })
+      } else {
+        setLineNotice(line.key, { kind: 'error', error: saved.error })
+      }
+    } finally {
+      setSavingLineKey(null)
+    }
+  }
 
   function save() {
     setError(null)
@@ -147,6 +188,7 @@ export function SheetEditor({ saved: initial, costItems }: { saved: CostSheet; c
       const next = toDraft(outcome.sheet)
       setSaved(next)
       setDraft(next)
+      setLineNotices({}) // the reloaded lines have new keys
     })
   }
 
@@ -254,88 +296,138 @@ export function SheetEditor({ saved: initial, costItems }: { saved: CostSheet; c
                 {draft.lines.map((line, index) => {
                   const costed = result.lines[index]
                   const linked = line.kind === 'linked'
+                  const notice = lineNotices[line.key]
                   return (
-                    <tr key={line.key} className={linked ? 'bg-accent/5 align-middle' : 'align-middle'}>
-                      <td className="py-1 pr-2">
+                    <Fragment key={line.key}>
+                      <tr className={linked ? 'bg-accent/5 align-middle' : 'align-middle'}>
+                        <td className="py-1 pr-2">
+                          {linked ? (
+                            <span className="whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                              ลิงก์ลิสต์
+                            </span>
+                          ) : (
+                            <span className="whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs text-muted">
+                              พิมพ์เอง
+                            </span>
+                          )}
+                        </td>
                         {linked ? (
-                          <span className="whitespace-nowrap rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
-                            ลิงก์ลิสต์
-                          </span>
+                          <>
+                            <td className="py-1 pr-2 pl-2">{line.name}</td>
+                            <td className="py-1 pr-2 pl-2 tabular-nums">{line.unitCost}</td>
+                            <td className="py-1 pr-2 pl-2">{line.unit}</td>
+                          </>
                         ) : (
-                          <span className="whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs text-muted">
-                            พิมพ์เอง
-                          </span>
+                          <>
+                            <td className="py-1 pr-2">
+                              <input
+                                aria-label="ชื่อ"
+                                value={line.name}
+                                onChange={(e) => setLine(line.key, { name: e.target.value })}
+                                className={cell}
+                              />
+                            </td>
+                            <td className="py-1 pr-2">
+                              <input
+                                aria-label="ต้นทุนต่อหน่วย"
+                                value={line.unitCost}
+                                onChange={(e) => setLine(line.key, { unitCost: e.target.value })}
+                                inputMode="decimal"
+                                className={cell}
+                              />
+                            </td>
+                            <td className="py-1 pr-2">
+                              <input
+                                aria-label="หน่วย"
+                                value={line.unit}
+                                onChange={(e) => setLine(line.key, { unit: e.target.value })}
+                                placeholder="g, ml"
+                                className={cell}
+                              />
+                            </td>
+                          </>
                         )}
-                      </td>
-                      {linked ? (
-                        <>
-                          <td className="py-1 pr-2 pl-2">{line.name}</td>
-                          <td className="py-1 pr-2 pl-2 tabular-nums">{line.unitCost}</td>
-                          <td className="py-1 pr-2 pl-2">{line.unit}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="py-1 pr-2">
-                            <input
-                              aria-label="ชื่อ"
-                              value={line.name}
-                              onChange={(e) => setLine(line.key, { name: e.target.value })}
-                              className={cell}
-                            />
-                          </td>
-                          <td className="py-1 pr-2">
-                            <input
-                              aria-label="ต้นทุนต่อหน่วย"
-                              value={line.unitCost}
-                              onChange={(e) => setLine(line.key, { unitCost: e.target.value })}
-                              inputMode="decimal"
-                              className={cell}
-                            />
-                          </td>
-                          <td className="py-1 pr-2">
-                            <input
-                              aria-label="หน่วย"
-                              value={line.unit}
-                              onChange={(e) => setLine(line.key, { unit: e.target.value })}
-                              placeholder="g, ml"
-                              className={cell}
-                            />
-                          </td>
-                        </>
-                      )}
-                      <td className="py-1 pr-2">
-                        <input
-                          aria-label={`ใช้ต่อ${unit}`}
-                          value={line.quantityUsed}
-                          onChange={(e) => setLine(line.key, { quantityUsed: e.target.value })}
-                          inputMode="decimal"
-                          className={cell}
-                        />
-                      </td>
-                      <td className="py-1 pr-2 text-right tabular-nums">{baht.format(costed.cost)}</td>
-                      <td className="py-1 pr-2 text-right tabular-nums text-muted">
-                        {formatShare(costed.shareOfCost)}
-                      </td>
-                      <td className="whitespace-nowrap py-1 text-right">
-                        {linked && (
+                        <td className="py-1 pr-2">
+                          <input
+                            aria-label={`ใช้ต่อ${unit}`}
+                            value={line.quantityUsed}
+                            onChange={(e) => setLine(line.key, { quantityUsed: e.target.value })}
+                            inputMode="decimal"
+                            className={cell}
+                          />
+                        </td>
+                        <td className="py-1 pr-2 text-right tabular-nums">{baht.format(costed.cost)}</td>
+                        <td className="py-1 pr-2 text-right tabular-nums text-muted">
+                          {formatShare(costed.shareOfCost)}
+                        </td>
+                        <td className="whitespace-nowrap py-1 text-right">
+                          {linked ? (
+                            <button
+                              type="button"
+                              onClick={() => unlink(line.key)}
+                              title="เปลี่ยนเป็นรายการพิมพ์เอง โดยเก็บค่าปัจจุบันไว้"
+                              className="mr-3 text-sm text-muted"
+                            >
+                              เลิกลิงก์
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => saveLineToList(line)}
+                              disabled={savingLineKey !== null}
+                              title="สร้างรายการในลิสต์ต้นทุนจากบรรทัดนี้ แล้วลิงก์บรรทัดนี้กับรายการนั้น"
+                              className="mr-3 text-sm text-accent disabled:opacity-60"
+                            >
+                              {savingLineKey === line.key ? 'กำลังบันทึก…' : 'บันทึกเข้าลิสต์'}
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => unlink(line.key)}
-                            title="เปลี่ยนเป็นรายการพิมพ์เอง โดยเก็บค่าปัจจุบันไว้"
-                            className="mr-3 text-sm text-muted"
+                            onClick={() => removeLine(line.key)}
+                            className="text-sm text-loss"
                           >
-                            เลิกลิงก์
+                            ลบ
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeLine(line.key)}
-                          className="text-sm text-loss"
-                        >
-                          ลบ
-                        </button>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {notice && (
+                        <tr>
+                          <td colSpan={8} className="pb-2">
+                            {notice.kind === 'error' ? (
+                              <p role="alert" className="text-sm text-loss">
+                                {notice.error}
+                              </p>
+                            ) : (
+                              <div
+                                role="alert"
+                                className="flex flex-wrap items-center gap-3 rounded border border-line px-3 py-2 text-sm"
+                              >
+                                <span>
+                                  มี &ldquo;{notice.item.name}&rdquo; ในลิสต์ต้นทุนอยู่แล้ว:{' '}
+                                  <span className="tabular-nums">
+                                    {notice.item.unitCost} ฿/{notice.item.unit}
+                                  </span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => linkTo(line.key, notice.item)}
+                                  className="rounded bg-accent px-3 py-1 font-medium text-card"
+                                >
+                                  ลิงก์กับรายการนี้แทน
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setLineNotice(line.key, null)}
+                                  className="text-muted"
+                                >
+                                  ไม่ต้อง
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>

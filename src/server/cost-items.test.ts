@@ -6,6 +6,7 @@ import {
   deleteCostItem,
   getCostItem,
   listCostItems,
+  saveManualLineToCostList,
   updateCostItem,
   CostListError,
   type CostItem,
@@ -23,7 +24,9 @@ import {
   saveCostSheet,
   type CostSheet,
   type CostSheetInput,
+  type ManualLineInput,
 } from '@/server/cost-sheets'
+import { linkLine } from '@/lib/cost-lines'
 import { computeSheet } from '@/lib/sheet'
 
 // Each test makes names no other test (or the dev seed) uses, and deletes what it made.
@@ -390,5 +393,96 @@ describe('Cost Items', () => {
       await expect(deleteCostItem(randomUUID())).resolves.toBeUndefined()
       await expect(deleteCostItem('not-an-id')).resolves.toBeUndefined()
     })
+  })
+})
+
+describe('saving a Manual Line into the Cost List', () => {
+  // Like make(), but through the save, so whatever it creates is cleaned up too.
+  async function save(line: ManualLineInput) {
+    const saved = await saveManualLineToCostList(line)
+    if (saved.outcome === 'created') made.push(saved.item)
+    return saved
+  }
+
+  it('creates a Cost Item from the line at once, and the line can then link to it', async () => {
+    const ingredients = await makeCategory('วัตถุดิบ')
+    const line: ManualLineInput = {
+      name: `  ${uniqueName('ไซรัป')}  `,
+      unitCost: '0.35',
+      unit: 'ml',
+      quantityUsed: '20',
+      categoryId: ingredients.id,
+    }
+    const saved = await save(line)
+
+    expect(saved.outcome).toBe('created')
+    expect(saved.item).toEqual({
+      id: expect.any(String),
+      name: line.name.trim(),
+      unitCost: '0.35',
+      unit: 'ml',
+      categoryId: ingredients.id,
+    })
+    expect(await getCostItem(saved.item.id)).toEqual(saved.item)
+
+    // The line's switch to a Linked Line is a sheet edit, kept when the sheet is saved.
+    const sheet = await createCostSheet(uniqueName('ชีต'))
+    madeSheets.push(sheet)
+    const linked = linkLine(line, saved.item)
+    await saveCostSheet(sheet.id, {
+      name: sheet.name,
+      saleUnit: 'แก้ว',
+      sellingPrice: '65',
+      gpPercent: '0',
+      vatPercent: '7',
+      lines: [linked],
+    })
+    const [reloaded] = (await getCostSheet(sheet.id))!.lines
+    expect(reloaded).toEqual({
+      id: expect.any(String),
+      kind: 'linked',
+      costItemId: saved.item.id,
+      name: saved.item.name,
+      unitCost: '0.35',
+      unit: 'ml',
+      quantityUsed: '20',
+      categoryId: ingredients.id,
+    })
+  })
+
+  it('creates nothing on a name clash, and returns the existing item to link to', async () => {
+    const name = uniqueName('Oat Milk')
+    const existing = await make({ name, unitCost: '0.09', unit: 'ml' })
+    const before = await listCostItems({ search: name })
+
+    const saved = await save({
+      name: `  ${name.toUpperCase()} `,
+      unitCost: '0.12',
+      unit: 'ml',
+      quantityUsed: '150',
+      categoryId: null,
+    })
+
+    expect(saved).toEqual({ outcome: 'clash', item: existing })
+    expect(await listCostItems({ search: name })).toEqual(before)
+  })
+
+  it('treats wildcard characters in the name literally when checking for a clash', async () => {
+    const tag = randomUUID()
+    await make({ name: `ab ${tag}`, unitCost: '1', unit: 'g' })
+    const saved = await save({
+      name: `a_ ${tag}`,
+      unitCost: '1',
+      unit: 'g',
+      quantityUsed: '1',
+      categoryId: null,
+    })
+    expect(saved.outcome).toBe('created')
+  })
+
+  it("rejects a line whose values can't make a Cost Item", async () => {
+    await expect(
+      save({ name: uniqueName('ฝา'), unitCost: '', unit: 'ชิ้น', quantityUsed: '1', categoryId: null }),
+    ).rejects.toThrow(CostListError)
   })
 })
