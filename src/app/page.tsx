@@ -15,9 +15,14 @@ export default async function HomePage() {
         <span className="mr-2 inline-block size-2 rounded-full bg-profit align-middle" />
         {status}
       </p>
-      <Link href="/cost-list" className="mt-6 inline-block text-accent underline">
-        ลิสต์ต้นทุน
-      </Link>
+      <nav className="mt-6 flex gap-6">
+        <Link href="/cost-list" className="text-accent underline">
+          ลิสต์ต้นทุน
+        </Link>
+        <Link href="/sheets" className="text-accent underline">
+          ชีตต้นทุน
+        </Link>
+      </nav>
     </main>
   )
 }

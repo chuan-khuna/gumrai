@@ -68,13 +68,59 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"cost_line": {
+                  Row: {
+                    "cost_category_id": string | null,"cost_item_id": string | null,"id": string,"name": string | null,"position": number,"quantity_used": number,"sheet_id": string,"unit": string | null,"unit_cost": number | null
+                  }
+                  Insert: {
+                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"position": number,"quantity_used": number,"sheet_id": string,"unit"?: string | null,"unit_cost"?: number | null
+                  }
+                  Update: {
+                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"position"?: number,"quantity_used"?: number,"sheet_id"?: string,"unit"?: string | null,"unit_cost"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cost_line_cost_category_id_fkey"
+      columns: ["cost_category_id"]
+isOneToOne: false
+      referencedRelation: "cost_category"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cost_line_cost_item_id_fkey"
+      columns: ["cost_item_id"]
+isOneToOne: false
+      referencedRelation: "cost_item"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "cost_line_sheet_id_fkey"
+      columns: ["sheet_id"]
+isOneToOne: false
+      referencedRelation: "cost_sheet"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"cost_sheet": {
+                  Row: {
+                    "created_at": string,"gp_percent": number,"id": string,"name": string,"owner": string | null,"sale_unit": string,"selling_price": number,"updated_at": string,"vat_percent": number
+                  }
+                  Insert: {
+                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name": string,"owner"?: string | null,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name"?: string,"owner"?: string | null,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "save_cost_sheet":
+{ Args: { "p_lines": Json,"p_sheet": Json,"p_sheet_id": string }; Returns: undefined
+                           }
           }
           Enums: {
             [_ in never]: never
