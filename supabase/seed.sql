@@ -1,0 +1,2 @@
+-- Development sample data. Applied only by `supabase db reset`, never by a migration.
+-- Sample Cost Items and a sample sheet arrive with issue 10.

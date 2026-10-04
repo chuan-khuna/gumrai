@@ -1,0 +1,8 @@
+[install]
+# Supply-chain hardening: refuse packages published less than 7 days ago.
+# A compromised release that gets yanked within a day or two never reaches this machine.
+# Do not lower this, and do not add minimumReleaseAgeExcludes without asking first.
+minimumReleaseAge = 604800
+
+# Pin exact versions. No ^ ranges drifting under us between installs.
+exact = true
