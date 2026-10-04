@@ -160,7 +160,13 @@ export async function countSheetsUsingCostItem(id: string): Promise<number> {
   return new Set(data.map((line) => line.sheet_id)).size
 }
 
+/**
+ * Deletes a Cost Item. Every Linked Line to it first becomes a Manual Line holding the item's
+ * last values, so no sheet's figures change (ADR 0002). Both happen in one transaction.
+ * An unknown or malformed id deletes nothing.
+ */
 export async function deleteCostItem(id: string): Promise<void> {
-  const { error } = await createServerClient().from('cost_item').delete().eq('id', id)
+  if (!UUID.test(id)) return
+  const { error } = await createServerClient().rpc('delete_cost_item', { p_id: id })
   if (error) throw error
 }

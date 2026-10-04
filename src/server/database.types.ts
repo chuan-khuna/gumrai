@@ -118,7 +118,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "save_cost_sheet":
+            "delete_cost_item":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"save_cost_sheet":
 { Args: { "p_lines": Json,"p_sheet": Json,"p_sheet_id": string }; Returns: undefined
                            }
           }

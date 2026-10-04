@@ -72,3 +72,34 @@ export function CostItemForm({ action, initial, categories, submitLabel }: Props
     </form>
   )
 }
+
+// Deletes a Cost Item after asking. When sheets use it, says how many, and that their lines
+// keep the item's values as typed-in lines (ADR 0002).
+export function DeleteCostItemButton({
+  action,
+  name,
+  sheetCount,
+}: {
+  action: () => Promise<void>
+  name: string
+  sheetCount: number
+}) {
+  const question =
+    sheetCount === 0
+      ? `ลบ "${name}"?`
+      : `ลบ "${name}"? ใช้อยู่ใน ${sheetCount} ชีต บรรทัดที่ใช้รายการนี้จะกลายเป็นรายการพิมพ์เอง โดยเก็บชื่อ ต้นทุนต่อหน่วย หน่วย และหมวดล่าสุดไว้ ตัวเลขในชีตไม่เปลี่ยน`
+
+  return (
+    <form action={action}>
+      <button
+        type="submit"
+        onClick={(event) => {
+          if (!window.confirm(question)) event.preventDefault()
+        }}
+        className="rounded border border-loss px-4 py-2 text-loss"
+      >
+        ลบรายการนี้
+      </button>
+    </form>
+  )
+}

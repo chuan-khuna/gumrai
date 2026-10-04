@@ -16,7 +16,15 @@ import {
   deleteCostCategory,
   type CostCategory,
 } from '@/server/cost-categories'
-import { createCostSheet, deleteCostSheet, saveCostSheet, type CostSheet } from '@/server/cost-sheets'
+import {
+  createCostSheet,
+  deleteCostSheet,
+  getCostSheet,
+  saveCostSheet,
+  type CostSheet,
+  type CostSheetInput,
+} from '@/server/cost-sheets'
+import { computeSheet } from '@/lib/sheet'
 
 // Each test makes names no other test (or the dev seed) uses, and deletes what it made.
 const made: CostItem[] = []
@@ -276,6 +284,111 @@ describe('Cost Items', () => {
       expect(await countSheetsUsingCostItem(unused.id)).toBe(0)
       expect(await countSheetsUsingCostItem(randomUUID())).toBe(0)
       expect(await countSheetsUsingCostItem('not-an-id')).toBe(0)
+    })
+  })
+
+  describe('deleting an item that sheets use', () => {
+    // A sheet's figures as the seller sees them: loaded, then computed.
+    async function totals(sheetId: string) {
+      const sheet = (await getCostSheet(sheetId))!
+      const result = computeSheet({
+        sellingPrice: Number(sheet.sellingPrice),
+        gpPercent: Number(sheet.gpPercent),
+        vatPercent: Number(sheet.vatPercent),
+        lines: sheet.lines.map((line) => ({
+          id: line.id,
+          categoryId: line.categoryId,
+          name: line.name,
+          unit: line.unit,
+          unitCost: Number(line.unitCost),
+          quantityUsed: Number(line.quantityUsed),
+        })),
+      })
+      return {
+        totalCost: result.totalCost,
+        netProfit: result.netProfit,
+        categories: result.categories,
+      }
+    }
+
+    async function sheetWith(lines: CostSheetInput['lines']) {
+      const sheet = await createCostSheet(uniqueName('ชีต'))
+      madeSheets.push(sheet)
+      await saveCostSheet(sheet.id, {
+        name: sheet.name,
+        saleUnit: 'แก้ว',
+        sellingPrice: '65',
+        gpPercent: '33',
+        vatPercent: '7',
+        lines,
+      })
+      return sheet
+    }
+
+    it("turns its Linked Lines into Manual Lines, and no sheet's figures change", async () => {
+      const ingredients = await makeCategory('วัตถุดิบ')
+      const matcha = await make({
+        name: uniqueName('มัทฉะ'),
+        unitCost: '4.25',
+        unit: 'g',
+        categoryId: ingredients.id,
+      })
+      const milk = await make({ name: uniqueName('นมสด'), unitCost: '0.075', unit: 'ml' })
+      const latte = await sheetWith([
+        { costItemId: matcha.id, quantityUsed: '4' },
+        { costItemId: milk.id, quantityUsed: '150' },
+        { name: 'แก้ว', unitCost: '3', unit: 'ชิ้น', quantityUsed: '1', categoryId: null },
+        { costItemId: matcha.id, quantityUsed: '0.5' },
+      ])
+      const shot = await sheetWith([{ costItemId: matcha.id, quantityUsed: '2' }])
+      const latteBefore = await totals(latte.id)
+      const shotBefore = await totals(shot.id)
+
+      await deleteCostItem(matcha.id)
+
+      expect(await getCostItem(matcha.id)).toBeNull()
+      expect(await totals(latte.id)).toEqual(latteBefore)
+      expect(await totals(shot.id)).toEqual(shotBefore)
+
+      const manualMatcha = {
+        kind: 'manual',
+        name: matcha.name,
+        unitCost: '4.25',
+        unit: 'g',
+        categoryId: ingredients.id,
+      }
+      expect((await getCostSheet(latte.id))!.lines).toMatchObject([
+        { ...manualMatcha, quantityUsed: '4' },
+        { kind: 'linked', costItemId: milk.id },
+        { kind: 'manual', name: 'แก้ว' },
+        { ...manualMatcha, quantityUsed: '0.5' },
+      ])
+      expect((await getCostSheet(shot.id))!.lines).toMatchObject([
+        { ...manualMatcha, quantityUsed: '2' },
+      ])
+      expect(await countSheetsUsingCostItem(matcha.id)).toBe(0)
+    })
+
+    it("holds the item's last values, not the ones it had when linked", async () => {
+      const input = { name: uniqueName('ไซรัป'), unitCost: '0.4', unit: 'ml' }
+      const syrup = await make(input)
+      const sheet = await sheetWith([{ costItemId: syrup.id, quantityUsed: '10' }])
+      const changed = await updateCostItem(syrup.id, {
+        ...input,
+        name: uniqueName('ไซรัปใหม่'),
+        unitCost: '0.45',
+      })
+
+      await deleteCostItem(syrup.id)
+
+      expect((await getCostSheet(sheet.id))!.lines).toMatchObject([
+        { kind: 'manual', name: changed.name, unitCost: '0.45', unit: 'ml', quantityUsed: '10' },
+      ])
+    })
+
+    it('does nothing for an unknown or malformed id', async () => {
+      await expect(deleteCostItem(randomUUID())).resolves.toBeUndefined()
+      await expect(deleteCostItem('not-an-id')).resolves.toBeUndefined()
     })
   })
 })

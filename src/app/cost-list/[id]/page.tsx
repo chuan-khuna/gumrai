@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteCostItemAction, updateCostItemAction } from '@/app/cost-list/actions'
-import { CostItemForm } from '@/app/cost-list/cost-item-form'
+import { CostItemForm, DeleteCostItemButton } from '@/app/cost-list/cost-item-form'
 import { listCostCategories } from '@/server/cost-categories'
 import { countSheetsUsingCostItem, getCostItem } from '@/server/cost-items'
 
@@ -37,11 +37,13 @@ export default async function EditCostItemPage({ params }: { params: Promise<{ i
         />
       </section>
 
-      <form action={deleteCostItemAction.bind(null, item.id)} className="mt-8">
-        <button type="submit" className="rounded border border-loss px-4 py-2 text-loss">
-          ลบรายการนี้
-        </button>
-      </form>
+      <div className="mt-8">
+        <DeleteCostItemButton
+          action={deleteCostItemAction.bind(null, item.id)}
+          name={item.name}
+          sheetCount={sheetCount}
+        />
+      </div>
     </main>
   )
 }
