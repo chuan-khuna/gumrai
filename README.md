@@ -71,6 +71,14 @@ bun run test    # Vitest; the integration tests need local Supabase running
 
 When you're done, `bun run db:stop` stops the Supabase containers.
 
+## Install skills
+
+```
+npx skills add mattpocock/skills#v1.2.3
+npx skills add nutlope/hallmark
+npx skills add pbakaus/impeccable
+```
+
 ## Commands
 
 | Command | What it does |
