@@ -1,8 +1,8 @@
-// Cost Category colours come from a fixed palette, defined as OKLCH tokens in globals.css
+// Cost Category colours come from a fixed palette, defined as OKLCH tokens in the theme preset
 // (--color-category-0 …). A category's colour slot picks one; slots past the end wrap round.
 // The seller never picks a colour. ไม่มีหมวด has its own neutral one.
 
-// Keep in step with the --color-category-N tokens in src/app/globals.css.
+// Keep in step with the --color-category-N tokens in src/styles/presets/bubblegum.css.
 export const CATEGORY_PALETTE_SIZE = 8
 
 // A CSS colour for a Cost Category's slot, or for ไม่มีหมวด when the slot is null.

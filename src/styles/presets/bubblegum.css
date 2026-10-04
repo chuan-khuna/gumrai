@@ -1,0 +1,82 @@
+/* Bubblegum: Gumrai's theme. Hum-derived (Hallmark), bubblegum pink on cream.
+   This is the only place a colour is written down, always in OKLCH. globals.css loads it.
+   Components use the Tailwind utilities these tokens generate (bg-paper, text-ink …).
+   The rules for using them live in DESIGN.md. */
+
+@theme {
+  /* Paper and ink. Every neutral leans toward the gum hue: no pure white, no pure black. */
+  --color-paper: oklch(0.975 0.012 345);
+  --color-paper-2: oklch(0.95 0.02 345);
+  --color-paper-3: oklch(0.915 0.03 345);
+  --color-card: oklch(0.994 0.004 345);
+  --color-line: oklch(0.885 0.022 345);
+  --color-line-2: oklch(0.925 0.016 345);
+  --color-muted: oklch(0.5 0.03 340);
+  --color-ink-2: oklch(0.38 0.035 340);
+  --color-ink: oklch(0.24 0.035 340);
+
+  /* Flavours. Each owns one job: gum = action, mint = profit, razz = linked,
+     cinnamon = loss, grape = the save pop, lemon = the one highlighted figure. */
+  --color-gum: oklch(0.8 0.12 350);
+  --color-gum-deep: oklch(0.64 0.17 354);
+  --color-gum-ink: oklch(0.5 0.19 356);
+  --color-gum-tint: oklch(0.935 0.04 350);
+  --color-mint: oklch(0.86 0.1 165);
+  --color-mint-deep: oklch(0.7 0.13 162);
+  --color-mint-ink: oklch(0.47 0.11 160);
+  --color-mint-tint: oklch(0.945 0.04 165);
+  --color-razz: oklch(0.66 0.15 248);
+  --color-razz-ink: oklch(0.48 0.16 255);
+  --color-razz-tint: oklch(0.945 0.03 245);
+  --color-cinnamon: oklch(0.54 0.19 34);
+  --color-cinnamon-tint: oklch(0.94 0.035 40);
+  --color-grape: oklch(0.62 0.17 305);
+  --color-lemon: oklch(0.9 0.13 100);
+
+  /* Roles. Accent is the deep gum so white text on it and accent text on paper stay legible;
+     the light bubblegum fill (--color-gum) carries ink text. */
+  --color-accent: var(--color-gum-ink);
+  --color-profit: var(--color-mint-ink);
+  --color-loss: var(--color-cinnamon);
+  --color-focus: var(--color-gum-ink);
+
+  /* Type. The variables come from next/font in src/app/layout.tsx. */
+  --font-sans: var(--font-plex-looped), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-mitr), var(--font-plex-looped), ui-sans-serif, sans-serif;
+
+  /* Shape and depth: round everything, two quiet shadows, nothing glossy. */
+  --radius-card: 20px;
+  --radius-field: 12px;
+  --shadow-card: 0 1px 2px oklch(0.24 0.035 340 / 0.06), 0 14px 30px -18px oklch(0.24 0.035 340 / 0.22);
+  --shadow-lift: 0 2px 4px oklch(0.24 0.035 340 / 0.06), 0 22px 40px -20px oklch(0.24 0.035 340 / 0.3);
+  --shadow-push: 0 4px 0 0 var(--color-gum-deep), 0 6px 12px -3px oklch(0.7 0.14 350 / 0.4);
+
+  /* Motion: press, chew, pop. */
+  --ease-press: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Cost Category colours, indexed by a category's colour slot (src/lib/category-colours.ts
+   reads them by number and wraps past the last). Hues steer clear of gum (330–10°),
+   cinnamon loss (20–45°) and mint profit (135–170°). `static` emits every one, since they
+   are looked up by slot, not named in a class. Adding or removing one means changing
+   CATEGORY_PALETTE_SIZE too. */
+@theme static {
+  --color-category-0: oklch(0.68 0.12 250);
+  --color-category-1: oklch(0.8 0.13 90);
+  --color-category-2: oklch(0.64 0.14 310);
+  --color-category-3: oklch(0.72 0.1 185);
+  --color-category-4: oklch(0.62 0.13 280);
+  --color-category-5: oklch(0.76 0.13 120);
+  --color-category-6: oklch(0.74 0.12 60);
+  --color-category-7: oklch(0.7 0.1 215);
+  /* ไม่มีหมวด */
+  --color-category-none: oklch(0.8 0.01 345);
+}
+
+/* The platform's parts of the Selling Price split chart: its GP, and the VAT on that GP.
+   Static for the same reason: the chart names them by variable, not by class. */
+@theme static {
+  --color-commission: oklch(0.42 0.03 330);
+  --color-commission-vat: oklch(0.6 0.03 330);
+}
