@@ -1,6 +1,6 @@
 import { createServerClient } from '@/server/supabase'
 
-// Cost Sheets (CONTEXT.md): one saved costing per thing the seller sells. Money, percentages
+// Cost Sheets (GLOSSARY.md): one saved costing per thing the seller sells. Money, percentages
 // and quantities travel as decimal strings, never JS numbers, so what the seller typed is
 // stored and read back exactly. The Selling Price is never rounded.
 

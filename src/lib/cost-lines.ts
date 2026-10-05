@@ -4,7 +4,7 @@ import type { CostItem } from '@/server/cost-items'
 import type { LinkedLine, ManualLineInput } from '@/server/cost-sheets'
 
 /**
- * Unlinks a Linked Line (CONTEXT.md): the Manual Line it becomes holds the values the line
+ * Unlinks a Linked Line (GLOSSARY.md): the Manual Line it becomes holds the values the line
  * has now, so the sheet's figures do not move, and later Cost Item changes leave it alone.
  */
 export function unlinkLine(line: Omit<LinkedLine, 'id' | 'kind'>): ManualLineInput {

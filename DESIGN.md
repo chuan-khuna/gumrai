@@ -458,7 +458,7 @@ Plain CSS plus `tw-animate-css` for shadcn's open and close animations. There is
 
 ## Voice
 
-Thai, warm and short: a friend who's good with numbers. Use the words in `CONTEXT.md` exactly (รายการต้นทุน, not สินค้า; กำไรสุทธิ, not มาร์จิ้น). Buttons are plain verbs: บันทึก, สร้าง, ทำสำเนา. Errors say what happened and what to do: ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน. The fun comes from the colour and the bubble, never from jokes.
+Thai, warm and short: a friend who's good with numbers. Use the words in `GLOSSARY.md` exactly (รายการต้นทุน, not สินค้า; กำไรสุทธิ, not มาร์จิ้น). Buttons are plain verbs: บันทึก, สร้าง, ทำสำเนา. Errors say what happened and what to do: ราคาขาย 40 ฿ ยังไม่พอจ่ายต้นทุน. The fun comes from the colour and the bubble, never from jokes.
 
 ## Implementation
 

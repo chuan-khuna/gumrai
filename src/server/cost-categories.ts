@@ -1,6 +1,6 @@
 import { createServerClient } from '@/server/supabase'
 
-// Cost Categories (CONTEXT.md): groups the seller names themselves. Each has a colour slot,
+// Cost Categories (GLOSSARY.md): groups the seller names themselves. Each has a colour slot,
 // an index into the fixed palette (@/lib/category-colours), assigned automatically: the
 // seller never picks a colour.
 export type CostCategory = {

@@ -5,7 +5,7 @@ A Thai-language web app that helps a seller work out cost, selling price and pro
 - **Cost List** (ลิสต์ต้นทุน): each thing you buy, entered once with its Unit Cost and Unit, grouped by Cost Category.
 - **Cost Sheets** (ชีตต้นทุน): one per thing you sell. Each has its Selling Price, GP and VAT, and cost lines taken from the Cost List or typed by hand. A sheet shows Net Profit and two charts.
 
-The domain terms are defined in [CONTEXT.md](CONTEXT.md). The v1 spec is [.scratch/gumrai-v1/spec.md](.scratch/gumrai-v1/spec.md).
+The domain terms are defined in [GLOSSARY.md](GLOSSARY.md). The v1 spec is [.scratch/gumrai-v1/spec.md](.scratch/gumrai-v1/spec.md).
 
 Stack: Next.js (App Router), Tailwind v4, TypeScript, Supabase (local Postgres in Docker), TanStack Charts, Vitest, bun.
 

@@ -130,7 +130,7 @@ Changing a Cost Item's Unit Cost updates every sheet that links to it. Data live
   - Money and quantities are Postgres `numeric`, never float.
   - The three starting Cost Categories are created by a migration, not the seed.
 - **Category colours** are assigned automatically from a fixed OKLCH palette by the category's colour slot. Sellers cannot pick colours in v1. ไม่มีหมวด has its own neutral colour.
-- **UI:** Thai only, baht only, no i18n layer. Code and the glossary use English domain names (CONTEXT.md). Pages: Cost List (with category management) and Cost Sheets (list, plus a sheet editor with results and two charts). Charts are rebuilt with TanStack Charts and fed from the calculation module's output. matcha-cafe's SVG chart components are not reused.
+- **UI:** Thai only, baht only, no i18n layer. Code and the glossary use English domain names (GLOSSARY.md). Pages: Cost List (with category management) and Cost Sheets (list, plus a sheet editor with results and two charts). Charts are rebuilt with TanStack Charts and fed from the calculation module's output. matcha-cafe's SVG chart components are not reused.
 - **Editing model:** Cost Items are edited one at a time in a form and saved immediately. Sheets hold edits client-side until explicitly saved, and leaving with unsaved edits asks first.
 
 ## Testing Decisions

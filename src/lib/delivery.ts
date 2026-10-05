@@ -4,7 +4,7 @@
 //
 // What VAT is charged on: the platform's commission (GP) is a service it sells the seller,
 // so VAT sits on the commission, not on the Selling Price. A 33% GP therefore takes
-// 33% x 1.07 = 35.31% of the price (CONTEXT.md: Platform Take).
+// 33% x 1.07 = 35.31% of the price (GLOSSARY.md: Platform Take).
 
 export interface DeliveryRates {
   /** GP, as a fraction of the Selling Price. */
