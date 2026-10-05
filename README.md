@@ -74,7 +74,7 @@ When you're done, `bun run db:stop` stops the Supabase containers.
 ## Install skills
 
 ```
-npx skills add mattpocock/skills#v1.2.3
+npx skills add mattpocock/skills#v1.3.1
 npx skills add nutlope/hallmark
 npx skills add pbakaus/impeccable
 ```
