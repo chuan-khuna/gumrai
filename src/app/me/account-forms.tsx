@@ -35,20 +35,23 @@ export function DisplayNameForm({ displayName }: { displayName: string }) {
   const invalid = state.error ? true : undefined
 
   return (
-    <form action={formAction} className="grid gap-4">
-      <Field label="ชื่อที่แสดง">
-        <Input
-          name="displayName"
-          autoComplete="nickname"
-          required
-          defaultValue={state.displayName}
-          aria-invalid={invalid}
-        />
-      </Field>
+    // One row from sm up: the field grows, the button keeps its size beside it.
+    <form action={formAction} className="grid gap-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="ชื่อที่แสดง" className="flex-1 basis-56">
+          <Input
+            name="displayName"
+            autoComplete="nickname"
+            required
+            defaultValue={state.displayName}
+            aria-invalid={invalid}
+          />
+        </Field>
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? 'กำลังบันทึก…' : 'บันทึกชื่อ'}
+        </Button>
+      </div>
       <FormMessage error={state.error} saved={state.saved} savedText="บันทึกชื่อที่แสดงแล้ว" />
-      <Button type="submit" disabled={pending} className="justify-self-start">
-        {pending ? 'กำลังบันทึก…' : 'บันทึกชื่อ'}
-      </Button>
     </form>
   )
 }
@@ -76,7 +79,7 @@ export function ChangePasswordForm({ email, minPasswordLength }: { email: string
         />
       </Field>
       <FormMessage error={state.error} saved={state.saved} savedText="เปลี่ยนรหัสผ่านแล้ว" />
-      <Button type="submit" disabled={pending} className="justify-self-start">
+      <Button type="submit" variant="secondary" disabled={pending} className="justify-self-start">
         {pending ? 'กำลังเปลี่ยน…' : 'เปลี่ยนรหัสผ่าน'}
       </Button>
     </form>
@@ -101,7 +104,7 @@ export function SetPasswordForm({ email, minPasswordLength }: { email: string; m
         />
       </Field>
       <FormMessage error={state.error} saved={state.saved} savedText="ตั้งรหัสผ่านแล้ว" />
-      <Button type="submit" disabled={pending} className="justify-self-start">
+      <Button type="submit" variant="secondary" disabled={pending} className="justify-self-start">
         {pending ? 'กำลังตั้ง…' : 'ตั้งรหัสผ่าน'}
       </Button>
     </form>

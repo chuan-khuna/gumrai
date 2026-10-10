@@ -1,18 +1,17 @@
 import { redirect } from 'next/navigation'
 import { ChangePasswordForm, DisplayNameForm, SetPasswordForm } from '@/app/me/account-forms'
-import { signOutAction } from '@/app/login/actions'
 import {
   bindDiscordAction,
   deleteAccountAction,
-  shuffleAvatarPatternAction,
   unbindDiscordAction,
   unbindEmailAction,
 } from '@/app/me/actions'
+import { ShuffleAvatarButton } from '@/app/me/shuffle-avatar-button'
 import { SellerAvatar } from '@/app/seller-avatar'
 import { ConfirmAction } from '@/components/confirm-action'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { loginPath } from '@/lib/return-to'
 import {
   countAccountData,
@@ -25,9 +24,10 @@ import { currentSeller, MIN_PASSWORD_LENGTH, type Seller } from '@/server/auth/a
 import { oauthFailureMessage } from '@/server/auth/oauth'
 import { requestClient } from '@/server/db/request-client'
 
-// The signed-in Seller's account: Display Name, password, the ways to sign in, deleting the
-// account, and signing out. ?bound=discord and ?error= come back from binding Discord through
-// the OAuth callback.
+// The signed-in Seller's account: who they are at the top, then one section per setting, its
+// heading in a column beside its controls on wide screens: Display Name, the
+// ways to sign in, the password, and deleting the account. Signing out is in the header.
+// ?bound=discord and ?error= come back from binding Discord through the OAuth callback.
 export default async function MePage({
   searchParams,
 }: {
@@ -41,114 +41,107 @@ export default async function MePage({
   const [data, methods] = await Promise.all([countAccountData(db), listSignInMethods(db)])
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-12">
-      <h1 className="text-3xl">บัญชีของฉัน</h1>
+    <main className="mx-auto max-w-4xl px-4 py-12">
+      <Identity seller={seller} email={account.email} methods={methods} />
 
-      <SummaryCard seller={seller} email={account.email} methods={methods} />
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>ชื่อที่แสดง</CardTitle>
-          <CardDescription>ชื่อที่เห็นมุมขวาบนของทุกหน้า</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DisplayNameForm displayName={account.displayName} />
-        </CardContent>
-      </Card>
-
-      <Card id="password" className="mt-6 scroll-mt-6">
-        {account.hasPassword ? (
-          <>
-            <CardHeader>
-              <CardTitle>เปลี่ยนรหัสผ่าน</CardTitle>
-              <CardDescription>
-                <SignInEmail email={account.email} />
-              </CardDescription>
-            </CardHeader>
+      <div className="mt-12 grid gap-10">
+        <Section id="name" title="ชื่อที่แสดง">
+          <Card>
             <CardContent>
-              <ChangePasswordForm email={account.email ?? ''} minPasswordLength={MIN_PASSWORD_LENGTH} />
+              <DisplayNameForm displayName={account.displayName} />
             </CardContent>
-          </>
-        ) : (
-          <>
-            <CardHeader>
-              <CardTitle>ตั้งรหัสผ่าน</CardTitle>
-              <CardDescription className="grid gap-1">
-                <span>ตั้งไว้แล้วจะเข้าสู่ระบบด้วยอีเมลนี้และรหัสผ่านได้ด้วย</span>
-                <SignInEmail email={account.email} />
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SetPasswordForm email={account.email ?? ''} minPasswordLength={MIN_PASSWORD_LENGTH} />
-            </CardContent>
-          </>
-        )}
-      </Card>
+          </Card>
+        </Section>
 
-      <SignInMethodsCard
-        methods={methods}
-        email={account.email}
-        bindError={oauthFailureMessage(error, 'bind')}
-        justBound={bound === 'discord' && methods.includes('discord')}
-      />
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>ลบบัญชี</CardTitle>
-          <CardDescription>ลบบัญชีและข้อมูลทั้งหมดของคุณ ลบแล้วกู้คืนไม่ได้</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ConfirmAction
-            action={deleteAccountAction}
-            trigger="ลบบัญชี"
-            size="default"
-            title="ลบบัญชีนี้?"
-            description={`ชีตต้นทุน ${data.costSheets} ชีต รายการต้นทุน ${data.costItems} รายการ หมวดต้นทุน และชื่อที่แสดงของคุณจะถูกลบทั้งหมด ลบแล้วกู้คืนไม่ได้`}
-            confirmLabel="ลบบัญชี"
-            pendingLabel="กำลังลบ…"
-            typeToConfirm={DELETE_CONFIRMATION}
+        <Section id="sign-in" title="วิธีเข้าสู่ระบบ">
+          <SignInMethods
+            methods={methods}
+            email={account.email}
+            bindError={oauthFailureMessage(error, 'bind')}
+            justBound={bound === 'discord' && methods.includes('discord')}
           />
-        </CardContent>
-      </Card>
+        </Section>
 
-      <form action={signOutAction} className="mt-8">
-        <Button type="submit" variant="secondary">
-          ออกจากระบบ
-        </Button>
-      </form>
+        <Section
+          id="password"
+          title={account.hasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่าน'}
+        >
+          <Card>
+            <CardContent className="grid gap-5">
+              <SignInEmail email={account.email} />
+              {account.hasPassword ? (
+                <ChangePasswordForm email={account.email ?? ''} minPasswordLength={MIN_PASSWORD_LENGTH} />
+              ) : (
+                <SetPasswordForm email={account.email ?? ''} minPasswordLength={MIN_PASSWORD_LENGTH} />
+              )}
+            </CardContent>
+          </Card>
+        </Section>
+
+        <Section id="delete" title="ลบบัญชี">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-loss-surface px-6 py-5">
+            <p className="text-sm text-foreground">
+              ชีตต้นทุน {data.costSheets} ชีต และรายการต้นทุน {data.costItems} รายการจะหายไปด้วย
+            </p>
+            <ConfirmAction
+              action={deleteAccountAction}
+              trigger="ลบบัญชี"
+              title="ลบบัญชีนี้?"
+              description={`ชีตต้นทุน ${data.costSheets} ชีต รายการต้นทุน ${data.costItems} รายการ หมวดต้นทุน และชื่อที่แสดงของคุณจะถูกลบทั้งหมด ลบแล้วกู้คืนไม่ได้`}
+              confirmLabel="ลบบัญชี"
+              pendingLabel="กำลังลบ…"
+              typeToConfirm={DELETE_CONFIRMATION}
+            />
+          </div>
+        </Section>
+      </div>
     </main>
+  )
+}
+
+// A setting: its heading, then its controls. Side by side from md up, with a dashed rule
+// between settings.
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section
+      id={id}
+      aria-labelledby={`${id}-title`}
+      className="grid scroll-mt-6 gap-4 border-t border-dashed border-border pt-10 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10"
+    >
+      <h2 id={`${id}-title`} className="text-xl">
+        {title}
+      </h2>
+      <div className="min-w-0">{children}</div>
+    </section>
   )
 }
 
 const METHOD_NAMES: Record<SignInMethod, string> = { email: 'อีเมลและรหัสผ่าน', discord: 'Discord' }
 
-// Who the Seller is at a glance: avatar, Display Name, email and the ways they sign in.
-function SummaryCard({ seller, email, methods }: { seller: Seller; email: string | null; methods: SignInMethod[] }) {
+// Who the Seller is at a glance: avatar (with the dice that shuffles it), Display Name, email
+// and the ways they sign in.
+function Identity({ seller, email, methods }: { seller: Seller; email: string | null; methods: SignInMethod[] }) {
   return (
-    <Card className="mt-8">
-      <CardContent className="grid gap-5">
-        <div className="flex items-center gap-4">
-          <SellerAvatar seller={seller} size="lg" />
-          <div className="grid min-w-0 gap-1">
-            <p className="truncate font-heading text-xl">{seller.displayName}</p>
-            {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
-            <div className="flex flex-wrap gap-1.5">
-              {methods.map((method) => (
-                <Badge key={method} variant="secondary">
-                  {METHOD_NAMES[method]}
-                </Badge>
-              ))}
-            </div>
-          </div>
+    <header className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
+      <h1 className="sr-only">บัญชีของฉัน</h1>
+      <div className="relative shrink-0">
+        <SellerAvatar seller={seller} size="lg" />
+        <ShuffleAvatarButton className="absolute -right-1 -bottom-1" />
+      </div>
+      <div className="grid min-w-0 gap-2">
+        <p className="font-heading text-3xl leading-tight font-medium [overflow-wrap:anywhere] sm:text-4xl">
+          {seller.displayName}
+        </p>
+        {email && <p className="text-muted-foreground [overflow-wrap:anywhere]">{email}</p>}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {methods.map((method) => (
+            <Badge key={method} variant="linked">
+              {METHOD_NAMES[method]}
+            </Badge>
+          ))}
         </div>
-        <form action={shuffleAvatarPatternAction} className="flex flex-wrap items-center gap-3">
-          <Button type="submit" variant="outline" size="sm">
-            สุ่มลายใหม่
-          </Button>
-          <p className="text-sm text-muted-foreground">กดได้เรื่อย ๆ จนกว่าจะได้ลายที่ชอบ</p>
-        </form>
-      </CardContent>
-    </Card>
+      </div>
+    </header>
   )
 }
 
@@ -156,16 +149,42 @@ function SummaryCard({ seller, email, methods }: { seller: Seller; email: string
 function SignInEmail({ email }: { email: string | null }) {
   if (!email) return null
   return (
-    <span className="break-all">
+    <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
       อีเมล <span className="font-medium text-foreground">{email}</span>
-    </span>
+    </p>
+  )
+}
+
+// One way to sign in: what it is and what it signs in with, its state, and what can be done.
+function MethodRow({
+  name,
+  detail,
+  bound,
+  action,
+}: {
+  name: string
+  detail?: string | null
+  bound: boolean
+  action?: React.ReactNode
+}) {
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-6 py-5">
+      <div className="grid min-w-0 flex-1 basis-48 gap-0.5">
+        <p className="flex flex-wrap items-center gap-2 font-heading font-medium">
+          {name}
+          <Badge variant={bound ? 'linked' : 'manual'}>{bound ? 'ใช้อยู่' : 'ยังไม่ได้ใช้'}</Badge>
+        </p>
+        {detail && <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{detail}</p>}
+      </div>
+      {action}
+    </li>
   )
 }
 
 // The ways to sign in: email and password, and Discord. Each can be unbound while the other is
 // bound; binding Discord goes through Discord; email and password is bound back by setting a
-// password in the card above.
-function SignInMethodsCard({
+// password in the section below.
+function SignInMethods({
   methods,
   email,
   bindError,
@@ -181,85 +200,70 @@ function SignInMethodsCard({
   const canUnbind = methods.length > 1
 
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>วิธีเข้าสู่ระบบ</CardTitle>
-        <CardDescription>ใช้ทั้งสองวิธีได้ และเข้าสู่ระบบด้วยวิธีไหนก็ได้</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-1">
-            <p>อีเมลและรหัสผ่าน</p>
-            {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
-            <Badge variant={hasEmail ? 'secondary' : 'manual'}>{hasEmail ? 'ใช้อยู่' : 'ยังไม่ได้ใช้'}</Badge>
-          </div>
-          {!hasEmail && (
-            <Button asChild variant="outline" size="sm">
-              <a href="#password">ตั้งรหัสผ่าน</a>
-            </Button>
-          )}
-          {hasEmail && canUnbind && (
-            <ConfirmAction
-              action={unbindEmailAction}
-              trigger="เลิกใช้"
-              title="เลิกเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน?"
-              description="รหัสผ่านของบัญชีนี้จะถูกลบ หลังจากนี้เข้าสู่ระบบได้ด้วย Discord เท่านั้น ตั้งรหัสผ่านใหม่ได้ทุกเมื่อที่หน้านี้"
-              passwordLabel="รหัสผ่านปัจจุบัน"
-              confirmLabel="เลิกใช้"
-              pendingLabel="กำลังเลิกใช้…"
-            />
-          )}
-        </div>
+    <div className="grid gap-4">
+      <Card className="gap-0 py-0">
+        <ul className="divide-y divide-dashed divide-border">
+          <MethodRow
+            name="อีเมลและรหัสผ่าน"
+            detail={email}
+            bound={hasEmail}
+            action={
+              !hasEmail ? (
+                <Button asChild variant="outline" size="sm">
+                  <a href="#password">ตั้งรหัสผ่าน</a>
+                </Button>
+              ) : (
+                canUnbind && (
+                  <ConfirmAction
+                    action={unbindEmailAction}
+                    trigger="เลิกใช้"
+                    title="เลิกเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน?"
+                    description="รหัสผ่านของบัญชีนี้จะถูกลบ หลังจากนี้เข้าสู่ระบบได้ด้วย Discord เท่านั้น ตั้งรหัสผ่านใหม่ได้ทุกเมื่อที่หน้านี้"
+                    passwordLabel="รหัสผ่านปัจจุบัน"
+                    confirmLabel="เลิกใช้"
+                    pendingLabel="กำลังเลิกใช้…"
+                  />
+                )
+              )
+            }
+          />
+          <MethodRow
+            name="Discord"
+            bound={hasDiscord}
+            action={
+              hasDiscord ? (
+                canUnbind && (
+                  <ConfirmAction
+                    action={unbindDiscordAction}
+                    trigger="เลิกผูก"
+                    title="เลิกผูก Discord?"
+                    description="หลังจากนี้เข้าสู่ระบบด้วย Discord ไม่ได้ ใช้อีเมลและรหัสผ่านแทน ผูกใหม่ได้ทุกเมื่อที่หน้านี้"
+                    confirmLabel="เลิกผูก"
+                    pendingLabel="กำลังเลิกผูก…"
+                  />
+                )
+              ) : (
+                <form action={bindDiscordAction}>
+                  <Button type="submit" variant="outline" size="sm">
+                    ผูก Discord
+                  </Button>
+                </form>
+              )
+            }
+          />
+        </ul>
+      </Card>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-1">
-            <p>Discord</p>
-            <Badge variant={hasDiscord ? 'secondary' : 'manual'}>{hasDiscord ? 'ใช้อยู่' : 'ยังไม่ได้ใช้'}</Badge>
-          </div>
-          {hasDiscord ? (
-            canUnbind && (
-              <ConfirmAction
-                action={unbindDiscordAction}
-                trigger="เลิกผูก"
-                title="เลิกผูก Discord?"
-                description="หลังจากนี้เข้าสู่ระบบด้วย Discord ไม่ได้ ใช้อีเมลและรหัสผ่านแทน ผูกใหม่ได้ทุกเมื่อที่หน้านี้"
-                confirmLabel="เลิกผูก"
-                pendingLabel="กำลังเลิกผูก…"
-              />
-            )
-          ) : (
-            <form action={bindDiscordAction}>
-              <Button type="submit" variant="outline" size="sm">
-                ผูก Discord
-              </Button>
-            </form>
-          )}
-        </div>
-
-        {bindError && (
-          <p role="alert" className="text-sm text-loss">
-            {bindError}
-          </p>
-        )}
-        {justBound && (
-          <p role="status" className="text-sm text-muted-foreground">
-            ผูก Discord แล้ว
-          </p>
-        )}
-        {/* With one way left it cannot be unbound, so say why and point to the other. */}
-        {!hasDiscord && (
-          <p className="text-sm text-muted-foreground">
-            ตอนนี้เข้าสู่ระบบได้ด้วยรหัสผ่านทางเดียว แนะนำให้ผูก Discord ไว้ด้วย
-            เพราะยังรีเซ็ตรหัสผ่านไม่ได้ ถ้าลืมรหัสผ่าน จะยังเข้าบัญชีนี้ด้วย Discord ได้
-          </p>
-        )}
-        {!hasEmail && (
-          <p className="text-sm text-muted-foreground">
-            ตอนนี้เข้าสู่ระบบได้ด้วย Discord ทางเดียว แนะนำให้ตั้งรหัสผ่านไว้ด้วย
-            ถ้าเข้า Discord ไม่ได้ จะยังเข้าบัญชีนี้ด้วยอีเมลและรหัสผ่านได้
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      {bindError && (
+        <p role="alert" className="text-sm text-loss">
+          {bindError}
+        </p>
+      )}
+      {justBound && (
+        <p role="status" className="text-sm text-profit">
+          ผูก Discord แล้ว
+        </p>
+      )}
+    </div>
   )
 }
