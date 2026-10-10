@@ -1,6 +1,6 @@
 # Spec: Gumrai v1: Cost List and Cost Sheets
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Problem Statement
 
