@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import {
   createCostCategoryAction,
   deleteCostCategoryAction,
@@ -21,10 +20,7 @@ export default async function CostCategoriesPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/cost-list" className="text-sm text-muted-foreground hover:text-foreground">
-        ← ลิสต์ต้นทุน
-      </Link>
-      <h1 className="mt-2 text-3xl">หมวดต้นทุน</h1>
+      <h1 className="text-3xl">หมวดต้นทุน</h1>
       <p className="mt-2 text-muted-foreground">สีของแต่ละหมวดถูกกำหนดให้อัตโนมัติ</p>
 
       <Card className="mt-8">

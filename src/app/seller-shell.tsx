@@ -28,6 +28,12 @@ export async function SellerShell({ children }: { children: React.ReactNode }) {
             <Link href="/cost-list" className="text-sm text-muted-foreground hover:text-foreground">
               ลิสต์ต้นทุน
             </Link>
+            <Link
+              href="/cost-list/categories"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              หมวดต้นทุน
+            </Link>
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-3">
             <Link

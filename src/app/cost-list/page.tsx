@@ -54,10 +54,7 @@ export default async function CostListPage({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-        ← กำไร
-      </Link>
-      <h1 className="mt-2 text-3xl">ลิสต์ต้นทุน</h1>
+      <h1 className="text-3xl">ลิสต์ต้นทุน</h1>
 
       <Card className={firstRun ? 'mt-8 border-2 border-dashed bg-transparent shadow-none' : 'mt-8'}>
         <CardHeader>
@@ -75,9 +72,6 @@ export default async function CostListPage({
             categories={categories}
             submitLabel="เพิ่ม"
           />
-          <Button asChild variant="link" size="sm" className="mt-4">
-            <Link href="/cost-list/categories">จัดการหมวดต้นทุน</Link>
-          </Button>
         </CardContent>
       </Card>
 
