@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 function FormError({ error }: { error: string | null }) {
   if (!error) return null
   return (
-    <p role="alert" className="text-sm text-loss">
+    <p role="alert" className="rounded-lg bg-loss-surface px-3 py-2 text-sm text-foreground">
       {error}
     </p>
   )

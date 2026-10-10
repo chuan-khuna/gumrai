@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { discordSignInAction } from '@/app/login/actions'
 import { SignInForm, SignUpForm } from '@/app/login/login-forms'
@@ -23,42 +24,53 @@ export default async function LoginPage({
   const discordError = oauthFailureMessage(error)
 
   return (
-    <main className="mx-auto max-w-md px-4 py-12">
-      <h1 className="text-3xl">กำไร</h1>
+    <main className="mx-auto max-w-3xl px-4 pt-8 pb-16 sm:pt-12">
+      <Link href="/" className="font-heading text-2xl font-semibold hover:text-link">
+        กำไร
+      </Link>
+      <h1 className="mt-10 text-3xl sm:text-4xl">เข้าสู่ระบบ</h1>
       <p className="mt-2 text-muted-foreground">เข้าสู่ระบบเพื่อดูชีตต้นทุนและลิสต์ต้นทุนของคุณ</p>
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>เข้าสู่ระบบ</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-6">
-          <form action={discordSignInAction} className="grid gap-3">
-            <input type="hidden" name="next" value={returnTo} />
-            {discordError && (
-              <p role="alert" className="text-sm text-loss">
-                {discordError}
-              </p>
-            )}
-            <Button type="submit" variant="outline">
-              เข้าสู่ระบบด้วย Discord
-            </Button>
-          </form>
-          <p className="text-center text-sm text-muted-foreground">หรือใช้อีเมล</p>
-          <SignInForm returnTo={returnTo} />
-        </CardContent>
-      </Card>
+      {discordError && (
+        <p role="alert" className="mt-6 rounded-lg bg-loss-surface px-3 py-2 text-sm text-foreground">
+          {discordError}
+        </p>
+      )}
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>สมัครใช้งาน</CardTitle>
-          <CardDescription>
-            ยังไม่มีบัญชี สมัครด้วยอีเมลได้เลย ไม่ต้องยืนยันอีเมล หรือเข้าสู่ระบบด้วย Discord ครั้งแรกก็สร้างบัญชีให้เอง
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SignUpForm returnTo={returnTo} minPasswordLength={MIN_PASSWORD_LENGTH} />
-        </CardContent>
-      </Card>
+      <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle>มีบัญชีอยู่แล้ว</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-5">
+            <form action={discordSignInAction}>
+              <input type="hidden" name="next" value={returnTo} />
+              <Button type="submit" variant="outline" className="w-full">
+                เข้าสู่ระบบด้วย Discord
+              </Button>
+            </form>
+            <p className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span aria-hidden="true" className="flex-1 border-t border-dashed border-border" />
+              หรือใช้อีเมล
+              <span aria-hidden="true" className="flex-1 border-t border-dashed border-border" />
+            </p>
+            <SignInForm returnTo={returnTo} />
+          </CardContent>
+        </Card>
+
+        {/* A first-run card: dashed, no fill (DESIGN.md § Card and money). */}
+        <Card className="border-2 border-dashed border-border bg-transparent shadow-none">
+          <CardHeader>
+            <CardTitle>ยังไม่มีบัญชี</CardTitle>
+            <CardDescription>
+              สมัครด้วยอีเมลได้เลย ไม่ต้องยืนยันอีเมล หรือเข้าสู่ระบบด้วย Discord ครั้งแรกก็สร้างบัญชีให้เอง
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SignUpForm returnTo={returnTo} minPasswordLength={MIN_PASSWORD_LENGTH} />
+          </CardContent>
+        </Card>
+      </div>
     </main>
   )
 }
