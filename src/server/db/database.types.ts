@@ -23,20 +23,7 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "app_status": {
-                  Row: {
-                    "id": number,"message": string
-                  }
-                  Insert: {
-                    "id"?: number,"message": string
-                  }
-                  Update: {
-                    "id"?: number,"message"?: string
-                  }
-                  Relationships: [
-                    
-                  ]
-                },"cost_category": {
+            "cost_category": {
                   Row: {
                     "colour_slot": number,"created_at": string,"id": string,"name": string,"owner": string,"sort_order": number
                   }

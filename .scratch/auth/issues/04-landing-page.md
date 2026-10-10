@@ -4,9 +4,9 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The root page needs no sign-in and replaces the current database-status page.
-- [ ] Its main button depends on whether a Seller is signed in, as described above.
-- [ ] Signed-in Sellers are not redirected away from it.
-- [ ] Built from existing UI components and design tokens.
+- [x] The root page needs no sign-in and replaces the current database-status page.
+- [x] Its main button depends on whether a Seller is signed in, as described above.
+- [x] Signed-in Sellers are not redirected away from it.
+- [x] Built from existing UI components and design tokens.
