@@ -12,17 +12,15 @@ export default async function SheetsPage() {
   const sheets = await listCostSheets(db)
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl">ชีตต้นทุน</h1>
+    <main className="mx-auto max-w-4xl px-4 py-12">
+      <h1 className="text-3xl sm:text-4xl">ชีตต้นทุน</h1>
 
       {sheets.length === 0 ? (
         // First run: no sheets yet, so the one thing to do is create the first.
         <Card className="mt-8 border-2 border-dashed bg-transparent shadow-none">
           <CardHeader>
             <CardTitle>สร้างชีตแรก</CardTitle>
-            <CardDescription>
-              ยังไม่มีชีตต้นทุน ตั้งชื่อสิ่งที่ขายเพื่อเริ่มคิดต้นทุนและกำไร
-            </CardDescription>
+            <CardDescription>ตั้งชื่อสิ่งที่ขายเพื่อเริ่มคิดต้นทุนและกำไร</CardDescription>
           </CardHeader>
           <CardContent>
             <CreateSheetForm />
@@ -31,14 +29,11 @@ export default async function SheetsPage() {
       ) : (
         <>
           <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>สร้างชีตใหม่</CardTitle>
-            </CardHeader>
             <CardContent>
               <CreateSheetForm />
             </CardContent>
           </Card>
-          <ul className="mt-6 grid gap-3">
+          <ul className="mt-10 grid gap-3 border-t border-dashed border-border pt-10">
             {sheets.map((sheet) => (
               <SheetRow key={sheet.id} sheet={sheet} />
             ))}

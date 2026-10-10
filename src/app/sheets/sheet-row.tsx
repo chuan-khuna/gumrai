@@ -18,24 +18,25 @@ export function SheetRow({ sheet }: { sheet: CostSheetSummary }) {
   const [renaming, setRenaming] = useState(false)
 
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-2xl bg-card px-5 py-4 shadow-card transition-[transform,box-shadow] duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-lift motion-reduce:hover:translate-y-0">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-card px-6 py-4 shadow-card transition-[transform,box-shadow] duration-200 ease-spring hover:-translate-y-0.5 hover:shadow-lift motion-reduce:hover:translate-y-0">
       {renaming ? (
         <RenameForm sheet={sheet} onDone={() => setRenaming(false)} />
       ) : (
         <>
           <Link
             href={`/sheets/${sheet.id}`}
-            className="flex min-w-0 flex-1 basis-48 items-baseline justify-between gap-4 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring"
+            className="grid min-w-0 flex-1 basis-56 gap-0.5 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring"
           >
-            <span className="font-heading text-lg">{sheet.name}</span>
-            <span className="text-sm text-muted-foreground">ต่อ{sheet.saleUnit}</span>
+            <span className="font-heading text-lg font-medium [overflow-wrap:anywhere]">{sheet.name}</span>
+            <span className="text-sm whitespace-nowrap text-muted-foreground">ต่อ{sheet.saleUnit}</span>
           </Link>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setRenaming(true)}>
+          {/* Quiet ghosts for the everyday actions; only ลบ keeps its warning outline. */}
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setRenaming(true)}>
               เปลี่ยนชื่อ
             </Button>
             <form action={duplicateCostSheetAction.bind(null, sheet.id)}>
-              <Button type="submit" variant="outline" size="sm">
+              <Button type="submit" variant="ghost" size="sm">
                 ทำสำเนา
               </Button>
             </form>

@@ -26,7 +26,7 @@ export function CategoryNameForm({
   const [state, formAction, pending] = useActionState(action, { name: initialName, error: null })
 
   return (
-    <form action={formAction} className="flex flex-1 flex-wrap items-center gap-2">
+    <form action={formAction} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <Input
         name="name"
         required
@@ -35,7 +35,7 @@ export function CategoryNameForm({
         defaultValue={state.name}
         key={state.name}
         aria-invalid={state.error ? true : undefined}
-        className={primary ? 'flex-1 basis-48' : 'h-9 flex-1 basis-40'}
+        className={primary ? 'min-w-0 flex-1 basis-0' : 'h-9 min-w-0 flex-1 basis-0'}
       />
       <Button
         type="submit"

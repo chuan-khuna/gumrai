@@ -5,7 +5,7 @@ import {
 } from '@/app/cost-list/categories/actions'
 import { CategoryNameForm, DeleteCategoryButton } from '@/app/cost-list/categories/category-forms'
 import { CategoryDot } from '@/app/cost-list/category-dot'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { countCostItemsIn, listCostCategories } from '@/server/costs/cost-categories'
 import { requestClient } from '@/server/db/request-client'
@@ -19,14 +19,10 @@ export default async function CostCategoriesPage() {
   const counts = await Promise.all(categories.map((c) => countCostItemsIn(db, c.id)))
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl">หมวดต้นทุน</h1>
-      <p className="mt-2 text-muted-foreground">สีของแต่ละหมวดถูกกำหนดให้อัตโนมัติ</p>
+    <main className="mx-auto max-w-4xl px-4 py-12">
+      <h1 className="text-3xl sm:text-4xl">หมวดต้นทุน</h1>
 
       <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>เพิ่มหมวด</CardTitle>
-        </CardHeader>
         <CardContent>
           <CategoryNameForm
             action={createCostCategoryAction}
@@ -38,28 +34,33 @@ export default async function CostCategoriesPage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6 gap-0 py-2">
-        <ul className="divide-y divide-dashed">
+      <Card className="mt-10 gap-0 py-2">
+        <ul className="divide-y divide-dashed divide-border">
+          {/* Phones: dot and name on one line, the count and ลบ on the next. */}
           {categories.map((category, i) => (
-            <li key={category.id} className="flex flex-wrap items-center gap-3 px-6 py-3">
-              <CategoryDot colourSlot={category.colourSlot} />
-              <CategoryNameForm
-                action={renameCostCategoryAction.bind(null, category.id)}
-                initialName={category.name}
-                submitLabel="เปลี่ยนชื่อ"
-                label={`ชื่อหมวด ${category.name}`}
-              />
-              <span className="whitespace-nowrap text-sm text-muted-foreground">
-                {counts[i]} รายการ
-              </span>
-              <DeleteCategoryButton
-                action={deleteCostCategoryAction.bind(null, category.id)}
-                name={category.name}
-                itemCount={counts[i]}
-              />
+            <li key={category.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3">
+              <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
+                <CategoryDot colourSlot={category.colourSlot} />
+                <CategoryNameForm
+                  action={renameCostCategoryAction.bind(null, category.id)}
+                  initialName={category.name}
+                  submitLabel="เปลี่ยนชื่อ"
+                  label={`ชื่อหมวด ${category.name}`}
+                />
+              </div>
+              <div className="ml-auto flex items-center gap-3">
+                <span className="text-sm whitespace-nowrap text-muted-foreground tabular-nums">
+                  {counts[i]} รายการ
+                </span>
+                <DeleteCategoryButton
+                  action={deleteCostCategoryAction.bind(null, category.id)}
+                  name={category.name}
+                  itemCount={counts[i]}
+                />
+              </div>
             </li>
           ))}
-          <li className="flex items-center gap-3 px-6 py-3 text-muted-foreground">
+          <li className="flex items-center gap-3 px-6 py-4 text-muted-foreground">
             <CategoryDot colourSlot={null} />
             {UNCATEGORISED}
           </li>

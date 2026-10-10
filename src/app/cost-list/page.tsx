@@ -53,18 +53,17 @@ export default async function CostListPage({
     : [{ category: null, items }]
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl">ลิสต์ต้นทุน</h1>
+    <main className="mx-auto max-w-4xl px-4 py-12">
+      <h1 className="text-3xl sm:text-4xl">ลิสต์ต้นทุน</h1>
 
       <Card className={firstRun ? 'mt-8 border-2 border-dashed bg-transparent shadow-none' : 'mt-8'}>
-        <CardHeader>
-          <CardTitle>{firstRun ? 'เพิ่มรายการต้นทุนแรก' : 'เพิ่มรายการต้นทุน'}</CardTitle>
-          {firstRun && (
-            <CardDescription>
-              ยังไม่มีรายการต้นทุน เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g
-            </CardDescription>
-          )}
-        </CardHeader>
+        {/* Once there are items, the fields and เพิ่ม say what the card is for. */}
+        {firstRun && (
+          <CardHeader>
+            <CardTitle>เพิ่มรายการต้นทุนแรก</CardTitle>
+            <CardDescription>เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g</CardDescription>
+          </CardHeader>
+        )}
         <CardContent>
           <CostItemForm
             action={createCostItemAction}
@@ -76,7 +75,10 @@ export default async function CostListPage({
       </Card>
 
       {!firstRun && (
-        <form className="mt-8 flex flex-wrap items-center gap-3" role="search">
+        <form
+          className="mt-10 flex flex-wrap items-center gap-3 border-t border-dashed border-border pt-10"
+          role="search"
+        >
           <Input
             name="q"
             type="search"
@@ -127,7 +129,7 @@ export default async function CostListPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6">ชื่อ</TableHead>
-                    {!grouped && <TableHead>หมวด</TableHead>}
+                    {!grouped && <TableHead className="hidden sm:table-cell">หมวด</TableHead>}
                     <TableHead className="pr-6 text-right">ต้นทุนต่อหน่วย</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -137,16 +139,23 @@ export default async function CostListPage({
                     return (
                       // The name links to the item; its ::after stretches over the whole row.
                       <TableRow key={item.id} className="relative hover:bg-accent focus-within:bg-accent">
-                        <TableCell className="pl-6 text-base">
+                        <TableCell className="py-3 pl-6 text-base whitespace-normal">
                           <Link
                             href={`/cost-list/${item.id}`}
-                            className="outline-none after:absolute after:inset-0 focus-visible:underline"
+                            className="outline-none [overflow-wrap:anywhere] after:absolute after:inset-0 focus-visible:underline"
                           >
                             {item.name}
                           </Link>
+                          {/* Phones have no room for the หมวด column, so the category sits under the name. */}
+                          {!grouped && (
+                            <span className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground sm:hidden">
+                              <CategoryDot colourSlot={itemCategory?.colourSlot ?? null} />
+                              {itemCategory?.name ?? UNCATEGORISED}
+                            </span>
+                          )}
                         </TableCell>
                         {!grouped && (
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <span className="flex items-center gap-2 text-muted-foreground">
                               <CategoryDot colourSlot={itemCategory?.colourSlot ?? null} />
                               {itemCategory?.name ?? UNCATEGORISED}

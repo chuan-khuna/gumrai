@@ -25,12 +25,12 @@ export function CostItemForm({ action, initial, categories, submitLabel }: Props
   return (
     <form
       action={formAction}
-      className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_1.5fr_auto] sm:items-end"
+      className="grid gap-3 md:grid-cols-[2fr_1.25fr_1fr_1.5fr_auto] md:items-end"
     >
       <Field label="ชื่อ">
         <Input name="name" required defaultValue={state.values.name} />
       </Field>
-      <Field label="ต้นทุนต่อหน่วย (฿)">
+      <Field label={<span className="whitespace-nowrap">ต้นทุนต่อหน่วย (฿)</span>}>
         <Input
           name="unitCost"
           required
@@ -59,7 +59,7 @@ export function CostItemForm({ action, initial, categories, submitLabel }: Props
         {submitLabel}
       </Button>
       {state.error && (
-        <p role="alert" className="text-sm text-loss sm:col-span-5">
+        <p role="alert" className="text-sm text-loss md:col-span-5">
           {state.error}
         </p>
       )}
