@@ -52,6 +52,8 @@ export type DiscordUser = {
   globalName: string
   /** The avatar hash; '' when they use Discord's default avatar. */
   avatar: string
+  /** Whether Discord has verified the account's email. */
+  emailVerified: boolean
 }
 
 /** A made-up Discord user with a display name and an avatar. */
@@ -61,6 +63,7 @@ export function discordUser(overrides: Partial<DiscordUser> = {}): DiscordUser {
     username: 'matcha.cafe',
     globalName: 'ร้านมัทฉะ',
     avatar: 'a1b2c3d4e5f6',
+    emailVerified: true,
     ...overrides,
   }
 }
@@ -83,16 +86,17 @@ export function discordMetadata(user: DiscordUser, email: string): Record<string
     full_name: user.username,
     provider_id: user.id,
     email,
-    email_verified: true,
+    email_verified: user.emailVerified,
     phone_verified: false,
   }
 }
 
 /**
- * A new Seller made as a first Discord sign-in makes one: the auth user is inserted with the
- * Discord provider's metadata, and has a `discord` identity. The real OAuth redirect cannot run
- * in a test, so the user is made with the admin API (with a password, so the test can sign in)
- * and the identity is inserted straight into Postgres.
+ * A new Seller with Discord bound, signed in: the auth user has the Discord provider's metadata,
+ * a password, an `email` identity and a `discord` identity. The real OAuth redirect cannot run
+ * in a test, so the admin API makes the user (with a password, so the test can sign in), and
+ * Discord is then bound the way binding at /me binds it (bindDiscordIdentity), the only way
+ * refuse_automatic_link lets a `discord` identity join a user made in another transaction.
  */
 export async function createDiscordSeller(user: DiscordUser = discordUser()): Promise<TestSeller> {
   const email = `discord-${randomUUID()}@gumrai.test`
@@ -105,7 +109,7 @@ export async function createDiscordSeller(user: DiscordUser = discordUser()): Pr
   })
   if (error) throw error
   made.push(data.user.id)
-  await attachDiscordIdentity(data.user.id, user, email)
+  await bindDiscordIdentity(data.user.id, user, email)
   return { id: data.user.id, email, password, db: await signIn(email, password) }
 }
 
@@ -126,28 +130,113 @@ export async function createDiscordOnlySeller(
   return { ...seller, password: '' }
 }
 
+// Supabase Auth's callback for a Discord sign-in or bind runs in one transaction: it inserts the
+// identity (and, for a first sign-in, the user before it), writes the user, then marks the flow
+// state used by setting its user_id (supabase/auth v2.197.0, internal/api/external.go,
+// internalExternalProviderCallback). The helpers below run those statements as that transaction
+// does, so refuse_automatic_link judges them as it would the real one.
+
+function identityInsert(sellerId: string, user: DiscordUser, email: string) {
+  return `insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+     values (${literal(user.id)}, '${uuid(sellerId)}', ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
+             'discord', now(), now(), now());`
+}
+
+function flowStateClaim(flowStateId: string, sellerId: string) {
+  return `update auth.flow_state set user_id = '${uuid(sellerId)}', auth_code_issued_at = now(), updated_at = now()
+      where id = '${uuid(flowStateId)}';`
+}
+
 /**
- * Inserts a `discord` identity for `user` on the existing auth user `sellerId`, as Supabase
- * Auth does when it attaches one (a first sign-in, a bind, or linking by email). It was made
- * `createdAgo` (a Postgres interval; '0' is now) and last updated now: with '0', untouched
- * since Supabase Auth inserted it; with more, as after a later sign-in with it.
+ * Writes a PKCE flow state for Discord as GET /authorize does when a sign-in starts
+ * (`linkingTargetId` null), or as GET /user/identities/authorize does when `linkingTargetId`
+ * starts binding Discord from /me. Returns its id, the OAuth `state`.
  */
-export async function attachDiscordIdentity(
+export async function startDiscordFlowState(linkingTargetId: string | null): Promise<string> {
+  const id = randomUUID()
+  await runSql(
+    `insert into auth.flow_state (id, provider_type, authentication_method, code_challenge, code_challenge_method,
+                                  auth_code, linking_target_id, created_at, updated_at)
+     values ('${id}', 'discord', 'oauth', ${literal(randomUUID())}, 's256', ${literal(randomUUID())},
+             ${linkingTargetId ? `'${uuid(linkingTargetId)}'` : 'null'}, now(), now())`,
+  )
+  return id
+}
+
+/**
+ * Binds `user`'s Discord account to the existing Seller `sellerId` as Supabase Auth's callback
+ * for binding from /me does: the identity is inserted and the bind's flow state (made by
+ * startDiscordFlowState(sellerId) unless `flowStateId` names one) marked used, in one
+ * transaction.
+ */
+export async function bindDiscordIdentity(
   sellerId: string,
   user: DiscordUser,
   email: string,
-  createdAgo = '0',
+  flowStateId?: string,
 ): Promise<void> {
+  const state = flowStateId ?? (await startDiscordFlowState(sellerId))
+  await runSql(`begin; ${identityInsert(sellerId, user, email)} ${flowStateClaim(state, sellerId)} commit;`)
+}
+
+/**
+ * What Supabase Auth's callback for a Discord sign-in does when `user`'s email matches the
+ * existing Seller `sellerId` (automatic linking by email): in one transaction, inserts the
+ * identity on that Seller, writes the Discord metadata onto them, and marks the sign-in's flow
+ * state (made by startDiscordFlowState(null) unless `flowStateId` names one) used. The database
+ * refuses it, so this rejects with the error Postgres raised.
+ */
+export async function linkDiscordByEmail(
+  sellerId: string,
+  user: DiscordUser,
+  email: string,
+  flowStateId?: string,
+): Promise<void> {
+  const state = flowStateId ?? (await startDiscordFlowState(null))
   await runSql(
-    `insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-     values (${literal(user.id)}, '${uuid(sellerId)}', ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
-             'discord', now(), now() - ${literal(createdAgo)}::interval, now())`,
+    `begin;
+     ${identityInsert(sellerId, user, email)}
+     update auth.users set raw_user_meta_data = raw_user_meta_data || ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
+                           updated_at = now()
+      where id = '${uuid(sellerId)}';
+     ${flowStateClaim(state, sellerId)}
+     commit;`,
   )
 }
 
-/** Moves when the Seller's auth user was made `ago` (a Postgres interval) into the past. */
-export async function backdateSeller(sellerId: string, ago: string): Promise<void> {
-  await runSql(`update auth.users set created_at = now() - ${literal(ago)}::interval where id = '${uuid(sellerId)}'`)
+/**
+ * What Supabase Auth's callback does for a first Discord sign-in: in one transaction, inserts
+ * a new auth user with the Discord provider's metadata and no password, then its `discord`
+ * identity, then marks the sign-in's flow state used. Returns the new user's id; removeSellers
+ * removes it. Not signed in: it has no password.
+ */
+export async function signUpWithDiscord(user: DiscordUser = discordUser()): Promise<string> {
+  const id = randomUUID()
+  const email = `discord-${id}@gumrai.test`
+  const state = await startDiscordFlowState(null)
+  const metadata = literal(JSON.stringify(discordMetadata(user, email)))
+  await runSql(
+    `begin;
+     insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+                             raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                             confirmation_token, recovery_token, email_change_token_new, email_change)
+     values ('00000000-0000-0000-0000-000000000000', '${id}', 'authenticated', 'authenticated', ${literal(email)}, '',
+             now(), '{"provider":"discord","providers":["discord"]}'::jsonb, ${metadata}::jsonb, now(), now(),
+             '', '', '', '');
+     ${identityInsert(id, user, email)}
+     ${flowStateClaim(state, id)}
+     commit;`,
+  )
+  made.push(id)
+  return id
+}
+
+/** Whether the Seller's `email` identity says their email is verified, or null without one. */
+export async function emailIdentityVerified(sellerId: string): Promise<boolean | null> {
+  const { data, error } = await admin.auth.admin.getUserById(sellerId)
+  if (error) throw error
+  const identity = (data.user.identities ?? []).find((each) => each.provider === 'email')
+  return identity ? identity.identity_data?.email_verified === true : null
 }
 
 /** The providers of the Seller's identities, as Supabase Auth stores them, sorted. */

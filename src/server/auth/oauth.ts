@@ -1,4 +1,3 @@
-import type { UserIdentity } from '@supabase/supabase-js'
 import { loginPath, safeReturnTo } from '@/lib/return-to'
 import type { Db } from '@/server/db/supabase'
 
@@ -24,7 +23,10 @@ export type OAuthFailure =
   | 'no_email'
   | 'unverified_email'
   | 'failed'
-  /** Signing in: Supabase Auth attached the Discord account to an existing Seller by email. */
+  /**
+   * Signing in: the Discord account's email belongs to an existing Seller, and the database
+   * refused Supabase Auth's automatic linking by email.
+   */
   | 'email_in_use'
   /** Binding: the Discord account is already bound to another Seller. */
   | 'discord_taken'
@@ -101,20 +103,36 @@ export async function startDiscordBind(db: Db, origin: string): Promise<string> 
   return data.url
 }
 
-// Supabase Auth's message when the provider gave no email (internal/api/external.go).
+// Classifying the error Supabase Auth (or Discord, through it) put on the callback. The
+// error_code values are Supabase Auth's own (internal/api/apierrors/errorcode.go) and are
+// matched first. Where it sends none, or one too broad to say what happened, the description is
+// matched instead. That is a fallback: a reworded message in a new Supabase Auth version turns
+// the failure into 'failed', never into a success, and the tests pin each one.
+
+/**
+ * The message of the error the database raises when Supabase Auth tries to link a Discord
+ * account to an existing Seller by email (refuse_automatic_link,
+ * supabase/migrations/20261010090815_refuse_automatic_linking.sql). Supabase Auth passes it on as
+ * ?error=access_denied&error_description=automatic_link_refused, with no error_code.
+ */
+export const AUTOMATIC_LINK_REFUSED = 'automatic_link_refused'
+// Fallback: the no-email error carries only the generic error_code unexpected_failure
+// (internal/api/external.go).
 const NO_EMAIL = 'Error getting user email from external provider'
-// Its message when binding a Discord account that another user has (internal/api/identity.go).
-// The same error code without "to another user" means this user has it already.
+// Fallback: identity_already_exists covers both "Identity is already linked" (to this user)
+// and "Identity is already linked to another user" (internal/api/identity.go).
 const LINKED_TO_ANOTHER_USER = 'already linked to another user'
 
-// What went wrong, from the error Supabase Auth (or Discord, through it) put on the callback.
-function failureFrom(params: URLSearchParams): OAuthFailure {
+function failureFrom(flow: OAuthFlow, params: URLSearchParams): OAuthFailure {
   const code = params.get('error_code')
   const description = params.get('error_description') ?? ''
   if (code === 'identity_already_exists') {
     return description.includes(LINKED_TO_ANOTHER_USER) ? 'discord_taken' : 'already_bound'
   }
   if (code === 'provider_email_needs_verification') return 'unverified_email'
+  // Our own message, matched exactly. A bind is refused this way only if Supabase Auth stopped
+  // marking the bind's flow state, so on /me it is a plain failure.
+  if (!code && description === AUTOMATIC_LINK_REFUSED) return flow === 'sign-in' ? 'email_in_use' : 'failed'
   // Discord's answer when the visitor presses Cancel on its consent screen. Supabase Auth
   // passes it on with no error_code of its own.
   if (params.get('error') === 'access_denied' && !code) return 'cancelled'
@@ -124,7 +142,7 @@ function failureFrom(params: URLSearchParams): OAuthFailure {
 
 const FLOWS: readonly OAuthFlow[] = ['sign-in', 'bind']
 
-// An unknown or missing ?flow= is treated as signing in.
+// An unknown or missing ?flow= is treated as signing in. It only picks where to go next.
 function flowOf(params: URLSearchParams): OAuthFlow {
   return FLOWS.find((flow) => flow === params.get('flow')) ?? 'sign-in'
 }
@@ -138,102 +156,30 @@ function failurePath(flow: OAuthFlow, returnTo: string, failure: OAuthFailure): 
   }
 }
 
-// The Seller the verified session in `db` names, or null.
-async function sessionSellerId(db: Db): Promise<string | null> {
-  const { data } = await db.auth.getClaims()
-  return data?.claims.sub ?? null
-}
-
 /**
  * Finishes an OAuth flow at the callback, given the callback's query. On success the session
  * is in `db`'s cookies (it must be able to write them: the Route Handler's request client).
  * Returns the path on this site to redirect to: the return-to page, or, on failure, the page
  * the flow started from with ?error= set to an OAuthFailure.
  *
- * A sign-in that Supabase Auth finished by attaching the Discord account to an existing Seller
- * with the same email is refused (refuseAutomaticLink): the visitor is signed out and sent to
- * the login page with ?error=email_in_use.
+ * Nothing here decides whether a link is allowed. A Discord sign-in that Supabase Auth tried to
+ * attach to an existing Seller by email comes back with no code: the database refused the link,
+ * so no identity, code or session was made, and the error becomes email_in_use.
  */
 export async function finishOAuth(db: Db, params: URLSearchParams): Promise<string> {
   const flow = flowOf(params)
   const returnTo = safeReturnTo(params.get('next'))
-  if (params.has('error')) return failurePath(flow, returnTo, failureFrom(params))
+  if (params.has('error')) return failurePath(flow, returnTo, failureFrom(flow, params))
 
   const code = params.get('code')
   if (!code) return failurePath(flow, returnTo, 'failed')
-  // Who was signed in before this flow: when binding, the Seller who started it at /me.
-  const before = await sessionSellerId(db)
   const { error } = await db.auth.exchangeCodeForSession(code)
   if (error) {
     // Most often the code verifier cookie is missing: the flow started on another host
     // (localhost rather than 127.0.0.1) or in another browser, or the code was already used.
+    // No session was made. A Seller who was already signed in (binding from /me) stays so.
     console.warn(`OAuth code exchange failed: ${error.code ?? ''} ${error.message}`)
     return failurePath(flow, returnTo, 'failed')
   }
-  // Checked whatever ?flow= says: the visitor can change it.
-  if (await refuseAutomaticLink(db, before)) return `${loginPath(returnTo)}&error=email_in_use`
   return returnTo
-}
-
-// How long after Supabase Auth attaches an identity its session can still be handed out: the
-// PKCE auth code lives 5 minutes (FlowStateExpiryDuration), with room to spare.
-const JUST_NOW_MS = 10 * 60 * 1000
-// A first sign-in inserts the user and the identity in one transaction, milliseconds apart.
-const SAME_TRANSACTION_MS = 10 * 1000
-// Supabase Auth writes created_at and updated_at together when it inserts an identity, and
-// moves updated_at on at every later sign-in with it.
-const UNTOUCHED_MS = 1000
-
-/**
- * Supabase Auth links identities by email on its own: a first Discord sign-in whose email
- * matches an existing user is attached to that user (DetermineAccountLinking in supabase/auth
- * internal/models/linking.go), and with email confirmations off it trusts even an unverified
- * Discord email. That would let anyone who puts a Seller's email on a Discord account sign in
- * as that Seller. Binding at /me is the only way Discord may join an existing Seller.
- *
- * So after the code exchange, when `db`'s new session belongs to a Seller who was not already
- * signed in before the flow (`signedInBefore`, the Seller id from before the exchange, or null),
- * and that Seller has a Discord identity Supabase Auth inserted just now, untouched since, on a
- * user it did not insert with it, the identity is unlinked with the Seller's own session and the
- * session is signed out. Returns true when it refused.
- *
- * - A first Discord sign-in: the user and identity were inserted together. Allowed.
- * - A later Discord sign-in: the identity is old, or updated_at moved on. Allowed.
- * - Binding at /me: the same Seller was signed in before. Allowed.
- */
-export async function refuseAutomaticLink(db: Db, signedInBefore: string | null): Promise<boolean> {
-  const { data: claims } = await db.auth.getClaims()
-  if (!claims) return false
-  const { data, error } = await db.auth.getUser()
-  if (error) throw error
-  const { user } = data
-  if (user.id === signedInBefore) return false
-
-  // Supabase Auth's clock: when it issued this session.
-  const issuedAt = claims.claims.iat * 1000
-  const userCreated = Date.parse(user.created_at)
-  const attached = (user.identities ?? []).filter((identity) => {
-    if (identity.provider !== 'discord' || !identity.created_at || !identity.updated_at) return false
-    const created = Date.parse(identity.created_at)
-    return (
-      created >= issuedAt - JUST_NOW_MS &&
-      Math.abs(Date.parse(identity.updated_at) - created) < UNTOUCHED_MS &&
-      created - userCreated > SAME_TRANSACTION_MS
-    )
-  })
-  if (attached.length === 0) return false
-
-  try {
-    for (const identity of attached) await unlink(db, identity)
-  } finally {
-    // Signed out even if unlinking failed; that failure is then thrown.
-    await db.auth.signOut({ scope: 'local' })
-  }
-  console.warn(`Refused a Discord sign-in that Supabase Auth linked by email to Seller ${user.id}`)
-  return true
-}
-
-async function unlink(db: Db, identity: UserIdentity) {
-  const { error } = await db.auth.unlinkIdentity(identity)
-  if (error) throw error
 }
