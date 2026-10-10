@@ -1,18 +1,21 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { signOutAction } from '@/app/login/actions'
 import { SellerAvatar } from '@/app/seller-avatar'
+import { loginPath, RETURN_TO_HEADER } from '@/lib/return-to'
 import { Button } from '@/components/ui/button'
 import { currentSeller } from '@/server/auth/auth'
 import { requestClient } from '@/server/db/request-client'
 
 // The frame around every page that needs a signed-in Seller: a header with their avatar and
 // Display Name (a link to /me) and ออกจากระบบ. The proxy has already sent signed-out visitors to the login
-// page; this check is the one that trusts only a verified session.
+// page; this check is the one that trusts only a verified session. It too keeps the page they
+// were going to, which the proxy passes on in RETURN_TO_HEADER.
 export async function SellerShell({ children }: { children: React.ReactNode }) {
   const db = await requestClient()
   const seller = await currentSeller(db)
-  if (!seller) redirect('/login')
+  if (!seller) redirect(loginPath((await headers()).get(RETURN_TO_HEADER) ?? ''))
 
   return (
     <>

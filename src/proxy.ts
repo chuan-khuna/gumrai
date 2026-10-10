@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { loginPath } from '@/lib/return-to'
+import { loginPath, RETURN_TO_HEADER } from '@/lib/return-to'
 import { refreshSession } from '@/server/db/session'
 
 // Runs before every page (Next 16 renamed middleware to proxy). It keeps the Seller's session
@@ -15,8 +15,11 @@ function isSellerPage(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
-  const { response, signedIn } = await refreshSession(request)
   const { pathname, search } = request.nextUrl
+  // For the Seller layouts' own check (SellerShell). Set before refreshSession, which passes
+  // the request's headers on to the page.
+  request.headers.set(RETURN_TO_HEADER, pathname + search)
+  const { response, signedIn } = await refreshSession(request)
   if (signedIn || !isSellerPage(pathname)) return response
 
   const redirect = NextResponse.redirect(new URL(loginPath(pathname + search), request.url))

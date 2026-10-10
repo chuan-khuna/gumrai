@@ -20,6 +20,13 @@ export function safeReturnTo(value: unknown): string {
   return value
 }
 
+/**
+ * The request header in which the proxy (src/proxy.ts) hands every page the path and query the
+ * visitor asked for, so a page can send them to the login page and back. Server Components
+ * cannot read the URL otherwise. The proxy always overwrites it; safeReturnTo still applies.
+ */
+export const RETURN_TO_HEADER = 'x-gumrai-return-to'
+
 /** The login page, set to return to `returnTo` afterwards. */
 export function loginPath(returnTo: string): string {
   return `/login?next=${encodeURIComponent(safeReturnTo(returnTo))}`
