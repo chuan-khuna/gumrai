@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { CreateSheetForm } from '@/app/sheets/create-sheet-form'
 import { SheetRow } from '@/app/sheets/sheet-row'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,10 +13,7 @@ export default async function SheetsPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-        ← กำไร
-      </Link>
-      <h1 className="mt-2 text-3xl">ชีตต้นทุน</h1>
+      <h1 className="text-3xl">ชีตต้นทุน</h1>
 
       {sheets.length === 0 ? (
         // First run: no sheets yet, so the one thing to do is create the first.
