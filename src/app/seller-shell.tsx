@@ -6,8 +6,8 @@ import { currentSeller } from '@/server/auth/auth'
 import { requestClient } from '@/server/db/request-client'
 
 // The frame around every page that needs a signed-in Seller: a header with their Display Name
-// and ออกจากระบบ. The proxy has already sent signed-out visitors to the login page; this check
-// is the one that trusts only a verified session.
+// (a link to /me) and ออกจากระบบ. The proxy has already sent signed-out visitors to the login
+// page; this check is the one that trusts only a verified session.
 export async function SellerShell({ children }: { children: React.ReactNode }) {
   const db = await requestClient()
   const seller = await currentSeller(db)
@@ -26,9 +26,13 @@ export async function SellerShell({ children }: { children: React.ReactNode }) {
             </Link>
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-3">
-            <span className="truncate text-sm" title={seller.displayName}>
+            <Link
+              href="/me"
+              className="truncate text-sm hover:text-link"
+              title={`${seller.displayName} · บัญชีของฉัน`}
+            >
               {seller.displayName}
-            </span>
+            </Link>
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm">
                 ออกจากระบบ

@@ -32,6 +32,36 @@ export async function createSeller(displayName = 'ผู้ขายทดสอ
   return { id: data.user.id, email, password, db: await signIn(email, password) }
 }
 
+/**
+ * A new Seller with no password, signed in, like a Seller who only ever signed in with
+ * Discord. Supabase Auth leaves such a user's password hash empty, but the admin API always
+ * stores one (a random one if none is given), so the helper signs the Seller in first and
+ * then empties the hash straight in Postgres. `password` is ''.
+ */
+export async function createSellerWithoutPassword(displayName = 'ผู้ขายทดสอบ'): Promise<TestSeller> {
+  const seller = await createSeller(displayName)
+  await runSql(`update auth.users set encrypted_password = '' where id = '${uuid(seller.id)}'`)
+  return { ...seller, password: '' }
+}
+
+function uuid(id: string) {
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error(`not a uuid: ${id}`)
+  return id
+}
+
+// Runs SQL as postgres through the local stack's postgres-meta (/pg/query, the API Supabase
+// Studio uses), which only the secret key may call. For test set-up that the Auth admin API
+// cannot do; never for the data under test.
+async function runSql(query: string): Promise<void> {
+  const key = process.env.SUPABASE_SECRET_KEY ?? ''
+  const response = await fetch(`${process.env.SUPABASE_URL}/pg/query`, {
+    method: 'POST',
+    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ query }),
+  })
+  if (!response.ok) throw new Error(`SQL failed (${response.status}): ${await response.text()}`)
+}
+
 /** A fresh client signed in with this email and password. */
 export async function signIn(email: string, password: string): Promise<Db> {
   const db = createPublicClient()

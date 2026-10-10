@@ -4,12 +4,12 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] /me requires a signed-in Seller.
-- [ ] The business rules module gains an account module with operations to read the Seller's profile, rename the Display Name, change the password, and set a first password.
-- [ ] A Display Name cannot be blank; surrounding spaces are trimmed.
-- [ ] Changing the password fails with a Thai message if the current password is wrong; the new password must be at least 8 characters.
-- [ ] A Seller with no password sees ตั้งรหัสผ่าน instead of the change form, and needs no current password.
-- [ ] Tests (real Sellers, no mocks) cover renaming, changing the password with right and wrong current passwords, the new password working for sign-in, and setting a first password.
-- [ ] The sign-in document is updated.
+- [x] /me requires a signed-in Seller.
+- [x] The business rules module gains an account module with operations to read the Seller's profile, rename the Display Name, change the password, and set a first password.
+- [x] A Display Name cannot be blank; surrounding spaces are trimmed.
+- [x] Changing the password fails with a Thai message if the current password is wrong; the new password must be at least 8 characters.
+- [x] A Seller with no password sees ตั้งรหัสผ่าน instead of the change form, and needs no current password.
+- [x] Tests (real Sellers, no mocks) cover renaming, changing the password with right and wrong current passwords, the new password working for sign-in, and setting a first password.
+- [x] The sign-in document is updated.

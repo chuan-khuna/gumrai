@@ -126,6 +126,9 @@ isOneToOne: false
                            },
 "save_cost_sheet":
 { Args: { "p_lines": Json,"p_sheet": Json,"p_sheet_id": string }; Returns: undefined
+                           },
+"seller_has_password":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            }
           }
           Enums: {

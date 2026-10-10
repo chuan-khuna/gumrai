@@ -8,7 +8,7 @@ import { refreshSession } from '@/server/db/session'
 // each Seller's data apart, and the Seller layouts check again with currentSeller.
 
 // The pages that need a signed-in Seller, and everything under them.
-const SELLER_PAGES = ['/sheets', '/cost-list']
+const SELLER_PAGES = ['/sheets', '/cost-list', '/me']
 
 function isSellerPage(pathname: string) {
   return SELLER_PAGES.some((page) => pathname === page || pathname.startsWith(`${page}/`))
