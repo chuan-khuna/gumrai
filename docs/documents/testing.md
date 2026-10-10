@@ -34,6 +34,8 @@ All tests share one local database with the sample data and with each other. Eac
 
 No test assumes the database is empty, and no test runs `db:reset`.
 
+Every operation takes its Supabase client as its first argument (see [Architecture](architecture.md#how-an-operation-gets-its-client)). Each test file makes one at the top with `const db = createServerClient()` and passes `db` to every call.
+
 ## What the business-rule tests cover
 
 The tests in `src/server/` cover these rules:

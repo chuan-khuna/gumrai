@@ -1,4 +1,4 @@
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
 
 // Cost Items (GLOSSARY.md): the Cost List's entries. Unit Cost travels as a decimal string,
 // never a JS number, so a value like 0.075 is stored and shown exactly as typed.
@@ -99,9 +99,10 @@ function escapeLike(text: string) {
 // surrounding spaces. `categoryId` keeps only one Cost Category's items, or with null only
 // the items in ไม่มีหมวด.
 export async function listCostItems(
+  db: Db,
   options: { search?: string; categoryId?: string | null } = {},
 ): Promise<CostItem[]> {
-  let query = createServerClient().from('cost_item').select(columns)
+  let query = db.from('cost_item').select(columns)
   const search = options.search?.trim()
   if (search) query = query.ilike('name', `%${escapeLike(search)}%`)
   const { categoryId } = options
@@ -115,8 +116,8 @@ export async function listCostItems(
   return data.map(toCostItem)
 }
 
-export async function getCostItem(id: string): Promise<CostItem | null> {
-  const { data, error } = await createServerClient()
+export async function getCostItem(db: Db, id: string): Promise<CostItem | null> {
+  const { data, error } = await db
     .from('cost_item')
     .select(columns)
     .eq('id', id)
@@ -126,8 +127,8 @@ export async function getCostItem(id: string): Promise<CostItem | null> {
   return data && toCostItem(data)
 }
 
-export async function createCostItem(input: CostItemInput): Promise<CostItem> {
-  const { data, error } = await createServerClient()
+export async function createCostItem(db: Db, input: CostItemInput): Promise<CostItem> {
+  const { data, error } = await db
     .from('cost_item')
     .insert(toRow(input))
     .select(columns)
@@ -136,8 +137,8 @@ export async function createCostItem(input: CostItemInput): Promise<CostItem> {
   return toCostItem(data)
 }
 
-export async function updateCostItem(id: string, input: CostItemInput): Promise<CostItem> {
-  const { data, error } = await createServerClient()
+export async function updateCostItem(db: Db, id: string, input: CostItemInput): Promise<CostItem> {
+  const { data, error } = await db
     .from('cost_item')
     .update(toRow(input))
     .eq('id', id)
@@ -157,8 +158,8 @@ export type SavedManualLine = { outcome: 'created'; item: CostItem } | { outcome
 
 // The Cost Item whose name matches, ignoring case and surrounding spaces, as the unique index
 // cost_item_owner_name_key does.
-async function findByName(name: string): Promise<CostItem | null> {
-  const { data, error } = await createServerClient()
+async function findByName(db: Db, name: string): Promise<CostItem | null> {
+  const { data, error } = await db
     .from('cost_item')
     .select(columns)
     .ilike('name', escapeLike(name.trim()))
@@ -173,20 +174,20 @@ async function findByName(name: string): Promise<CostItem | null> {
  * Line is the sheet's edit (see linkLine in @/lib/cost-lines). On a name clash nothing is
  * created and the existing item is returned.
  */
-export async function saveManualLineToCostList(line: CostItemInput): Promise<SavedManualLine> {
+export async function saveManualLineToCostList(db: Db, line: CostItemInput): Promise<SavedManualLine> {
   const row = toRow({
     name: line.name,
     unitCost: line.unitCost,
     unit: line.unit,
     categoryId: line.categoryId ?? null,
   })
-  const { data, error } = await createServerClient()
+  const { data, error } = await db
     .from('cost_item')
     .insert(row)
     .select(columns)
     .single()
   if (error?.code === UNIQUE_VIOLATION) {
-    const existing = await findByName(row.name)
+    const existing = await findByName(db, row.name)
     if (existing) return { outcome: 'clash', item: existing }
   }
   if (error) rejectBrokenRule(error)
@@ -194,9 +195,9 @@ export async function saveManualLineToCostList(line: CostItemInput): Promise<Sav
 }
 
 /** How many Cost Sheets have a Linked Line to this Cost Item ("ใช้อยู่ใน N ชีต"). */
-export async function countSheetsUsingCostItem(id: string): Promise<number> {
+export async function countSheetsUsingCostItem(db: Db, id: string): Promise<number> {
   if (!UUID.test(id)) return 0 // no such item, so no sheet uses it
-  const { data, error } = await createServerClient()
+  const { data, error } = await db
     .from('cost_line')
     .select('sheet_id')
     .eq('cost_item_id', id)
@@ -210,8 +211,8 @@ export async function countSheetsUsingCostItem(id: string): Promise<number> {
  * last values, so no sheet's figures change (ADR 0002). Both happen in one transaction.
  * An unknown or malformed id deletes nothing.
  */
-export async function deleteCostItem(id: string): Promise<void> {
+export async function deleteCostItem(db: Db, id: string): Promise<void> {
   if (!UUID.test(id)) return
-  const { error } = await createServerClient().rpc('delete_cost_item', { p_id: id })
+  const { error } = await db.rpc('delete_cost_item', { p_id: id })
   if (error) throw error
 }

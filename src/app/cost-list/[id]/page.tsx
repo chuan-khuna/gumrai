@@ -5,13 +5,15 @@ import { CostItemForm, DeleteCostItemButton } from '@/app/cost-list/cost-item-fo
 import { Card, CardContent } from '@/components/ui/card'
 import { listCostCategories } from '@/server/cost-categories'
 import { countSheetsUsingCostItem, getCostItem } from '@/server/cost-items'
+import { requestClient } from '@/server/request-client'
 
 export default async function EditCostItemPage({ params }: { params: Promise<{ id: string }> }) {
+  const db = await requestClient()
   const { id } = await params
   const [item, categories, sheetCount] = await Promise.all([
-    getCostItem(id),
-    listCostCategories(),
-    countSheetsUsingCostItem(id),
+    getCostItem(db, id),
+    listCostCategories(db),
+    countSheetsUsingCostItem(db, id),
   ])
   if (!item) notFound()
 

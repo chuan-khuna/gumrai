@@ -9,13 +9,15 @@ import { CategoryDot } from '@/app/cost-list/category-dot'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { countCostItemsIn, listCostCategories } from '@/server/cost-categories'
+import { requestClient } from '@/server/request-client'
 
 // Read on every request, so the page always reflects the database.
 export const dynamic = 'force-dynamic'
 
 export default async function CostCategoriesPage() {
-  const categories = await listCostCategories()
-  const counts = await Promise.all(categories.map((c) => countCostItemsIn(c.id)))
+  const db = await requestClient()
+  const categories = await listCostCategories(db)
+  const counts = await Promise.all(categories.map((c) => countCostItemsIn(db, c.id)))
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">

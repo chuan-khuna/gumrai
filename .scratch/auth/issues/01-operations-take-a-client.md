@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every exported operation for Cost Items, Cost Categories, Cost Sheets and app status takes the client as its first argument and makes no client of its own.
-- [ ] Pages and server actions obtain the client from one function in the business rules module and pass it through; they still never import the Supabase library or the client factory's internals.
-- [ ] Tests pass a client in the same way; their assertions are unchanged.
-- [ ] `bun run test` and `bun run check` pass, and the app behaves exactly as before.
-- [ ] The Architecture document describes operations taking their client.
+- [x] Every exported operation for Cost Items, Cost Categories, Cost Sheets and app status takes the client as its first argument and makes no client of its own.
+- [x] Pages and server actions obtain the client from one function in the business rules module and pass it through; they still never import the Supabase library or the client factory's internals.
+- [x] Tests pass a client in the same way; their assertions are unchanged.
+- [x] `bun run test` and `bun run check` pass, and the app behaves exactly as before.
+- [x] The Architecture document describes operations taking their client.

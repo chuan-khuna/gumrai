@@ -9,6 +9,7 @@ import {
   updateCostItem,
   type CostItemInput,
 } from '@/server/cost-items'
+import { requestClient } from '@/server/request-client'
 
 // Wiring only: the rules live in @/server/cost-items.
 
@@ -33,9 +34,10 @@ export async function createCostItemAction(
   _previous: CostItemFormState,
   formData: FormData,
 ): Promise<CostItemFormState> {
+  const db = await requestClient()
   const values = readForm(formData)
   try {
-    await createCostItem(values)
+    await createCostItem(db, values)
   } catch (error) {
     if (error instanceof CostListError) return { values, error: error.message }
     throw error
@@ -49,9 +51,10 @@ export async function updateCostItemAction(
   _previous: CostItemFormState,
   formData: FormData,
 ): Promise<CostItemFormState> {
+  const db = await requestClient()
   const values = readForm(formData)
   try {
-    await updateCostItem(id, values)
+    await updateCostItem(db, id, values)
   } catch (error) {
     if (error instanceof CostListError) return { values, error: error.message }
     throw error
@@ -61,7 +64,8 @@ export async function updateCostItemAction(
 }
 
 export async function deleteCostItemAction(id: string): Promise<void> {
-  await deleteCostItem(id)
+  const db = await requestClient()
+  await deleteCostItem(db, id)
   revalidatePath('/cost-list')
   redirect('/cost-list')
 }

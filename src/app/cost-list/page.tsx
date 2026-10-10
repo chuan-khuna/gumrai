@@ -18,6 +18,7 @@ import {
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { listCostCategories, type CostCategory } from '@/server/cost-categories'
 import { listCostItems, type CostItem } from '@/server/cost-items'
+import { requestClient } from '@/server/request-client'
 
 // ?category= in the URL: a Cost Category's id, or this for ไม่มีหมวด.
 const NONE = 'none'
@@ -27,16 +28,17 @@ export default async function CostListPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+  const db = await requestClient()
   const { q, category, group } = await searchParams
   const search = typeof q === 'string' ? q : ''
   const filter = typeof category === 'string' ? category : ''
   const grouped = group === '1'
   const [items, categories] = await Promise.all([
-    listCostItems({
+    listCostItems(db, {
       search,
       categoryId: filter === NONE ? null : filter === '' ? undefined : filter,
     }),
-    listCostCategories(),
+    listCostCategories(db),
   ])
   // First run: the Cost List itself is empty, not just this search or filter.
   const firstRun = items.length === 0 && search === '' && filter === ''

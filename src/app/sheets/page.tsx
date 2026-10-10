@@ -3,12 +3,14 @@ import { CreateSheetForm } from '@/app/sheets/create-sheet-form'
 import { SheetRow } from '@/app/sheets/sheet-row'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { listCostSheets } from '@/server/cost-sheets'
+import { requestClient } from '@/server/request-client'
 
 // Read on every request, so the list always reflects the database.
 export const dynamic = 'force-dynamic'
 
 export default async function SheetsPage() {
-  const sheets = await listCostSheets()
+  const db = await requestClient()
+  const sheets = await listCostSheets(db)
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">

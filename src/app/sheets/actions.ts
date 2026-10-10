@@ -18,6 +18,7 @@ import {
   type CostSheetInput,
   type ManualLineInput,
 } from '@/server/cost-sheets'
+import { requestClient } from '@/server/request-client'
 
 // Wiring only: the rules live in @/server/cost-sheets and @/server/cost-items.
 
@@ -27,10 +28,11 @@ export async function createCostSheetAction(
   _previous: CreateSheetState,
   formData: FormData,
 ): Promise<CreateSheetState> {
+  const db = await requestClient()
   const name = String(formData.get('name') ?? '')
   let sheet: CostSheet
   try {
-    sheet = await createCostSheet(name)
+    sheet = await createCostSheet(db, name)
   } catch (error) {
     if (error instanceof CostSheetError) return { name, error: error.message }
     throw error
@@ -45,8 +47,9 @@ export async function saveCostSheetAction(
   id: string,
   input: CostSheetInput,
 ): Promise<SaveSheetResult> {
+  const db = await requestClient()
   try {
-    const sheet = await saveCostSheet(id, input)
+    const sheet = await saveCostSheet(db, id, input)
     revalidatePath('/sheets')
     return { sheet, error: null }
   } catch (error) {
@@ -60,8 +63,9 @@ export type SaveLineToListResult = SavedManualLine | { outcome: 'error'; error: 
 export async function saveManualLineToCostListAction(
   line: ManualLineInput,
 ): Promise<SaveLineToListResult> {
+  const db = await requestClient()
   try {
-    const saved = await saveManualLineToCostList(line)
+    const saved = await saveManualLineToCostList(db, line)
     if (saved.outcome === 'created') revalidatePath('/cost-list')
     return saved
   } catch (error) {
@@ -77,9 +81,10 @@ export async function renameCostSheetAction(
   _previous: RenameSheetState,
   formData: FormData,
 ): Promise<RenameSheetState> {
+  const db = await requestClient()
   const name = String(formData.get('name') ?? '')
   try {
-    const sheet = await renameCostSheet(id, name)
+    const sheet = await renameCostSheet(db, id, name)
     revalidatePath('/sheets')
     revalidatePath(`/sheets/${id}`)
     return { name: sheet.name, error: null }
@@ -91,8 +96,9 @@ export async function renameCostSheetAction(
 
 // A sheet deleted meanwhile has nothing to copy; the refreshed list no longer shows it.
 export async function duplicateCostSheetAction(id: string): Promise<void> {
+  const db = await requestClient()
   try {
-    await duplicateCostSheet(id)
+    await duplicateCostSheet(db, id)
   } catch (error) {
     if (!(error instanceof CostSheetError)) throw error
   }
@@ -100,6 +106,7 @@ export async function duplicateCostSheetAction(id: string): Promise<void> {
 }
 
 export async function deleteCostSheetAction(id: string): Promise<void> {
-  await deleteCostSheet(id)
+  const db = await requestClient()
+  await deleteCostSheet(db, id)
   revalidatePath('/sheets')
 }

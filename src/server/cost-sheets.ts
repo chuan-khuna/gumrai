@@ -1,4 +1,4 @@
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
 
 // Cost Sheets (GLOSSARY.md): one saved costing per thing the seller sells. Money, percentages
 // and quantities travel as decimal strings, never JS numbers, so what the seller typed is
@@ -100,8 +100,8 @@ const sheetName = (name: string) => required(name, 'ต้องใส่ชื�
 const columns =
   'id, name, sale_unit, selling_price::text, gp_percent::text, vat_percent::text, cost_line(id, position, quantity_used::text, cost_item_id, name, unit_cost::text, unit, cost_category_id, cost_item(name, unit_cost::text, unit, cost_category_id))'
 
-async function readSheet(id: string): Promise<CostSheet | null> {
-  const { data, error } = await createServerClient()
+async function readSheet(db: Db, id: string): Promise<CostSheet | null> {
+  const { data, error } = await db
     .from('cost_sheet')
     .select(columns)
     .eq('id', id)
@@ -148,8 +148,8 @@ async function readSheet(id: string): Promise<CostSheet | null> {
 }
 
 /** Every Cost Sheet, the most recently changed first. */
-export async function listCostSheets(): Promise<CostSheetSummary[]> {
-  const { data, error } = await createServerClient()
+export async function listCostSheets(db: Db): Promise<CostSheetSummary[]> {
+  const { data, error } = await db
     .from('cost_sheet')
     .select('id, name, sale_unit, updated_at')
     .order('updated_at', { ascending: false })
@@ -163,19 +163,19 @@ export async function listCostSheets(): Promise<CostSheetSummary[]> {
 }
 
 /** One Cost Sheet with its lines in order, or null when there is no such sheet. */
-export async function getCostSheet(id: string): Promise<CostSheet | null> {
-  return readSheet(id)
+export async function getCostSheet(db: Db, id: string): Promise<CostSheet | null> {
+  return readSheet(db, id)
 }
 
 /** A new, empty Cost Sheet: Sale Unit ชิ้น, Selling Price 0, GP 0%, VAT 7%. */
-export async function createCostSheet(name: string): Promise<CostSheet> {
-  const { data, error } = await createServerClient()
+export async function createCostSheet(db: Db, name: string): Promise<CostSheet> {
+  const { data, error } = await db
     .from('cost_sheet')
     .insert({ name: sheetName(name), sale_unit: DEFAULT_SALE_UNIT })
     .select('id')
     .single()
   if (error) throw error
-  const sheet = await readSheet(data.id)
+  const sheet = await readSheet(db, data.id)
   if (!sheet) throw new CostSheetError(NOT_FOUND)
   return sheet
 }
@@ -184,7 +184,7 @@ export async function createCostSheet(name: string): Promise<CostSheet> {
  * Saves a Cost Sheet as one unit: its own fields, and its lines replacing the old ones as a
  * whole. Either all of it is saved or, when anything is invalid, none of it.
  */
-export async function saveCostSheet(id: string, input: CostSheetInput): Promise<CostSheet> {
+export async function saveCostSheet(db: Db, id: string, input: CostSheetInput): Promise<CostSheet> {
   const sheet = {
     name: sheetName(input.name),
     sale_unit: required(input.saleUnit, 'ต้องใส่หน่วยขาย'),
@@ -213,7 +213,7 @@ export async function saveCostSheet(id: string, input: CostSheetInput): Promise<
   })
   if (!UUID.test(id)) throw new CostSheetError(NOT_FOUND)
 
-  const { error } = await createServerClient().rpc('save_cost_sheet', {
+  const { error } = await db.rpc('save_cost_sheet', {
     p_sheet_id: id,
     p_sheet: sheet,
     p_lines: lines,
@@ -226,22 +226,22 @@ export async function saveCostSheet(id: string, input: CostSheetInput): Promise<
   }
   if (error) throw error
 
-  const saved = await readSheet(id)
+  const saved = await readSheet(db, id)
   if (!saved) throw new CostSheetError(NOT_FOUND)
   return saved
 }
 
 /** Deletes a Cost Sheet and its lines. */
-export async function deleteCostSheet(id: string): Promise<void> {
-  const { error } = await createServerClient().from('cost_sheet').delete().eq('id', id)
+export async function deleteCostSheet(db: Db, id: string): Promise<void> {
+  const { error } = await db.from('cost_sheet').delete().eq('id', id)
   if (error && error.code !== INVALID_TEXT_REPRESENTATION) throw error
 }
 
 /** Renames a Cost Sheet, leaving its fields and lines as they are. */
-export async function renameCostSheet(id: string, name: string): Promise<CostSheet> {
+export async function renameCostSheet(db: Db, id: string, name: string): Promise<CostSheet> {
   const newName = sheetName(name)
   if (!UUID.test(id)) throw new CostSheetError(NOT_FOUND)
-  const { data, error } = await createServerClient()
+  const { data, error } = await db
     .from('cost_sheet')
     .update({ name: newName, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -249,7 +249,7 @@ export async function renameCostSheet(id: string, name: string): Promise<CostShe
     .maybeSingle()
   if (error) throw error
   if (!data) throw new CostSheetError(NOT_FOUND)
-  const renamed = await readSheet(id)
+  const renamed = await readSheet(db, id)
   if (!renamed) throw new CostSheetError(NOT_FOUND)
   return renamed
 }
@@ -259,18 +259,18 @@ export async function renameCostSheet(id: string, name: string): Promise<CostShe
  * Unit, Selling Price, GP and VAT, with its Manual Lines copied and its Linked Lines still
  * linked to the same Cost Items. Used to compare selling channels.
  */
-export async function duplicateCostSheet(id: string): Promise<CostSheet> {
-  const original = UUID.test(id) ? await readSheet(id) : null
+export async function duplicateCostSheet(db: Db, id: string): Promise<CostSheet> {
+  const original = UUID.test(id) ? await readSheet(db, id) : null
   if (!original) throw new CostSheetError(NOT_FOUND)
 
-  const { data: copyId, error } = await createServerClient().rpc('duplicate_cost_sheet', {
+  const { data: copyId, error } = await db.rpc('duplicate_cost_sheet', {
     p_sheet_id: id,
     p_name: `${original.name} (สำเนา)`,
   })
   if (error?.code === NO_DATA_FOUND) throw new CostSheetError(NOT_FOUND)
   if (error) throw error
 
-  const copy = await readSheet(copyId)
+  const copy = await readSheet(db, copyId)
   if (!copy) throw new CostSheetError(NOT_FOUND)
   return copy
 }

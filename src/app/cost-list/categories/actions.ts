@@ -7,6 +7,7 @@ import {
   deleteCostCategory,
   renameCostCategory,
 } from '@/server/cost-categories'
+import { requestClient } from '@/server/request-client'
 
 // Wiring only: the rules live in @/server/cost-categories.
 
@@ -24,9 +25,10 @@ export async function createCostCategoryAction(
   _previous: CategoryFormState,
   formData: FormData,
 ): Promise<CategoryFormState> {
+  const db = await requestClient()
   const name = String(formData.get('name') ?? '')
   try {
-    await createCostCategory(name)
+    await createCostCategory(db, name)
   } catch (error) {
     if (error instanceof CostCategoryError) return { name, error: error.message }
     throw error
@@ -40,9 +42,10 @@ export async function renameCostCategoryAction(
   _previous: CategoryFormState,
   formData: FormData,
 ): Promise<CategoryFormState> {
+  const db = await requestClient()
   const name = String(formData.get('name') ?? '')
   try {
-    const renamed = await renameCostCategory(id, name)
+    const renamed = await renameCostCategory(db, id, name)
     revalidate()
     return { name: renamed.name, error: null }
   } catch (error) {
@@ -52,6 +55,7 @@ export async function renameCostCategoryAction(
 }
 
 export async function deleteCostCategoryAction(id: string): Promise<void> {
-  await deleteCostCategory(id)
+  const db = await requestClient()
+  await deleteCostCategory(db, id)
   revalidate()
 }

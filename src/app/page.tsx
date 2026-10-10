@@ -2,12 +2,14 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getAppStatus } from '@/server/app-status'
+import { requestClient } from '@/server/request-client'
 
 // Read on every request, so the page always reflects the database.
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const status = await getAppStatus()
+  const db = await requestClient()
+  const status = await getAppStatus(db)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">

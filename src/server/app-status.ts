@@ -1,8 +1,8 @@
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
 
 // Tracer-bullet operation for the scaffold (issue 01). Goes when app_status does.
-export async function getAppStatus(): Promise<string> {
-  const { data, error } = await createServerClient()
+export async function getAppStatus(db: Db): Promise<string> {
+  const { data, error } = await db
     .from('app_status')
     .select('message')
     .single()

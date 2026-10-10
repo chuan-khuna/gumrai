@@ -28,6 +28,10 @@ import {
 } from '@/server/cost-sheets'
 import { linkLine } from '@/lib/cost-lines'
 import { computeSheet } from '@/lib/sheet'
+import { createServerClient } from '@/server/supabase'
+
+// The secret-key client the app itself uses until sign-in lands (ticket 02).
+const db = createServerClient()
 
 // Each test makes names no other test (or the dev seed) uses, and deletes what it made.
 const made: CostItem[] = []
@@ -35,13 +39,13 @@ function uniqueName(label: string) {
   return `${label} ${randomUUID()}`
 }
 async function make(input: CostItemInput) {
-  const item = await createCostItem(input)
+  const item = await createCostItem(db, input)
   made.push(item)
   return item
 }
 const madeCategories: CostCategory[] = []
 async function makeCategory(label: string) {
-  const category = await createCostCategory(uniqueName(label))
+  const category = await createCostCategory(db, uniqueName(label))
   madeCategories.push(category)
   return category
 }
@@ -50,12 +54,12 @@ const madeSheets: CostSheet[] = []
 
 afterEach(async () => {
   // Sheets first: a Cost Item that a line still links to cannot be deleted.
-  for (const sheet of madeSheets.splice(0)) await deleteCostSheet(sheet.id).catch(() => {})
+  for (const sheet of madeSheets.splice(0)) await deleteCostSheet(db, sheet.id).catch(() => {})
   for (const item of made.splice(0)) {
-    await deleteCostItem(item.id).catch(() => {})
+    await deleteCostItem(db, item.id).catch(() => {})
   }
   for (const category of madeCategories.splice(0)) {
-    await deleteCostCategory(category.id).catch(() => {})
+    await deleteCostCategory(db, category.id).catch(() => {})
   }
 })
 
@@ -65,7 +69,7 @@ describe('Cost Items', () => {
     const item = await make({ name, unitCost: '4', unit: 'g' })
 
     expect(item).toMatchObject({ name, unitCost: '4', unit: 'g' })
-    expect(await listCostItems()).toContainEqual(item)
+    expect(await listCostItems(db)).toContainEqual(item)
   })
 
   it('keeps a decimal Unit Cost exact', async () => {
@@ -126,10 +130,10 @@ describe('Cost Items', () => {
         await make({ name: taken, unitCost: '0.06', unit: 'ml' })
         const other = await make({ name: uniqueName('Cup'), unitCost: '3', unit: 'ชิ้น' })
 
-        const attempt = updateCostItem(other.id, { name: rename(taken), unitCost: '3', unit: 'ชิ้น' })
+        const attempt = updateCostItem(db, other.id, { name: rename(taken), unitCost: '3', unit: 'ชิ้น' })
         await expect(attempt).rejects.toThrow(CostListError)
         await expect(attempt).rejects.toThrow('มีรายการชื่อนี้อยู่แล้ว')
-        expect((await listCostItems()).find((i) => i.id === other.id)).toEqual(other)
+        expect((await listCostItems(db)).find((i) => i.id === other.id)).toEqual(other)
       })
     }
   })
@@ -138,47 +142,47 @@ describe('Cost Items', () => {
     const item = await make({ name: uniqueName('มัทฉะ'), unitCost: '4', unit: 'g' })
     const name = uniqueName('มัทฉะ เกรดพิธี')
 
-    const updated = await updateCostItem(item.id, { name, unitCost: '4.25', unit: 'กรัม' })
+    const updated = await updateCostItem(db, item.id, { name, unitCost: '4.25', unit: 'กรัม' })
 
     expect(updated).toEqual({ id: item.id, name, unitCost: '4.25', unit: 'กรัม', categoryId: null })
-    expect((await listCostItems()).find((i) => i.id === item.id)).toEqual(updated)
+    expect((await listCostItems(db)).find((i) => i.id === item.id)).toEqual(updated)
   })
 
   it('lets a Cost Item keep its own name in a different case', async () => {
     const name = uniqueName('matcha')
     const item = await make({ name, unitCost: '4', unit: 'g' })
 
-    const updated = await updateCostItem(item.id, { name: name.toUpperCase(), unitCost: '4', unit: 'g' })
+    const updated = await updateCostItem(db, item.id, { name: name.toUpperCase(), unitCost: '4', unit: 'g' })
 
     expect(updated.name).toBe(name.toUpperCase())
   })
 
   it('validates the Unit Cost on update too', async () => {
     const item = await make({ name: uniqueName('x'), unitCost: '1', unit: 'g' })
-    await expect(updateCostItem(item.id, { ...item, unitCost: '-1' })).rejects.toThrow(
+    await expect(updateCostItem(db, item.id, { ...item, unitCost: '-1' })).rejects.toThrow(
       'ต้นทุนต่อหน่วยติดลบไม่ได้',
     )
   })
 
   it('gets one Cost Item by id, for its edit form', async () => {
     const item = await make({ name: uniqueName('ไซรัป'), unitCost: '0.4', unit: 'ml' })
-    expect(await getCostItem(item.id)).toEqual(item)
-    expect(await getCostItem('not-an-id')).toBeNull()
+    expect(await getCostItem(db, item.id)).toEqual(item)
+    expect(await getCostItem(db, 'not-an-id')).toBeNull()
   })
 
   it('deletes a Cost Item, and it leaves the list', async () => {
     const item = await make({ name: uniqueName('ซอง'), unitCost: '1', unit: 'ซอง' })
 
-    await deleteCostItem(item.id)
+    await deleteCostItem(db, item.id)
 
-    expect((await listCostItems()).map((i) => i.id)).not.toContain(item.id)
-    expect(await getCostItem(item.id)).toBeNull()
+    expect((await listCostItems(db)).map((i) => i.id)).not.toContain(item.id)
+    expect(await getCostItem(db, item.id)).toBeNull()
   })
 
   it('frees a deleted name for a new Cost Item', async () => {
     const name = uniqueName('หลอด')
     const item = await make({ name, unitCost: '0.5', unit: 'ชิ้น' })
-    await deleteCostItem(item.id)
+    await deleteCostItem(db, item.id)
 
     const again = await make({ name, unitCost: '0.6', unit: 'ชิ้น' })
 
@@ -199,17 +203,17 @@ describe('Cost Items', () => {
       const item = await make({ ...input, categoryId: ingredients.id })
       expect(item.categoryId).toBe(ingredients.id)
 
-      const moved = await updateCostItem(item.id, { ...input, categoryId: packaging.id })
+      const moved = await updateCostItem(db, item.id, { ...input, categoryId: packaging.id })
       expect(moved.categoryId).toBe(packaging.id)
-      expect(await getCostItem(item.id)).toEqual(moved)
+      expect(await getCostItem(db, item.id)).toEqual(moved)
 
-      const cleared = await updateCostItem(item.id, { ...input, categoryId: null })
+      const cleared = await updateCostItem(db, item.id, { ...input, categoryId: null })
       expect(cleared.categoryId).toBeNull()
     })
 
     it('rejects a Cost Category that does not exist, with a Thai message', async () => {
       const gone = await makeCategory('ลบแล้ว')
-      await deleteCostCategory(gone.id)
+      await deleteCostCategory(db, gone.id)
       const input = { name: uniqueName('x'), unitCost: '1', unit: 'g' }
 
       for (const categoryId of [gone.id, 'not-an-id']) {
@@ -223,10 +227,10 @@ describe('Cost Items', () => {
       const vanilla = await make({ name: `วานิลลา ${tag}`, unitCost: '0.4', unit: 'ml', categoryId: syrups.id })
       const ice = await make({ name: `น้ำแข็ง ${tag}`, unitCost: '0.02', unit: 'g' })
 
-      const inSyrups = await listCostItems({ categoryId: syrups.id })
+      const inSyrups = await listCostItems(db, { categoryId: syrups.id })
       expect(inSyrups).toEqual([vanilla])
 
-      const uncategorised = await listCostItems({ search: tag, categoryId: null })
+      const uncategorised = await listCostItems(db, { search: tag, categoryId: null })
       expect(uncategorised).toEqual([ice])
     })
   })
@@ -238,10 +242,10 @@ describe('Cost Items', () => {
       const cp = await make({ name: `นมสด (CP) ${tag}`, unitCost: '0.07', unit: 'ml' })
       const cup = await make({ name: `แก้ว ${tag}`, unitCost: '3', unit: 'ชิ้น' })
 
-      const found = await listCostItems({ search: `  ${tag.toUpperCase()} ` })
+      const found = await listCostItems(db, { search: `  ${tag.toUpperCase()} ` })
       expect(found.map((i) => i.id).sort()).toEqual([makro.id, cp.id, cup.id].sort())
 
-      const milk = await listCostItems({ search: 'นมสด (makro)' })
+      const milk = await listCostItems(db, { search: 'นมสด (makro)' })
       expect(milk.map((i) => i.id)).toContain(makro.id)
       expect(milk.map((i) => i.id)).not.toContain(cp.id)
     })
@@ -251,17 +255,17 @@ describe('Cost Items', () => {
       const percent = await make({ name: `ส่วนลด 10% ${tag}`, unitCost: '1', unit: 'ครั้ง' })
       await make({ name: `ส่วนลด 10x ${tag}`, unitCost: '1', unit: 'ครั้ง' })
 
-      const found = await listCostItems({ search: `10% ${tag}` })
+      const found = await listCostItems(db, { search: `10% ${tag}` })
       expect(found.map((i) => i.id)).toEqual([percent.id])
-      expect(await listCostItems({ search: `10_ ${tag}` })).toEqual([])
+      expect(await listCostItems(db, { search: `10_ ${tag}` })).toEqual([])
     })
   })
 
   describe('counting the sheets that use an item', () => {
     async function sheetLinking(...items: CostItem[]) {
-      const sheet = await createCostSheet(uniqueName('ชีต'))
+      const sheet = await createCostSheet(db, uniqueName('ชีต'))
       madeSheets.push(sheet)
-      await saveCostSheet(sheet.id, {
+      await saveCostSheet(db, sheet.id, {
         name: sheet.name,
         saleUnit: 'แก้ว',
         sellingPrice: '65',
@@ -278,22 +282,22 @@ describe('Cost Items', () => {
       await sheetLinking(matcha, milk)
       await sheetLinking(milk)
 
-      expect(await countSheetsUsingCostItem(matcha.id)).toBe(2)
-      expect(await countSheetsUsingCostItem(milk.id)).toBe(2)
+      expect(await countSheetsUsingCostItem(db, matcha.id)).toBe(2)
+      expect(await countSheetsUsingCostItem(db, milk.id)).toBe(2)
     })
 
     it('counts no sheets for an unused, unknown or malformed item', async () => {
       const unused = await make({ name: uniqueName('น้ำแข็ง'), unitCost: '1', unit: 'g' })
-      expect(await countSheetsUsingCostItem(unused.id)).toBe(0)
-      expect(await countSheetsUsingCostItem(randomUUID())).toBe(0)
-      expect(await countSheetsUsingCostItem('not-an-id')).toBe(0)
+      expect(await countSheetsUsingCostItem(db, unused.id)).toBe(0)
+      expect(await countSheetsUsingCostItem(db, randomUUID())).toBe(0)
+      expect(await countSheetsUsingCostItem(db, 'not-an-id')).toBe(0)
     })
   })
 
   describe('deleting an item that sheets use', () => {
     // A sheet's figures as the seller sees them: loaded, then computed.
     async function totals(sheetId: string) {
-      const sheet = (await getCostSheet(sheetId))!
+      const sheet = (await getCostSheet(db, sheetId))!
       const result = computeSheet({
         sellingPrice: Number(sheet.sellingPrice),
         gpPercent: Number(sheet.gpPercent),
@@ -315,9 +319,9 @@ describe('Cost Items', () => {
     }
 
     async function sheetWith(lines: CostSheetInput['lines']) {
-      const sheet = await createCostSheet(uniqueName('ชีต'))
+      const sheet = await createCostSheet(db, uniqueName('ชีต'))
       madeSheets.push(sheet)
-      await saveCostSheet(sheet.id, {
+      await saveCostSheet(db, sheet.id, {
         name: sheet.name,
         saleUnit: 'แก้ว',
         sellingPrice: '65',
@@ -347,9 +351,9 @@ describe('Cost Items', () => {
       const latteBefore = await totals(latte.id)
       const shotBefore = await totals(shot.id)
 
-      await deleteCostItem(matcha.id)
+      await deleteCostItem(db, matcha.id)
 
-      expect(await getCostItem(matcha.id)).toBeNull()
+      expect(await getCostItem(db, matcha.id)).toBeNull()
       expect(await totals(latte.id)).toEqual(latteBefore)
       expect(await totals(shot.id)).toEqual(shotBefore)
 
@@ -360,38 +364,38 @@ describe('Cost Items', () => {
         unit: 'g',
         categoryId: ingredients.id,
       }
-      expect((await getCostSheet(latte.id))!.lines).toMatchObject([
+      expect((await getCostSheet(db, latte.id))!.lines).toMatchObject([
         { ...manualMatcha, quantityUsed: '4' },
         { kind: 'linked', costItemId: milk.id },
         { kind: 'manual', name: 'แก้ว' },
         { ...manualMatcha, quantityUsed: '0.5' },
       ])
-      expect((await getCostSheet(shot.id))!.lines).toMatchObject([
+      expect((await getCostSheet(db, shot.id))!.lines).toMatchObject([
         { ...manualMatcha, quantityUsed: '2' },
       ])
-      expect(await countSheetsUsingCostItem(matcha.id)).toBe(0)
+      expect(await countSheetsUsingCostItem(db, matcha.id)).toBe(0)
     })
 
     it("holds the item's last values, not the ones it had when linked", async () => {
       const input = { name: uniqueName('ไซรัป'), unitCost: '0.4', unit: 'ml' }
       const syrup = await make(input)
       const sheet = await sheetWith([{ costItemId: syrup.id, quantityUsed: '10' }])
-      const changed = await updateCostItem(syrup.id, {
+      const changed = await updateCostItem(db, syrup.id, {
         ...input,
         name: uniqueName('ไซรัปใหม่'),
         unitCost: '0.45',
       })
 
-      await deleteCostItem(syrup.id)
+      await deleteCostItem(db, syrup.id)
 
-      expect((await getCostSheet(sheet.id))!.lines).toMatchObject([
+      expect((await getCostSheet(db, sheet.id))!.lines).toMatchObject([
         { kind: 'manual', name: changed.name, unitCost: '0.45', unit: 'ml', quantityUsed: '10' },
       ])
     })
 
     it('does nothing for an unknown or malformed id', async () => {
-      await expect(deleteCostItem(randomUUID())).resolves.toBeUndefined()
-      await expect(deleteCostItem('not-an-id')).resolves.toBeUndefined()
+      await expect(deleteCostItem(db, randomUUID())).resolves.toBeUndefined()
+      await expect(deleteCostItem(db, 'not-an-id')).resolves.toBeUndefined()
     })
   })
 })
@@ -399,7 +403,7 @@ describe('Cost Items', () => {
 describe('saving a Manual Line into the Cost List', () => {
   // Like make(), but through the save, so whatever it creates is cleaned up too.
   async function save(line: ManualLineInput) {
-    const saved = await saveManualLineToCostList(line)
+    const saved = await saveManualLineToCostList(db, line)
     if (saved.outcome === 'created') made.push(saved.item)
     return saved
   }
@@ -423,13 +427,13 @@ describe('saving a Manual Line into the Cost List', () => {
       unit: 'ml',
       categoryId: ingredients.id,
     })
-    expect(await getCostItem(saved.item.id)).toEqual(saved.item)
+    expect(await getCostItem(db, saved.item.id)).toEqual(saved.item)
 
     // The line's switch to a Linked Line is a sheet edit, kept when the sheet is saved.
-    const sheet = await createCostSheet(uniqueName('ชีต'))
+    const sheet = await createCostSheet(db, uniqueName('ชีต'))
     madeSheets.push(sheet)
     const linked = linkLine(line, saved.item)
-    await saveCostSheet(sheet.id, {
+    await saveCostSheet(db, sheet.id, {
       name: sheet.name,
       saleUnit: 'แก้ว',
       sellingPrice: '65',
@@ -437,7 +441,7 @@ describe('saving a Manual Line into the Cost List', () => {
       vatPercent: '7',
       lines: [linked],
     })
-    const [reloaded] = (await getCostSheet(sheet.id))!.lines
+    const [reloaded] = (await getCostSheet(db, sheet.id))!.lines
     expect(reloaded).toEqual({
       id: expect.any(String),
       kind: 'linked',
@@ -453,7 +457,7 @@ describe('saving a Manual Line into the Cost List', () => {
   it('creates nothing on a name clash, and returns the existing item to link to', async () => {
     const name = uniqueName('Oat Milk')
     const existing = await make({ name, unitCost: '0.09', unit: 'ml' })
-    const before = await listCostItems({ search: name })
+    const before = await listCostItems(db, { search: name })
 
     const saved = await save({
       name: `  ${name.toUpperCase()} `,
@@ -464,7 +468,7 @@ describe('saving a Manual Line into the Cost List', () => {
     })
 
     expect(saved).toEqual({ outcome: 'clash', item: existing })
-    expect(await listCostItems({ search: name })).toEqual(before)
+    expect(await listCostItems(db, { search: name })).toEqual(before)
   })
 
   it('treats wildcard characters in the name literally when checking for a clash', async () => {

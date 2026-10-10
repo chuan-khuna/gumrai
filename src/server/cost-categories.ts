@@ -1,4 +1,4 @@
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
 
 // Cost Categories (GLOSSARY.md): groups the seller names themselves. Each has a colour slot,
 // an index into the fixed palette (@/lib/category-colours), assigned automatically: the
@@ -41,8 +41,8 @@ function freeSlot(taken: number[]) {
 }
 
 // The seller's Cost Categories, in their listed order.
-export async function listCostCategories(): Promise<CostCategory[]> {
-  const { data, error } = await createServerClient()
+export async function listCostCategories(db: Db): Promise<CostCategory[]> {
+  const { data, error } = await db
     .from('cost_category')
     .select(columns)
     .order('sort_order')
@@ -52,14 +52,14 @@ export async function listCostCategories(): Promise<CostCategory[]> {
 }
 
 // Adds a Cost Category at the end of the list, with a colour of its own.
-export async function createCostCategory(name: string): Promise<CostCategory> {
+export async function createCostCategory(db: Db, name: string): Promise<CostCategory> {
   const row = { name: toName(name) }
-  const supabase = createServerClient()
-  const { data: existing, error: readError } = await supabase
+  
+  const { data: existing, error: readError } = await db
     .from('cost_category')
     .select('colour_slot, sort_order')
   if (readError) throw readError
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('cost_category')
     .insert({
       ...row,
@@ -73,8 +73,8 @@ export async function createCostCategory(name: string): Promise<CostCategory> {
 }
 
 // Renames a Cost Category. Its items stay in it, and it keeps its colour and place.
-export async function renameCostCategory(id: string, name: string): Promise<CostCategory> {
-  const { data, error } = await createServerClient()
+export async function renameCostCategory(db: Db, id: string, name: string): Promise<CostCategory> {
+  const { data, error } = await db
     .from('cost_category')
     .update({ name: toName(name) })
     .eq('id', id)
@@ -86,8 +86,8 @@ export async function renameCostCategory(id: string, name: string): Promise<Cost
 }
 
 // How many Cost Items are in a Cost Category: what deleting it would move to ไม่มีหมวด.
-export async function countCostItemsIn(id: string): Promise<number> {
-  const { count, error } = await createServerClient()
+export async function countCostItemsIn(db: Db, id: string): Promise<number> {
+  const { count, error } = await db
     .from('cost_item')
     .select('id', { count: 'exact', head: true })
     .eq('cost_category_id', id)
@@ -98,7 +98,7 @@ export async function countCostItemsIn(id: string): Promise<number> {
 
 // Deletes a Cost Category. Its Cost Items are kept and move to ไม่มีหมวด: the database does
 // this in the same statement (cost_item_cost_category_id_fkey is ON DELETE SET NULL).
-export async function deleteCostCategory(id: string): Promise<void> {
-  const { error } = await createServerClient().from('cost_category').delete().eq('id', id)
+export async function deleteCostCategory(db: Db, id: string): Promise<void> {
+  const { error } = await db.from('cost_category').delete().eq('id', id)
   if (error) throw error
 }

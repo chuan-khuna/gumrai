@@ -12,11 +12,15 @@ flowchart LR
 	subgraph Server["Next.js server"]
 		pages["page.tsx<br/>server components"]
 		actions["actions.ts<br/>wiring only"]
+		rc["src/server/request-client.ts<br/>requestClient()"]
 		rules["src/server/*.ts<br/>business rules"]
-		sb["src/server/supabase.ts<br/>the only client"]
-		pages --> rules
-		actions --> rules
-		rules --> sb
+		sb["src/server/supabase.ts<br/>the only client factory"]
+		pages -- "1. get the client" --> rc
+		actions -- "1. get the client" --> rc
+		rc --> sb
+		pages -- "2. call with it" --> rules
+		actions -- "2. call with it" --> rules
+		rules -. "query through the client passed in" .-> sb
 	end
 	subgraph Docker["Docker: local Supabase"]
 		pg[("Postgres<br/>tables and RPC functions")]
@@ -28,16 +32,32 @@ flowchart LR
 
 | Layer | Path | Imports | Job |
 | --- | --- | --- | --- |
-| Pages | `src/app/**/page.tsx` | `src/server/*` operations, components, `src/lib` | Read data on the server and render it. No business logic and no Supabase client. |
-| Server actions | `src/app/**/actions.ts` | `src/server/*` operations | Read the form or the arguments, call one operation, call `revalidatePath`, and turn a rule error into `{ error }`. |
+| Pages | `src/app/**/page.tsx` | `src/server/*` operations, `requestClient`, components, `src/lib` | Get the client from `requestClient()`, read data on the server with it, and render. No business logic and no Supabase import. |
+| Server actions | `src/app/**/actions.ts` | `src/server/*` operations, `requestClient` | Read the form or the arguments, get the client, call one operation with it, call `revalidatePath`, and turn a rule error into `{ error }`. |
 | Client components | `sheet-editor.tsx` and the forms | `src/lib`, actions, and types from `src/server` | Handle interaction. The sheet editor holds a draft and computes figures in the browser. |
-| Business rules | `src/server/*.ts` | `src/server/supabase.ts` | Validate input, normalise it, and make every database call. |
+| Business rules | `src/server/*.ts` | the `Db` type from `src/server/supabase.ts` | Validate input, normalise it, and make every database call through the client the caller passed in. |
 | Pure logic | `src/lib/*.ts` | nothing that does I/O | Sheet arithmetic in `sheet.ts` and `delivery.ts`, link and unlink in `cost-lines.ts`, and category colours. Runs on either side. |
 | Database | `supabase/migrations/` | none | Schema, constraints, and the operations that need several statements in one transaction. |
 
 ## Why `src/server/` is the API
 
 The original plan put FastAPI between Next.js and Supabase. [ADR 0001](../adr/0001-no-fastapi-next-talks-to-supabase.md) dropped it, because it would only relay calls and would double the deploys. `src/server/` took its place as the boundary. Every operation there takes plain values and returns plain values, never `FormData` and never React types. That rule matters more than it looks. If a Discord bot or a mobile app ever needs the same rules, `src/server/` is the code that moves into a separate service, and it can only move cleanly if nothing in it depends on the UI.
+
+## How an operation gets its client
+
+Every exported operation in `src/server/` takes the Supabase client as its first argument, typed `Db` (`SupabaseClient<Database>`, exported by `supabase.ts`). No operation makes a client of its own. The caller decides whose client it is:
+
+| Caller | Gets the client from | Today |
+| --- | --- | --- |
+| A page or server action | `await requestClient()` in `src/server/request-client.ts`, called once per render or action and passed to each operation | The secret-key client |
+| A test | `createServerClient()` in `src/server/supabase.ts`, once per test file | The secret-key client |
+
+```ts
+const db = await requestClient()
+const [items, categories] = await Promise.all([listCostItems(db), listCostCategories(db)])
+```
+
+Pages and actions never import `supabase.ts` or `@supabase/supabase-js`. `requestClient` is the one function they use, so changing whose client the app runs as means changing that function and nothing else. It is async because a client carrying the seller's session has to read the request's cookies.
 
 ## Where a rule is enforced
 
@@ -64,4 +84,4 @@ Pages are server components that call `src/server/` directly. A page whose data 
 
 ## Why the server uses the secret key
 
-Gumrai has one seller and no login yet. `createServerClient()` therefore connects with the secret key, which has the `service_role` and bypasses row-level security (RLS). RLS is on for every table, but no policies exist, so only the server can read data. Every owned table has a nullable `owner` column. When Discord login arrives through Supabase Auth, the rows can be claimed by an owner, and `createServerClient` becomes a client per request that carries the seller's session.
+Gumrai has one seller and no login yet. `requestClient()` therefore returns `createServerClient()`, which connects with the secret key. That key has the `service_role` and bypasses row-level security (RLS). RLS is on for every table, but no policies exist, so only the server can read data. Every owned table has a nullable `owner` column. When login arrives through Supabase Auth, `requestClient()` returns a client per request that carries the seller's session from cookies, and RLS limits each seller to their own rows. `createServerClient()` stays for tests and admin-only work.
