@@ -12,6 +12,11 @@ Uses the five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Project documents
+
+- Design, structure and how the harder parts work live in `docs/documents/`, indexed by `docs/documents/INDEX.md`. Read the index before working on an area it covers. When a change alters how a documented area works, update its document in the same change. A new document gets a bullet link in `INDEX.md` saying what it covers.
+- Draw flows, relationships and state changes as Mermaid diagrams (```` ```mermaid ````) where a diagram reads faster than prose.
+
 ## Stack
 
 Next.js (App Router) + Tailwind v4, TypeScript, Supabase (local Postgres in Docker), Vitest, bun. No FastAPI (ADR 0001). UI text is Thai only.

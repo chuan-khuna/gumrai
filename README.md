@@ -11,6 +11,8 @@ Stack: Next.js (App Router), Tailwind v4, TypeScript, Supabase (local Postgres i
 
 ## Getting started
 
+New to the project? Follow [the onboarding guide](docs/documents/ONBOARDING.md). How the app is built is documented in [docs/documents/](docs/documents/INDEX.md).
+
 ### Prerequisites
 
 - [bun](https://bun.sh). Use it for everything, never npm, pnpm or yarn.
