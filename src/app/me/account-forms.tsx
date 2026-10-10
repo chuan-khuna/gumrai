@@ -38,7 +38,8 @@ export function DisplayNameForm({ displayName }: { displayName: string }) {
     // One row from sm up: the field grows, the button keeps its size beside it.
     <form action={formAction} className="grid gap-3">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="ชื่อที่แสดง" className="flex-1 basis-56">
+        {/* The section heading already reads ชื่อที่แสดง. */}
+        <Field label="ชื่อที่แสดง" hideLabel className="flex-1 basis-56">
           <Input
             name="displayName"
             autoComplete="nickname"

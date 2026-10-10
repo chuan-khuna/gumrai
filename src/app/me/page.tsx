@@ -6,7 +6,9 @@ import {
   unbindDiscordAction,
   unbindEmailAction,
 } from '@/app/me/actions'
+import { RevealOnArrival } from '@/app/me/reveal-on-arrival'
 import { ShuffleAvatarButton } from '@/app/me/shuffle-avatar-button'
+import { SubmitButton } from '@/app/me/submit-button'
 import { SellerAvatar } from '@/app/seller-avatar'
 import { ConfirmAction } from '@/components/confirm-action'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { loginPath } from '@/lib/return-to'
 import {
+  type AccountData,
   countAccountData,
   DELETE_CONFIRMATION,
   listSignInMethods,
@@ -39,6 +42,7 @@ export default async function MePage({
   // The layout has already checked; this only narrows the type.
   if (!account || !seller) redirect(loginPath('/me'))
   const [data, methods] = await Promise.all([countAccountData(db), listSignInMethods(db)])
+  const lost = lostData(data)
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
@@ -79,15 +83,21 @@ export default async function MePage({
         </Section>
 
         <Section id="delete" title="ลบบัญชี">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-loss-surface px-6 py-5">
-            <p className="text-sm text-foreground">
-              ชีตต้นทุน {data.costSheets} ชีต และรายการต้นทุน {data.costItems} รายการจะหายไปด้วย
-            </p>
+          {/* Always says what goes, before the button: the impact is the point of this section. */}
+          <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-loss-surface px-6 py-5">
+            <div className="grid min-w-0 flex-1 basis-56 gap-2 text-sm">
+              <p className="font-heading font-medium">ลบแล้วกู้คืนไม่ได้ สิ่งที่จะหายไป</p>
+              <ul className="grid list-disc gap-1 pl-5 marker:text-loss">
+                {lost.map((part) => (
+                  <li key={part}>{part}</li>
+                ))}
+              </ul>
+            </div>
             <ConfirmAction
               action={deleteAccountAction}
               trigger="ลบบัญชี"
               title="ลบบัญชีนี้?"
-              description={`ชีตต้นทุน ${data.costSheets} ชีต รายการต้นทุน ${data.costItems} รายการ หมวดต้นทุน และชื่อที่แสดงของคุณจะถูกลบทั้งหมด ลบแล้วกู้คืนไม่ได้`}
+              description={`${lost.join(' ')} จะถูกลบ ลบแล้วกู้คืนไม่ได้`}
               confirmLabel="ลบบัญชี"
               pendingLabel="กำลังลบ…"
               typeToConfirm={DELETE_CONFIRMATION}
@@ -97,6 +107,19 @@ export default async function MePage({
       </div>
     </main>
   )
+}
+
+const count = new Intl.NumberFormat('th-TH')
+
+// What deleting the account takes: the account itself (its name and ways to sign in go with
+// it), then every count of what was made in it, zero included.
+function lostData({ costSheets, costItems, costCategories }: AccountData): string[] {
+  return [
+    'บัญชีนี้',
+    `ชีตต้นทุน ${count.format(costSheets)} ชีต`,
+    `รายการต้นทุน ${count.format(costItems)} รายการ`,
+    `หมวดต้นทุน ${count.format(costCategories)} หมวด`,
+  ]
 }
 
 // A setting: its heading, then its controls. Side by side from md up, with a dashed rule
@@ -244,9 +267,9 @@ function SignInMethods({
                 )
               ) : (
                 <form action={bindDiscordAction}>
-                  <Button type="submit" variant="outline" size="sm">
+                  <SubmitButton variant="outline" size="sm" pendingLabel="กำลังไปที่ Discord…">
                     ผูก Discord
-                  </Button>
+                  </SubmitButton>
                 </form>
               )
             }
@@ -254,15 +277,20 @@ function SignInMethods({
         </ul>
       </Card>
 
+      {/* Back from Discord the page opens at the top, so the outcome scrolls itself into view. */}
       {bindError && (
-        <p role="alert" className="text-sm text-loss">
-          {bindError}
-        </p>
+        <RevealOnArrival>
+          <p role="alert" className="text-sm text-loss">
+            {bindError}
+          </p>
+        </RevealOnArrival>
       )}
       {justBound && (
-        <p role="status" className="text-sm text-profit">
-          ผูก Discord แล้ว
-        </p>
+        <RevealOnArrival>
+          <p role="status" className="text-sm text-muted-foreground">
+            ผูก Discord แล้ว
+          </p>
+        </RevealOnArrival>
       )}
     </div>
   )

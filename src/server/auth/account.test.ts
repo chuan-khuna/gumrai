@@ -231,10 +231,11 @@ describe('Deleting the account', () => {
     cost_line: 2,
   }
 
-  it('counts the Cost Sheets and Cost Items that would be lost', async () => {
+  it('counts the Cost Sheets, Cost Items and Cost Categories that would be lost', async () => {
     const seller = await sellerWithData('ร้าน')
 
-    expect(await countAccountData(seller.db)).toEqual({ costSheets: 1, costItems: 1 })
+    // The three starting categories and the one made in sellerWithData.
+    expect(await countAccountData(seller.db)).toEqual({ costSheets: 1, costItems: 1, costCategories: 4 })
   })
 
   it('refuses any text but exactly "delete", in Thai, and deletes nothing', async () => {
@@ -272,7 +273,7 @@ describe('Deleting the account', () => {
     await deleteAccount(leaving.db, 'delete')
 
     expect(await rowsOwnedBy(staying.id)).toEqual(ONE_OF_EACH)
-    expect(await countAccountData(staying.db)).toEqual({ costSheets: 1, costItems: 1 })
+    expect(await countAccountData(staying.db)).toEqual({ costSheets: 1, costItems: 1, costCategories: 4 })
   })
 
   it('refuses when no one is signed in', async () => {

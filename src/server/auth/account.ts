@@ -163,19 +163,21 @@ export async function shuffleAvatarPattern(db: Db): Promise<string> {
 }
 
 /** What deleting the account would lose, for the confirmation /me shows. */
-export type AccountData = { costSheets: number; costItems: number }
+export type AccountData = { costSheets: number; costItems: number; costCategories: number }
 
-/** How many Cost Sheets and Cost Items the signed-in Seller has. */
+/** How many Cost Sheets, Cost Items and Cost Categories the signed-in Seller has. */
 export async function countAccountData(db: Db): Promise<AccountData> {
   await signedIn(db)
-  // Row-level security limits both counts to the Seller's own rows.
-  const [sheets, items] = await Promise.all([
+  // Row-level security limits every count to the Seller's own rows.
+  const [sheets, items, categories] = await Promise.all([
     db.from('cost_sheet').select('id', { count: 'exact', head: true }),
     db.from('cost_item').select('id', { count: 'exact', head: true }),
+    db.from('cost_category').select('id', { count: 'exact', head: true }),
   ])
   if (sheets.error) throw sheets.error
   if (items.error) throw items.error
-  return { costSheets: sheets.count ?? 0, costItems: items.count ?? 0 }
+  if (categories.error) throw categories.error
+  return { costSheets: sheets.count ?? 0, costItems: items.count ?? 0, costCategories: categories.count ?? 0 }
 }
 
 /** The text a Seller must type, exactly, to delete their account. */
