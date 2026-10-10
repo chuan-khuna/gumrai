@@ -113,7 +113,7 @@ Open each URL, and compare the page with the expected result.
 
 | URL | Expected result |
 | --- | --- |
-| http://localhost:3000 | The title กำไร, a green dot, and "เชื่อมต่อฐานข้อมูลแล้ว", which means "database connected" |
+| http://localhost:3000 | The landing page: the title กำไร and a เริ่มใช้งาน button that opens the login page |
 | http://localhost:3000/sheets | The login page, because no one is signed in. Sign in with the test Seller above. You return to the Cost Sheets page, and the header shows ร้านทดสอบ and ออกจากระบบ. |
 | http://localhost:3000/cost-list | The ลิสต์ต้นทุน page with eight sample items, such as มัทฉะเกรดพิธีชง at 4.5 ฿/g |
 | http://localhost:3000/sheets, again | One sheet, "มัทฉะลาเต้เย็น (แอปส่งอาหาร)". Open it and type a new Selling Price. The profit figures change as you type. |
@@ -172,7 +172,7 @@ If every check passes, your setup is complete.
 | --- | --- |
 | `db:start` hangs, or says it cannot connect to the Docker API | Docker Desktop is not running. Start it, wait for the engine, and run `bun run db:start` again. |
 | A page shows "SUPABASE_PUBLISHABLE_KEY must be set" or "SUPABASE_SECRET_KEY must be set" | `.env.local` is missing, or a key is empty. Compare it with `.env.example`. Repeat setup steps 5 and 6, then restart `bun run dev`. |
-| The home page shows an error about an invalid API key | The key in `.env.local` belongs to another Supabase stack. Copy it again from `bunx supabase status`. |
+| A page shows an error about an invalid API key | The key in `.env.local` belongs to another Supabase stack. Copy it again from `bunx supabase status`. |
 | Tests fail with connection errors | Local Supabase is not running. Run `bun run db:start`. |
 | `db:start` fails because a port is in use | Another Supabase project is running. Stop it with `bunx supabase stop --project-id <id>`, or stop its containers in Docker Desktop. |
 | `bun install` rejects a package version as too new | The 7-day rule in `bunfig.toml` blocks it. Use an older version of that package. |

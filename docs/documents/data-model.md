@@ -65,7 +65,6 @@ erDiagram
 | `cost_item` | One entry in the Cost List | `unit_cost` is `numeric`. `unit` is free text. `cost_category_id` is nullable. |
 | `cost_sheet` | One costing of a thing the seller sells | `sale_unit` defaults to ชิ้น, `gp_percent` to 0, and `vat_percent` to 7. |
 | `cost_line` | One cost on a sheet | `position` starts at 0. A line has either `cost_item_id` or its own `name`, `unit_cost`, `unit`, and `cost_category_id`. |
-| `app_status` | One row that the home page reads | A test table from the project scaffold, outside the domain. Anyone may read it, signed in or not. It is removed once nothing reads it. |
 
 Every owned table (`cost_category`, `cost_item`, `cost_sheet`, `cost_line`) has a required `owner`, the Seller's `auth.users` id. It defaults to `auth.uid()`, the signed-in Seller, so the app never sends it. Row-level security lets a Seller read and change only rows they own; [Sign-in](sign-in.md) describes the policies. Deleting a Seller deletes everything they own.
 

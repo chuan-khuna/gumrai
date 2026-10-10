@@ -81,7 +81,7 @@ Neither check is what keeps data apart. Row-level security does that, so even a 
 
 `safeReturnTo` accepts only a path on this site. It rejects `//host`, `/\host`, control characters, anything not starting with `/`, and the login page itself, and falls back to `/sheets`.
 
-The root page `/` needs no sign-in. It reads `app_status`, which anyone may read.
+The root page `/` is the public landing page. It needs no sign-in and is not in `SELLER_PAGES`, and it never redirects a signed-in Seller away. It calls `currentSeller` only to choose its main button: เริ่มใช้งาน to `/login` for a visitor, ไปที่ชีตต้นทุน to `/sheets` for a Seller.
 
 ## Signing out
 
@@ -95,9 +95,8 @@ Every table has row-level security on. The policies:
 | --- | --- | --- |
 | `cost_category`, `cost_item`, `cost_sheet`, `cost_line` | `authenticated` | Everything, on rows where `owner = auth.uid()`. A new row must have that owner too. |
 | `seller_profile` | `authenticated` | Read and update the row whose `id = auth.uid()`. No insert or delete: the triggers do both. |
-| `app_status` | `anon`, `authenticated` | Read. |
 
-`anon`, a visitor who is not signed in, has no other policy, so sees no Seller's data. `owner` defaults to `auth.uid()`, so the app never sends it, and the policies refuse any other value.
+`anon`, a visitor who is not signed in, has no policy at all, so sees no Seller's data. `owner` defaults to `auth.uid()`, so the app never sends it, and the policies refuse any other value.
 
 ```mermaid
 flowchart TD

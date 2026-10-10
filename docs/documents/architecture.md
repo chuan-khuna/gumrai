@@ -17,7 +17,7 @@ flowchart LR
 		pages["page.tsx<br/>server components"]
 		actions["actions.ts<br/>wiring only"]
 		rc["src/server/db/request-client.ts<br/>requestClient(), from cookies"]
-		rules["src/server/auth/, costs/, app-status.ts<br/>business rules"]
+		rules["src/server/auth/, costs/<br/>business rules"]
 		sb["src/server/db/supabase.ts<br/>the only client factory"]
 		pages -- "1. get the client" --> rc
 		actions -- "1. get the client" --> rc
@@ -42,7 +42,7 @@ flowchart LR
 | Pages | `src/app/**/page.tsx` | `src/server/*` operations, `requestClient`, components, `src/lib` | Get the client from `requestClient()`, read data on the server with it, and render. No business logic and no Supabase import. |
 | Server actions | `src/app/**/actions.ts` | `src/server/*` operations, `requestClient` | Read the form or the arguments, get the client, call one operation with it, call `revalidatePath`, and turn a rule error into `{ error }`. |
 | Client components | `sheet-editor.tsx` and the forms | `src/lib`, actions, and types from `src/server` | Handle interaction. The sheet editor holds a draft and computes figures in the browser. |
-| Business rules | `src/server/auth/*.ts`, `src/server/costs/*.ts`, `src/server/app-status.ts` | the `Db` type from `src/server/db/supabase.ts` | Validate input, normalise it, and make every database call through the client the caller passed in. `auth.ts` signs in, signs up, signs out and reads the signed-in Seller the same way. |
+| Business rules | `src/server/auth/*.ts`, `src/server/costs/*.ts` | the `Db` type from `src/server/db/supabase.ts` | Validate input, normalise it, and make every database call through the client the caller passed in. `auth.ts` signs in, signs up, signs out and reads the signed-in Seller the same way. |
 | Pure logic | `src/lib/*.ts` | nothing that does I/O | Sheet arithmetic in `sheet.ts` and `delivery.ts`, link and unlink in `cost-lines.ts`, and category colours. Runs on either side. |
 | Database | `supabase/migrations/` | none | Schema, constraints, and the operations that need several statements in one transaction. |
 
@@ -58,7 +58,6 @@ The original plan put FastAPI between Next.js and Supabase. [ADR 0001](../adr/00
 | `auth/` | `auth.ts` | Sign-up, sign-in, sign-out and the signed-in Seller. |
 | `costs/` | `cost-items.ts`, `cost-categories.ts`, `cost-sheets.ts` | The Cost List, Cost Categories and cost sheets. `seller-isolation.test.ts` lives here too. |
 | `testing/` | `test-sellers.ts` | Test-only helpers. The app never imports them. |
-| root | `app-status.ts` | The home page's status check. |
 
 Each test sits beside the file it tests. Imports always use the full alias path, such as `@/server/costs/cost-items`.
 
@@ -102,10 +101,10 @@ The `message` of each is in Thai, and the UI shows it to the seller unchanged. A
 
 ## How pages stay fresh
 
-Pages are server components that call `src/server/` directly. A page whose data can change outside its own actions sets `export const dynamic = 'force-dynamic'`. The home page and the sheet editor page do this. After a write, an action calls `revalidatePath` for every page that shows the changed data. For example, saving a Manual Line into the Cost List revalidates `/cost-list`. The sheet page renders `<SheetEditor key={sheet.id}>`, so a different sheet always starts with a fresh draft.
+Pages are server components that call `src/server/` directly. A page whose data can change outside its own actions sets `export const dynamic = 'force-dynamic'`. The sheet editor page does this. A page that reads the session, such as the landing page `/`, renders on every request anyway, because reading cookies makes it dynamic. After a write, an action calls `revalidatePath` for every page that shows the changed data. For example, saving a Manual Line into the Cost List revalidates `/cost-list`. The sheet page renders `<SheetEditor key={sheet.id}>`, so a different sheet always starts with a fresh draft.
 
 ## Whose rows a client sees
 
-Pages and actions run as the signed-in Seller, never with the secret key. Row-level security is on for every table, and each owned table has one policy: a signed-in Seller reads and changes only rows whose `owner` is them. A visitor who is not signed in (`anon`) has no policy, so sees nothing but `app_status`. Operations therefore need no `owner` filter of their own: `listCostItems(db)` lists the Seller's items because that is all the database shows them, and another Seller's id reads as "not found". [Sign-in](sign-in.md) describes the session and the policies.
+Pages and actions run as the signed-in Seller, never with the secret key. Row-level security is on for every table, and each owned table has one policy: a signed-in Seller reads and changes only rows whose `owner` is them. A visitor who is not signed in (`anon`) has no policy, so sees nothing. Operations therefore need no `owner` filter of their own: `listCostItems(db)` lists the Seller's items because that is all the database shows them, and another Seller's id reads as "not found". [Sign-in](sign-in.md) describes the session and the policies.
 
 The secret key bypasses row-level security. Only tests and admin-only operations use it, through `createSecretClient()`.
