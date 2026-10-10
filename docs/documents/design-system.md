@@ -41,6 +41,10 @@ Sellers never choose colours. `createCostCategory` gives each new category the l
 
 `CATEGORY_PALETTE_SIZE` is 8, which equals the number of `--color-category-N` tokens in the preset. The palette avoids the hues of loss and profit, so a category colour never looks like either.
 
+## Avatar colours
+
+`SellerAvatar` (`src/app/seller-avatar.tsx`) passes Boring Avatars five colours, `var(--color-avatar-1)` … `var(--color-avatar-5)`, so the pattern takes the theme's colours without writing any. The tokens sit in a `@theme static` block, as the category colours do, because the SVG names them by variable and no class would make Tailwind emit them. They are gum, mint and razz with two tints, and never cinnamon, so an avatar never reads as a loss. The `marble` variant is used because it only places the colours: variants such as `beam` parse a hex colour to pick a contrasting face, which a `var()` would break.
+
 ## Language of the UI
 
 The UI is in Thai only, and amounts are in baht only. There is no translation layer. Code and documents use the English domain terms from [GLOSSARY.md](../../GLOSSARY.md). The UI shows the Thai term that the glossary gives beside each one.

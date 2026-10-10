@@ -147,7 +147,7 @@ flowchart LR
    ```
 
    `bun run db:reset` alone is not enough; any change under `[auth]` needs this restart. Run the commands through `bun run`, from the repo folder: bun loads `.env.local` and passes it to the Supabase CLI. A bare `bunx supabase start` does not, and Auth then gets the literal text `env(SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID)` as the client ID.
-7. **Open the app** at http://127.0.0.1:3000 or http://localhost:3000. Supabase Auth sends the sign-in back to whichever of the two you started on (both are in `additional_redirect_urls`), where the cookie holding the one-time code verifier waits. Go to `/login` and choose เข้าสู่ระบบด้วย Discord. Discord asks you to authorize your application. Accept, and you land on the Cost Sheets page as a new Seller whose Display Name is your Discord name, with your Discord avatar in the header.
+7. **Open the app** at http://127.0.0.1:3000 or http://localhost:3000. Supabase Auth sends the sign-in back to whichever of the two you started on (both are in `additional_redirect_urls`), where the cookie holding the one-time code verifier waits. Go to `/login` and choose เข้าสู่ระบบด้วย Discord. Discord asks you to authorize your application. Accept, and you land on the Cost Sheets page as a new Seller whose Display Name is your Discord name, with a generated avatar in the header.
 
 ### When Discord sign-in fails
 

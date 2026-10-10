@@ -101,13 +101,13 @@ isOneToOne: false
                   ]
                 },"seller_profile": {
                   Row: {
-                    "created_at": string,"display_name": string,"id": string
+                    "avatar_seed": string,"created_at": string,"display_name": string,"id": string
                   }
                   Insert: {
-                    "created_at"?: string,"display_name": string,"id": string
+                    "avatar_seed"?: string,"created_at"?: string,"display_name": string,"id": string
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string,"id"?: string
+                    "avatar_seed"?: string,"created_at"?: string,"display_name"?: string,"id"?: string
                   }
                   Relationships: [
                     
@@ -132,9 +132,6 @@ isOneToOne: false
                            },
 "seller_clear_password":
 { Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"seller_discord_avatar":
-{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "seller_has_password":
 { Args: Record<PropertyKey, never>; Returns: boolean

@@ -1,30 +1,18 @@
-import { sellerAvatar } from '@/lib/avatar'
+import BoringAvatar from 'boring-avatars'
 import type { Seller } from '@/server/auth/auth'
 
-// The Seller's Discord avatar, or the first letter of their Display Name when they have no
-// Discord bound. Decorative: the Display Name is always written beside it.
-export function SellerAvatar({ seller }: { seller: Seller }) {
-  const avatar = sellerAvatar(seller)
-  if (avatar.kind === 'image') {
-    return (
-      // A plain img: the avatar is a small picture on Discord's CDN, and next/image would need
-      // that host allowed in the Next config for no gain.
-      <img
-        src={avatar.src}
-        alt=""
-        width={28}
-        height={28}
-        referrerPolicy="no-referrer"
-        className="size-7 shrink-0 rounded-full bg-muted object-cover"
-      />
-    )
-  }
+// The pattern's colours: theme tokens, never written here (src/styles/presets/bubblegum.css).
+const PATTERN = [1, 2, 3, 4, 5].map((n) => `var(--color-avatar-${n})`)
+
+const SIZES = { sm: { pixels: 28, box: 'size-7' }, lg: { pixels: 80, box: 'size-20' } }
+
+// The Seller's avatar: a Boring Avatars pattern drawn from their avatar seed, the same every
+// time until they shuffle it at /me. Decorative: the Display Name is always written beside it.
+export function SellerAvatar({ seller, size = 'sm' }: { seller: Seller; size?: keyof typeof SIZES }) {
+  const { pixels, box } = SIZES[size]
   return (
-    <span
-      aria-hidden
-      className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
-    >
-      {avatar.letter}
+    <span aria-hidden className={`${box} shrink-0`}>
+      <BoringAvatar name={seller.avatarSeed} variant="marble" colors={PATTERN} size={pixels} />
     </span>
   )
 }

@@ -8,8 +8,8 @@ import type { Db } from '@/server/db/supabase'
 export type Seller = {
   id: string
   displayName: string
-  /** Their Discord avatar, or null when they have no Discord identity. */
-  discordAvatarUrl: string | null
+  /** The seed of their generated avatar pattern, which they can shuffle at /me. */
+  avatarSeed: string
 }
 
 export type SignUpInput = {
@@ -109,25 +109,15 @@ export async function sessionSeller(db: Db): Promise<SessionSeller | null> {
   return { id, email: typeof email === 'string' && email !== '' ? email : null }
 }
 
-// The avatar URL in the Seller's own Discord identity, or null. The generated type of
-// seller_discord_avatar() says string, but the generator types every scalar function result as
-// non-null, and this one is null for a Seller without Discord.
-async function discordAvatar(db: Db): Promise<string | null> {
-  const { data, error } = await db.rpc('seller_discord_avatar')
-  if (error) throw error
-  const url: string | null = data
-  return url ?? null
-}
-
 /** The signed-in Seller, or null when no one is signed in. */
 export async function currentSeller(db: Db): Promise<Seller | null> {
   const session = await sessionSeller(db)
   if (!session) return null
-  const [profile, discordAvatarUrl] = await Promise.all([
-    db.from('seller_profile').select('id, display_name').eq('id', session.id).maybeSingle(),
-    discordAvatar(db),
-  ])
-  if (profile.error) throw profile.error
-  const data = profile.data
-  return data && { id: data.id, displayName: data.display_name, discordAvatarUrl }
+  const { data, error } = await db
+    .from('seller_profile')
+    .select('id, display_name, avatar_seed')
+    .eq('id', session.id)
+    .maybeSingle()
+  if (error) throw error
+  return data && { id: data.id, displayName: data.display_name, avatarSeed: data.avatar_seed }
 }

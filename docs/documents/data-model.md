@@ -18,6 +18,7 @@ erDiagram
 	seller_profile {
 		uuid id PK "= auth.users.id"
 		text display_name
+		text avatar_seed
 	}
 	cost_category {
 		uuid id PK
@@ -60,7 +61,7 @@ erDiagram
 
 | Table | Holds | Notes |
 | --- | --- | --- |
-| `seller_profile` | A Seller's Display Name | One row per auth user, made by the `create_seller` trigger. A Seller reads and changes only their own. |
+| `seller_profile` | A Seller's Display Name and avatar seed | One row per auth user, made by the `create_seller` trigger. A Seller reads and changes only their own. |
 | `cost_category` | A group the seller names | `colour_slot` is an index into the fixed colour palette. `sort_order` is the list order. Each new Seller gets three (วัตถุดิบ, บรรจุภัณฑ์, and อื่น ๆ) from `create_seller`, because they are part of the product and not sample data. |
 | `cost_item` | One entry in the Cost List | `unit_cost` is `numeric`. `unit` is free text. `cost_category_id` is nullable. |
 | `cost_sheet` | One costing of a thing the seller sells | `sale_unit` defaults to ชิ้น, `gp_percent` to 0, and `vat_percent` to 7. |
@@ -101,12 +102,11 @@ Each function runs as one transaction and uses `search_path = ''`. The app calls
 | `delete_cost_item(p_id)` | `deleteCostItem` | Locks the item, copies its name, Unit Cost, Unit, and category into every line that links to it, and then deletes it. Those lines become Manual Lines, so no sheet's figures change. |
 | `duplicate_cost_sheet(p_sheet_id, p_name)` | `duplicateCostSheet` | Inserts a copy of the sheet and of all its lines, and returns the new id. Linked Lines in the copy link to the same items. |
 
-Four more functions are not transactions but narrow windows into the `auth` schema:
+Three more functions are not transactions but narrow windows into the `auth` schema:
 
 | Function | Caller | Behaviour |
 | --- | --- | --- |
 | `seller_has_password()` | `readAccount`, `changePassword`, `setFirstPassword`, `listSignInMethods` | Whether the signed-in Seller has a password: `true` when their `auth.users.encrypted_password` is neither null nor empty. It is `security definer`, because the app cannot read `auth.users`, and it reads only the caller's own row and returns only a yes or no. Executable by `authenticated` only. |
-| `seller_discord_avatar()` | `currentSeller` (the header) | The avatar URL in the signed-in Seller's own `discord` identity (`auth.identities.identity_data.avatar_url`), or null when they have none. `security definer`, reads only the caller's identity, executable by `authenticated` only. It reads the identity rather than the user's metadata because binding Discord later does not write the metadata, and a Seller can write their own. The generated type says it returns `string`, because the type generator marks every scalar function result non-null; `discordAvatar` in `src/server/auth/auth.ts` types it as `string \| null`. |
 | `seller_clear_password()` | `unbindSignInMethod(db, 'email', currentPassword)`, after the app has checked the current password | Empties the signed-in Seller's `auth.users.encrypted_password`, so email and password no longer signs them in (Supabase Auth's API can change a password but not remove one). Raises `P0001` "no other way to sign in" unless the Seller has a `discord` identity. `security definer`, acts only on the caller's row, executable by `authenticated` only. |
 | `seller_add_email_identity()` | `unbindSignInMethod(db, 'discord')` | Inserts an `email` identity for the signed-in Seller, as Supabase Auth stores one for an email sign-up, so that Supabase Auth will unlink their Discord identity (it refuses to unlink a user's only identity, and setting a password adds none). Does nothing unless the Seller has a password and a confirmed email and no `email` identity yet. Its `email_verified` is true only when another of the Seller's identities has the same email and says its provider verified it (`20261010090817_email_identity_evidence.sql`); `email_confirmed_at` is no evidence while confirmations are off. `security definer`, acts only on the caller, executable by `authenticated` only. |
 

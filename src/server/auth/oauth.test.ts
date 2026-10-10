@@ -191,30 +191,6 @@ describe('A new Seller from Discord', () => {
   })
 })
 
-describe("The header's avatar", () => {
-  it("is the Discord avatar of a Seller with Discord bound, following Discord's changes", async () => {
-    const user = discordUser({ avatar: 'a1b2c3' })
-    const seller = await createDiscordSeller(user)
-
-    expect(await currentSeller(seller.db)).toMatchObject({
-      discordAvatarUrl: `https://cdn.discordapp.com/avatars/${user.id}/a1b2c3.png`,
-    })
-
-    await signInAgainWithDiscord(seller, { ...user, avatar: 'f00d' })
-    expect(await currentSeller(seller.db)).toMatchObject({
-      discordAvatarUrl: `https://cdn.discordapp.com/avatars/${user.id}/f00d.png`,
-    })
-  })
-
-  it('is absent for a Seller without Discord, even with an avatar_url in their own metadata', async () => {
-    const seller = await createSeller()
-    const { error } = await seller.db.auth.updateUser({ data: { avatar_url: 'https://evil.example/x.png' } })
-    if (error) throw error
-
-    expect(await currentSeller(seller.db)).toMatchObject({ discordAvatarUrl: null })
-  })
-})
-
 describe('Binding Discord from /me', () => {
   it('goes to Discord, back through Supabase Auth to the callback, keeping the code verifier in a cookie', async () => {
     const seller = await createSeller()
@@ -325,7 +301,7 @@ describe('A Discord sign-in that Supabase Auth would link to an existing Seller 
 
     expect(await identityProviders(seller.id)).toEqual(['email'])
     const again = await signIn(seller.email, seller.password)
-    expect(await currentSeller(again)).toMatchObject({ displayName: 'ร้านเดิม', discordAvatarUrl: null })
+    expect(await currentSeller(again)).toMatchObject({ displayName: 'ร้านเดิม' })
   })
 
   it('is refused when the Seller is signed in and presses sign in with Discord', async () => {
@@ -385,9 +361,6 @@ describe('Discord identities the database lets through', () => {
     await bindDiscordIdentity(seller.id, user, seller.email, state)
 
     expect(await identityProviders(seller.id)).toEqual(['discord', 'email'])
-    expect(await currentSeller(seller.db)).toMatchObject({
-      discordAvatarUrl: `https://cdn.discordapp.com/avatars/${user.id}/b1nd.png`,
-    })
   })
 
   it("a first Discord sign-in, which inserts the new user and its identity together", async () => {

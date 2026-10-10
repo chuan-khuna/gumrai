@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { MIN_PASSWORD_LENGTH, sessionSeller } from '@/server/auth/auth'
 import { createPublicClient, createSecretClient, type Db } from '@/server/db/supabase'
 
@@ -143,6 +144,22 @@ export async function setFirstPassword(db: Db, newPassword: string): Promise<voi
     throw new AccountError('บัญชีนี้มีรหัสผ่านอยู่แล้ว เปลี่ยนรหัสผ่านแทน')
   }
   await savePassword(db, newPassword)
+}
+
+/**
+ * Gives the signed-in Seller a new random avatar seed, so their generated avatar pattern
+ * changes. Returns the new seed.
+ */
+export async function shuffleAvatarPattern(db: Db): Promise<string> {
+  const { id } = await signedIn(db)
+  const { data, error } = await db
+    .from('seller_profile')
+    .update({ avatar_seed: randomUUID() })
+    .eq('id', id)
+    .select('avatar_seed')
+    .single()
+  if (error) throw error
+  return data.avatar_seed
 }
 
 /** What deleting the account would lose, for the confirmation /me shows. */

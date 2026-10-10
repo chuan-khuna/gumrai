@@ -59,6 +59,11 @@ colors:
   unsaved: "{colors.gum-ink}"
   highlight: "{colors.lemon}"
   pop: "{colors.grape}"
+  avatar-1: "{colors.gum}"
+  avatar-2: "{colors.mint}"
+  avatar-3: "{colors.razz}"
+  avatar-4: "{colors.gum-tint}"
+  avatar-5: "{colors.razz-tint}"
   category-0: "oklch(0.68 0.12 250)"
   category-1: "oklch(0.8 0.13 90)"
   category-2: "oklch(0.64 0.14 310)"
@@ -349,6 +354,8 @@ The flavours, and the job each one owns:
 The neutrals run `paper-0` (cards) · `paper` (`background`) · `paper-2` (`muted`, `secondary`) · `paper-3` · `line-2` · `line` (`border`, `input`) · `ink-3` (`muted-foreground`) · `ink-2` · `ink` (`foreground`). All lean slightly pink (hue 340–345). There is no pure white and no pure black.
 
 Data colours: `category-0`…`category-7` colour Cost Categories by slot, and the seller never picks them. `category-none` is ไม่มีหมวด. `chart-1`…`chart-5` point at the first five slots for any shadcn chart. `commission` and `commission-vat` are the platform's share in the split chart. Category hues stay clear of gum (330–10°), cinnamon (20–45°) and mint (135–170°).
+
+Avatar colours: `avatar-1`…`avatar-5` paint every Seller's avatar, a Boring Avatars pattern (marble) drawn from a seed they can shuffle at `/me`. They are gum, mint and razz with two tints, so a face never wears loss's cinnamon.
 
 ## Typography
 

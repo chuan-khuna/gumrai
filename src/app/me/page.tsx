@@ -1,7 +1,14 @@
 import { redirect } from 'next/navigation'
 import { ChangePasswordForm, DisplayNameForm, SetPasswordForm } from '@/app/me/account-forms'
 import { signOutAction } from '@/app/login/actions'
-import { bindDiscordAction, deleteAccountAction, unbindDiscordAction, unbindEmailAction } from '@/app/me/actions'
+import {
+  bindDiscordAction,
+  deleteAccountAction,
+  shuffleAvatarPatternAction,
+  unbindDiscordAction,
+  unbindEmailAction,
+} from '@/app/me/actions'
+import { SellerAvatar } from '@/app/seller-avatar'
 import { ConfirmAction } from '@/components/confirm-action'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,7 +21,7 @@ import {
   readAccount,
   type SignInMethod,
 } from '@/server/auth/account'
-import { MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
+import { currentSeller, MIN_PASSWORD_LENGTH, type Seller } from '@/server/auth/auth'
 import { oauthFailureMessage } from '@/server/auth/oauth'
 import { requestClient } from '@/server/db/request-client'
 
@@ -28,17 +35,18 @@ export default async function MePage({
 }) {
   const { bound, error } = await searchParams
   const db = await requestClient()
-  const account = await readAccount(db)
+  const [account, seller] = await Promise.all([readAccount(db), currentSeller(db)])
   // The layout has already checked; this only narrows the type.
-  if (!account) redirect(loginPath('/me'))
+  if (!account || !seller) redirect(loginPath('/me'))
   const [data, methods] = await Promise.all([countAccountData(db), listSignInMethods(db)])
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
       <h1 className="text-3xl">บัญชีของฉัน</h1>
-      {account.email && <p className="mt-2 break-all text-muted-foreground">{account.email}</p>}
 
-      <Card className="mt-8">
+      <SummaryCard seller={seller} email={account.email} methods={methods} />
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>ชื่อที่แสดง</CardTitle>
           <CardDescription>ชื่อที่เห็นมุมขวาบนของทุกหน้า</CardDescription>
@@ -48,11 +56,14 @@ export default async function MePage({
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
+      <Card id="password" className="mt-6 scroll-mt-6">
         {account.hasPassword ? (
           <>
             <CardHeader>
               <CardTitle>เปลี่ยนรหัสผ่าน</CardTitle>
+              <CardDescription>
+                <SignInEmail email={account.email} />
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ChangePasswordForm email={account.email ?? ''} minPasswordLength={MIN_PASSWORD_LENGTH} />
@@ -62,8 +73,9 @@ export default async function MePage({
           <>
             <CardHeader>
               <CardTitle>ตั้งรหัสผ่าน</CardTitle>
-              <CardDescription>
-                บัญชีนี้ยังไม่มีรหัสผ่าน ตั้งไว้แล้วจะเข้าสู่ระบบด้วยอีเมล {account.email} และรหัสผ่านนี้ได้ด้วย
+              <CardDescription className="grid gap-1">
+                <span>ตั้งไว้แล้วจะเข้าสู่ระบบด้วยอีเมลนี้และรหัสผ่านได้ด้วย</span>
+                <SignInEmail email={account.email} />
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -75,6 +87,7 @@ export default async function MePage({
 
       <SignInMethodsCard
         methods={methods}
+        email={account.email}
         bindError={oauthFailureMessage(error, 'bind')}
         justBound={bound === 'discord' && methods.includes('discord')}
       />
@@ -107,15 +120,59 @@ export default async function MePage({
   )
 }
 
+const METHOD_NAMES: Record<SignInMethod, string> = { email: 'อีเมลและรหัสผ่าน', discord: 'Discord' }
+
+// Who the Seller is at a glance: avatar, Display Name, email and the ways they sign in.
+function SummaryCard({ seller, email, methods }: { seller: Seller; email: string | null; methods: SignInMethod[] }) {
+  return (
+    <Card className="mt-8">
+      <CardContent className="grid gap-5">
+        <div className="flex items-center gap-4">
+          <SellerAvatar seller={seller} size="lg" />
+          <div className="grid min-w-0 gap-1">
+            <p className="truncate font-heading text-xl">{seller.displayName}</p>
+            {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
+            <div className="flex flex-wrap gap-1.5">
+              {methods.map((method) => (
+                <Badge key={method} variant="secondary">
+                  {METHOD_NAMES[method]}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+        <form action={shuffleAvatarPatternAction} className="flex flex-wrap items-center gap-3">
+          <Button type="submit" variant="outline" size="sm">
+            สุ่มลายใหม่
+          </Button>
+          <p className="text-sm text-muted-foreground">กดได้เรื่อย ๆ จนกว่าจะได้ลายที่ชอบ</p>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+// The email a password goes with, set apart so it is easy to spot.
+function SignInEmail({ email }: { email: string | null }) {
+  if (!email) return null
+  return (
+    <span className="break-all">
+      อีเมล <span className="font-medium text-foreground">{email}</span>
+    </span>
+  )
+}
+
 // The ways to sign in: email and password, and Discord. Each can be unbound while the other is
 // bound; binding Discord goes through Discord; email and password is bound back by setting a
 // password in the card above.
 function SignInMethodsCard({
   methods,
+  email,
   bindError,
   justBound,
 }: {
   methods: SignInMethod[]
+  email: string | null
   bindError: string | null
   justBound: boolean
 }) {
@@ -127,14 +184,20 @@ function SignInMethodsCard({
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>วิธีเข้าสู่ระบบ</CardTitle>
-        <CardDescription>เลิกใช้วิธีใดก็ได้ ตราบที่ยังเหลืออีกวิธีหนึ่ง</CardDescription>
+        <CardDescription>ใช้ทั้งสองวิธีได้ และเข้าสู่ระบบด้วยวิธีไหนก็ได้</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
             <p>อีเมลและรหัสผ่าน</p>
-            <Badge variant={hasEmail ? 'secondary' : 'manual'}>{hasEmail ? 'ใช้อยู่' : 'ยังไม่ได้ตั้งรหัสผ่าน'}</Badge>
+            {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
+            <Badge variant={hasEmail ? 'secondary' : 'manual'}>{hasEmail ? 'ใช้อยู่' : 'ยังไม่ได้ใช้'}</Badge>
           </div>
+          {!hasEmail && (
+            <Button asChild variant="outline" size="sm">
+              <a href="#password">ตั้งรหัสผ่าน</a>
+            </Button>
+          )}
           {hasEmail && canUnbind && (
             <ConfirmAction
               action={unbindEmailAction}
@@ -151,7 +214,7 @@ function SignInMethodsCard({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
             <p>Discord</p>
-            <Badge variant={hasDiscord ? 'secondary' : 'manual'}>{hasDiscord ? 'ผูกแล้ว' : 'ยังไม่ได้ผูก'}</Badge>
+            <Badge variant={hasDiscord ? 'secondary' : 'manual'}>{hasDiscord ? 'ใช้อยู่' : 'ยังไม่ได้ใช้'}</Badge>
           </div>
           {hasDiscord ? (
             canUnbind && (
@@ -183,13 +246,18 @@ function SignInMethodsCard({
             ผูก Discord แล้ว
           </p>
         )}
+        {/* With one way left it cannot be unbound, so say why and point to the other. */}
         {!hasDiscord && (
           <p className="text-sm text-muted-foreground">
-            แนะนำให้ผูก Discord ไว้ เพราะตอนนี้ยังรีเซ็ตรหัสผ่านไม่ได้ ถ้าลืมรหัสผ่าน จะยังเข้าบัญชีนี้ด้วย Discord ได้
+            ตอนนี้เข้าสู่ระบบได้ด้วยรหัสผ่านทางเดียว แนะนำให้ผูก Discord ไว้ด้วย
+            เพราะยังรีเซ็ตรหัสผ่านไม่ได้ ถ้าลืมรหัสผ่าน จะยังเข้าบัญชีนี้ด้วย Discord ได้
           </p>
         )}
-        {!canUnbind && (
-          <p className="text-sm text-muted-foreground">วิธีที่เหลืออยู่วิธีเดียวเลิกใช้ไม่ได้ ถ้าไม่ใช้บัญชีนี้แล้ว ลบบัญชีด้านล่างแทน</p>
+        {!hasEmail && (
+          <p className="text-sm text-muted-foreground">
+            ตอนนี้เข้าสู่ระบบได้ด้วย Discord ทางเดียว แนะนำให้ตั้งรหัสผ่านไว้ด้วย
+            ถ้าเข้า Discord ไม่ได้ จะยังเข้าบัญชีนี้ด้วยอีเมลและรหัสผ่านได้
+          </p>
         )}
       </CardContent>
     </Card>

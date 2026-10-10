@@ -105,7 +105,7 @@ describe('Signing in with email', () => {
 
     await signInWithEmail(db, `  ${seller.email} `, seller.password)
 
-    expect(await currentSeller(db)).toEqual({ id: seller.id, displayName: 'ร้านทดสอบ', discordAvatarUrl: null })
+    expect(await currentSeller(db)).toEqual({ id: seller.id, displayName: 'ร้านทดสอบ', avatarSeed: expect.any(String) })
   })
 
   it('refuses a wrong password, in Thai', async () => {

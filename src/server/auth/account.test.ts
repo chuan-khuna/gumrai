@@ -8,6 +8,7 @@ import {
   readAccount,
   renameDisplayName,
   setFirstPassword,
+  shuffleAvatarPattern,
   unbindSignInMethod,
 } from '@/server/auth/account'
 import { currentSeller } from '@/server/auth/auth'
@@ -279,6 +280,25 @@ describe('Deleting the account', () => {
   })
 })
 
+describe('Avatar pattern', () => {
+  it('starts each Seller with their own seed, and shuffling gives a new one', async () => {
+    const seller = await createSeller()
+    const other = await createSeller()
+    const before = (await currentSeller(seller.db))!.avatarSeed
+    expect((await currentSeller(other.db))!.avatarSeed).not.toBe(before)
+
+    const shuffled = await shuffleAvatarPattern(seller.db)
+
+    expect(shuffled).not.toBe(before)
+    expect(await currentSeller(seller.db)).toMatchObject({ avatarSeed: shuffled })
+    expect(await currentSeller(other.db)).not.toMatchObject({ avatarSeed: shuffled })
+  })
+
+  it('refuses when no one is signed in', async () => {
+    expect(await failure(shuffleAvatarPattern(createPublicClient()))).toBe('ต้องเข้าสู่ระบบก่อน')
+  })
+})
+
 describe('Ways to sign in', () => {
   it('lists email and password for a Seller who signed up with email', async () => {
     const seller = await createSeller()
@@ -326,7 +346,6 @@ describe('Ways to sign in', () => {
 
     expect(await listSignInMethods(seller.db)).toEqual(['email'])
     expect(await identityProviders(seller.id)).toEqual(['email'])
-    expect(await currentSeller(seller.db)).toMatchObject({ discordAvatarUrl: null })
     await signIn(seller.email, seller.password)
   })
 

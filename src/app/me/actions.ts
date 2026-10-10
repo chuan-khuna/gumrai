@@ -8,6 +8,7 @@ import {
   deleteAccount,
   renameDisplayName,
   setFirstPassword,
+  shuffleAvatarPattern,
   unbindSignInMethod,
 } from '@/server/auth/account'
 import { startDiscordBind } from '@/server/auth/oauth'
@@ -34,6 +35,13 @@ export async function renameDisplayNameAction(
     if (error instanceof AccountError) return { displayName, error: error.message, saved: false }
     throw error
   }
+}
+
+// A new random avatar pattern. Every page is revalidated: the header shows the avatar.
+export async function shuffleAvatarPatternAction(): Promise<void> {
+  const db = await requestClient()
+  await shuffleAvatarPattern(db)
+  revalidatePath('/', 'layout')
 }
 
 export type PasswordState = { error: string | null; saved: boolean }
@@ -90,7 +98,7 @@ export async function bindDiscordAction(): Promise<void> {
 }
 
 // Unbinding a way to sign in. The page offers it only when another way remains; the account
-// module refuses otherwise. Every page is revalidated: the header's avatar follows Discord.
+// module refuses otherwise.
 export async function unbindDiscordAction(): Promise<void> {
   const db = await requestClient()
   await unbindSignInMethod(db, 'discord')

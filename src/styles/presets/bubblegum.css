@@ -178,3 +178,13 @@
   --color-commission: oklch(0.42 0.03 330);
   --color-commission-vat: oklch(0.6 0.03 330);
 }
+
+/* Every Seller's avatar: a Boring Avatars pattern (marble) from their avatar seed
+   (src/app/seller-avatar.tsx). Static for the same reason: the SVG names them by variable. Never cinnamon, so a face never reads as a loss. */
+@theme static {
+  --color-avatar-1: var(--color-gum);
+  --color-avatar-2: var(--color-mint);
+  --color-avatar-3: var(--color-razz);
+  --color-avatar-4: var(--color-gum-tint);
+  --color-avatar-5: var(--color-razz-tint);
+}
