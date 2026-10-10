@@ -31,7 +31,7 @@ The app has a light theme only. `@custom-variant dark` ties shadcn's `dark:` cla
 | --- | --- |
 | `src/components/ui/` | shadcn/ui components on Radix, restyled to `DESIGN.md`. The shadcn CLI adds new ones with `bunx shadcn@<version> add <name>`, where the version is at least 7 days old. Each new component is restyled before use. |
 | `src/components/option-select.tsx` | `OptionSelect`, used for every dropdown. An option can show a category colour dot. |
-| `src/components/confirm-action.tsx` | `ConfirmAction`, used for every delete. It opens an alert dialog, runs the server action only after the seller confirms, and stays open until the action finishes. With `typeToConfirm` (deleting the account uses `delete`), its confirm button stays disabled until the seller types that text exactly, and the action receives what they typed. |
+| `src/components/confirm-action.tsx` | `ConfirmAction`, used for every delete and for unbinding a way to sign in at `/me`. It opens an alert dialog, runs the server action only after the seller confirms, and stays open until the action finishes. With `typeToConfirm` (deleting the account uses `delete`), its confirm button stays disabled until the seller types that text exactly, and the action receives what they typed. `pendingLabel` replaces กำลังลบ… on the confirm button while the action runs (unbinding says กำลังเลิกผูก… or กำลังเลิกใช้…). |
 | `src/components/field.tsx` | `Field`, a label with its control |
 
 ## Cost Category colours

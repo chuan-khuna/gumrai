@@ -4,13 +4,13 @@
 
 **Blocked by:** 03, 05
 
-**Status:** ready-for-agent
+**Status:** needs hand verification. Built and tested; the Discord round trip (binding at /me, and a refused sign-in linked by email) needs real Discord credentials and is checked by hand.
 
-- [ ] Manual identity linking is enabled; there is no automatic linking.
-- [ ] The account module offers listing bound sign-in methods and unbinding one; unbinding the last one is refused.
-- [ ] Binding Discord goes through the Discord OAuth flow and returns to /me with success or the already-bound error.
-- [ ] Tests cover listing methods and refusing to unbind the last one. The Discord redirect itself is verified by hand.
-- [ ] The sign-in document describes binding, with a Mermaid diagram of the bind flow and the conflict case.
+- [x] Manual identity linking is enabled; there is no automatic linking. (Supabase Auth's automatic linking by email cannot be turned off, so the OAuth callback refuses a sign-in it linked: unlinks the identity, signs out, sends to /login with a Thai message. Decided by the user; see docs/documents/sign-in.md, "Refusing automatic linking".)
+- [x] The account module offers listing bound sign-in methods and unbinding one; unbinding the last one is refused.
+- [ ] Binding Discord goes through the Discord OAuth flow and returns to /me with success or the already-bound error. (Built: bindDiscordAction, the `bind` flow and its /me messages, tested up to the Discord redirect and from the callback's query. Tick after the hand check with a real Discord Application.)
+- [x] Tests cover listing methods and refusing to unbind the last one. The Discord redirect itself is verified by hand.
+- [x] The sign-in document describes binding, with a Mermaid diagram of the bind flow and the conflict case.
 
 ## Notes
 

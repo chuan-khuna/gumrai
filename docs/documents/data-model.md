@@ -101,12 +101,14 @@ Each function runs as one transaction and uses `search_path = ''`. The app calls
 | `delete_cost_item(p_id)` | `deleteCostItem` | Locks the item, copies its name, Unit Cost, Unit, and category into every line that links to it, and then deletes it. Those lines become Manual Lines, so no sheet's figures change. |
 | `duplicate_cost_sheet(p_sheet_id, p_name)` | `duplicateCostSheet` | Inserts a copy of the sheet and of all its lines, and returns the new id. Linked Lines in the copy link to the same items. |
 
-Two more functions are not transactions but narrow windows into the `auth` schema:
+Four more functions are not transactions but narrow windows into the `auth` schema:
 
 | Function | Caller | Behaviour |
 | --- | --- | --- |
-| `seller_has_password()` | `readAccount`, `changePassword`, `setFirstPassword` | Whether the signed-in Seller has a password: `true` when their `auth.users.encrypted_password` is neither null nor empty. It is `security definer`, because the app cannot read `auth.users`, and it reads only the caller's own row and returns only a yes or no. Executable by `authenticated` only. |
+| `seller_has_password()` | `readAccount`, `changePassword`, `setFirstPassword`, `listSignInMethods` | Whether the signed-in Seller has a password: `true` when their `auth.users.encrypted_password` is neither null nor empty. It is `security definer`, because the app cannot read `auth.users`, and it reads only the caller's own row and returns only a yes or no. Executable by `authenticated` only. |
 | `seller_discord_avatar()` | `currentSeller` (the header) | The avatar URL in the signed-in Seller's own `discord` identity (`auth.identities.identity_data.avatar_url`), or null when they have none. `security definer`, reads only the caller's identity, executable by `authenticated` only. It reads the identity rather than the user's metadata because binding Discord later does not write the metadata, and a Seller can write their own. |
+| `seller_clear_password()` | `unbindSignInMethod(db, 'email')` | Empties the signed-in Seller's `auth.users.encrypted_password`, so email and password no longer signs them in (Supabase Auth's API can change a password but not remove one). Raises `P0001` "no other way to sign in" unless the Seller has a `discord` identity. `security definer`, acts only on the caller's row, executable by `authenticated` only. |
+| `seller_add_email_identity()` | `unbindSignInMethod(db, 'discord')` | Inserts an `email` identity for the signed-in Seller, as Supabase Auth stores one for an email sign-up, so that Supabase Auth will unlink their Discord identity (it refuses to unlink a user's only identity, and setting a password adds none). Does nothing unless the Seller has a password and a confirmed email and no `email` identity yet. `security definer`, acts only on the caller, executable by `authenticated` only. |
 
 The `linked_lines` migration redefines `save_cost_sheet` with `create or replace`. A later migration redefines a function instead of editing the migration that created it.
 
