@@ -44,6 +44,94 @@ export async function createSellerWithoutPassword(displayName = 'ผู้ขา
   return { ...seller, password: '' }
 }
 
+/** A Discord user, as Discord's /users/@me describes them. */
+export type DiscordUser = {
+  id: string
+  username: string
+  /** The display name the user chose on Discord; '' when they have none. */
+  globalName: string
+  /** The avatar hash; '' when they use Discord's default avatar. */
+  avatar: string
+}
+
+/** A made-up Discord user with a display name and an avatar. */
+export function discordUser(overrides: Partial<DiscordUser> = {}): DiscordUser {
+  return {
+    id: String(100000000000000000n + BigInt(Math.floor(Math.random() * 1e15))),
+    username: 'matcha.cafe',
+    globalName: 'ร้านมัทฉะ',
+    avatar: 'a1b2c3d4e5f6',
+    ...overrides,
+  }
+}
+
+/**
+ * The user metadata Supabase Auth's Discord provider stores for `user`
+ * (supabase/auth, internal/api/provider/discord.go, with the email added by external.go).
+ */
+export function discordMetadata(user: DiscordUser, email: string): Record<string, unknown> {
+  const avatarUrl = user.avatar
+    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+    : 'https://cdn.discordapp.com/embed/avatars/0.png'
+  return {
+    iss: 'https://discord.com/api',
+    sub: user.id,
+    name: `${user.username}#0`,
+    picture: avatarUrl,
+    custom_claims: { global_name: user.globalName },
+    avatar_url: avatarUrl,
+    full_name: user.username,
+    provider_id: user.id,
+    email,
+    email_verified: true,
+    phone_verified: false,
+  }
+}
+
+/**
+ * A new Seller made as a first Discord sign-in makes one: the auth user is inserted with the
+ * Discord provider's metadata, and has a `discord` identity. The real OAuth redirect cannot run
+ * in a test, so the user is made with the admin API (with a password, so the test can sign in)
+ * and the identity is inserted straight into Postgres.
+ */
+export async function createDiscordSeller(user: DiscordUser = discordUser()): Promise<TestSeller> {
+  const email = `discord-${randomUUID()}@gumrai.test`
+  const password = `test-${randomUUID()}`
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: discordMetadata(user, email),
+  })
+  if (error) throw error
+  made.push(data.user.id)
+  await runSql(
+    `insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+     values (${literal(user.id)}, '${uuid(data.user.id)}', ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
+             'discord', now(), now(), now())`,
+  )
+  return { id: data.user.id, email, password, db: await signIn(email, password) }
+}
+
+/**
+ * What a later Discord sign-in does after `user` changed on Discord: Supabase Auth rewrites
+ * the user's metadata and the identity's data with the new values.
+ */
+export async function signInAgainWithDiscord(seller: TestSeller, user: DiscordUser): Promise<void> {
+  const metadata = discordMetadata(user, seller.email)
+  const { error } = await admin.auth.admin.updateUserById(seller.id, { user_metadata: metadata })
+  if (error) throw error
+  await runSql(
+    `update auth.identities set identity_data = ${literal(JSON.stringify(metadata))}::jsonb, updated_at = now()
+      where user_id = '${uuid(seller.id)}' and provider = 'discord'`,
+  )
+}
+
+// A SQL string literal.
+function literal(text: string) {
+  return `'${text.replaceAll("'", "''")}'`
+}
+
 function uuid(id: string) {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error(`not a uuid: ${id}`)
   return id

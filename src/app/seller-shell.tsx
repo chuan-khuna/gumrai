@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { signOutAction } from '@/app/login/actions'
+import { SellerAvatar } from '@/app/seller-avatar'
 import { Button } from '@/components/ui/button'
 import { currentSeller } from '@/server/auth/auth'
 import { requestClient } from '@/server/db/request-client'
 
-// The frame around every page that needs a signed-in Seller: a header with their Display Name
-// (a link to /me) and ออกจากระบบ. The proxy has already sent signed-out visitors to the login
+// The frame around every page that needs a signed-in Seller: a header with their avatar and
+// Display Name (a link to /me) and ออกจากระบบ. The proxy has already sent signed-out visitors to the login
 // page; this check is the one that trusts only a verified session.
 export async function SellerShell({ children }: { children: React.ReactNode }) {
   const db = await requestClient()
@@ -28,10 +29,11 @@ export async function SellerShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex min-w-0 items-center gap-3">
             <Link
               href="/me"
-              className="truncate text-sm hover:text-link"
+              className="flex min-w-0 items-center gap-2 text-sm hover:text-link"
               title={`${seller.displayName} · บัญชีของฉัน`}
             >
-              {seller.displayName}
+              <SellerAvatar seller={seller} />
+              <span className="truncate">{seller.displayName}</span>
             </Link>
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm">

@@ -8,6 +8,8 @@ import type { Db } from '@/server/db/supabase'
 export type Seller = {
   id: string
   displayName: string
+  /** Their Discord avatar, or null when they have no Discord identity. */
+  discordAvatarUrl: string | null
 }
 
 export type SignUpInput = {
@@ -94,11 +96,12 @@ export async function currentSeller(db: Db): Promise<Seller | null> {
   const { data: auth } = await db.auth.getClaims()
   const id = auth?.claims.sub
   if (!id) return null
-  const { data, error } = await db
-    .from('seller_profile')
-    .select('id, display_name')
-    .eq('id', id)
-    .maybeSingle()
-  if (error) throw error
-  return data && { id: data.id, displayName: data.display_name }
+  const [profile, avatar] = await Promise.all([
+    db.from('seller_profile').select('id, display_name').eq('id', id).maybeSingle(),
+    db.rpc('seller_discord_avatar'),
+  ])
+  if (profile.error) throw profile.error
+  if (avatar.error) throw avatar.error
+  const data = profile.data
+  return data && { id: data.id, displayName: data.display_name, discordAvatarUrl: avatar.data ?? null }
 }

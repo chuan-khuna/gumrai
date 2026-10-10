@@ -1,9 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { safeReturnTo } from '@/lib/return-to'
 import { SignInError, signInWithEmail, signOut, signUpWithEmail } from '@/server/auth/auth'
+import { startDiscordSignIn } from '@/server/auth/oauth'
 import { requestClient } from '@/server/db/request-client'
 
 // Wiring only: the rules live in @/server/auth/auth. The request client writes the session
@@ -43,6 +45,22 @@ export async function signUpAction(_previous: SignUpState, formData: FormData): 
   }
   revalidatePath('/', 'layout')
   redirect(safeReturnTo(formData.get('next')))
+}
+
+// Sends the visitor to Discord (through Supabase Auth). They come back to /auth/callback.
+export async function discordSignInAction(formData: FormData): Promise<void> {
+  const db = await requestClient()
+  const url = await startDiscordSignIn(db, await requestOrigin(), safeReturnTo(formData.get('next')))
+  redirect(url)
+}
+
+// This site's origin as the visitor's browser sees it. A form post carries it in Origin.
+async function requestOrigin(): Promise<string> {
+  const list = await headers()
+  const origin = list.get('origin')
+  if (origin && origin !== 'null') return origin
+  const proto = list.get('x-forwarded-proto') ?? 'http'
+  return `${proto}://${list.get('x-forwarded-host') ?? list.get('host')}`
 }
 
 // Ends the session and goes to the landing page.
