@@ -4,9 +4,11 @@ import {
   changePassword,
   countAccountData,
   deleteAccount,
+  listSignInMethods,
   readAccount,
   renameDisplayName,
   setFirstPassword,
+  unbindSignInMethod,
 } from '@/server/auth/account'
 import { currentSeller } from '@/server/auth/auth'
 import { createCostCategory } from '@/server/costs/cost-categories'
@@ -15,8 +17,12 @@ import { createCostSheet, saveCostSheet } from '@/server/costs/cost-sheets'
 import { createPublicClient } from '@/server/db/supabase'
 import {
   adminClient,
+  createDiscordOnlySeller,
+  createDiscordSeller,
   createSeller,
   createSellerWithoutPassword,
+  discordUser,
+  identityProviders,
   removeSellers,
   signIn,
 } from '@/server/testing/test-sellers'
@@ -269,5 +275,104 @@ describe('Deleting the account', () => {
 
   it('refuses when no one is signed in', async () => {
     expect(await failure(deleteAccount(createPublicClient(), 'delete'))).toBe('ต้องเข้าสู่ระบบก่อน')
+  })
+})
+
+describe('Ways to sign in', () => {
+  it('lists email and password for a Seller who signed up with email', async () => {
+    const seller = await createSeller()
+
+    expect(await listSignInMethods(seller.db)).toEqual(['email'])
+  })
+
+  it('lists Discord alone for a Seller who signed up with Discord and has no password', async () => {
+    const seller = await createDiscordOnlySeller()
+
+    expect(await listSignInMethods(seller.db)).toEqual(['discord'])
+  })
+
+  it('lists both for a Seller with a password and Discord bound', async () => {
+    const seller = await createDiscordSeller()
+
+    expect(await listSignInMethods(seller.db)).toEqual(['email', 'discord'])
+  })
+
+  it('refuses to unbind the only way left to sign in', async () => {
+    const byEmail = await createSeller()
+    const byDiscord = await createDiscordOnlySeller()
+
+    expect(await failure(unbindSignInMethod(byEmail.db, 'email'))).toBe(
+      'ต้องเหลือวิธีเข้าสู่ระบบอย่างน้อยหนึ่งวิธี จึงเลิกใช้วิธีนี้ไม่ได้',
+    )
+    expect(await failure(unbindSignInMethod(byDiscord.db, 'discord'))).toBe(
+      'ต้องเหลือวิธีเข้าสู่ระบบอย่างน้อยหนึ่งวิธี จึงเลิกใช้วิธีนี้ไม่ได้',
+    )
+    expect(await listSignInMethods(byEmail.db)).toEqual(['email'])
+    expect(await identityProviders(byDiscord.id)).toEqual(['discord'])
+    await signIn(byEmail.email, byEmail.password)
+  })
+
+  it('refuses to unbind a way the Seller does not use', async () => {
+    const seller = await createSeller()
+
+    expect(await failure(unbindSignInMethod(seller.db, 'discord'))).toBe('บัญชีนี้ไม่ได้ใช้วิธีนี้เข้าสู่ระบบ')
+  })
+
+  it('unbinds Discord, leaving email and password', async () => {
+    const seller = await createDiscordSeller()
+
+    await unbindSignInMethod(seller.db, 'discord')
+
+    expect(await listSignInMethods(seller.db)).toEqual(['email'])
+    expect(await identityProviders(seller.id)).toEqual(['email'])
+    expect(await currentSeller(seller.db)).toMatchObject({ discordAvatarUrl: null })
+    await signIn(seller.email, seller.password)
+  })
+
+  it('unbinds Discord from a Seller who signed up with Discord and set a password later', async () => {
+    const seller = await createDiscordOnlySeller(discordUser(), { password: true })
+    expect(await identityProviders(seller.id)).toEqual(['discord'])
+
+    await unbindSignInMethod(seller.db, 'discord')
+
+    expect(await identityProviders(seller.id)).toEqual(['email'])
+    const { data } = await adminClient().auth.admin.getUserById(seller.id)
+    expect(data.user?.email).toBe(seller.email)
+    expect(await listSignInMethods(await signIn(seller.email, seller.password))).toEqual(['email'])
+  })
+
+  it('unbinds email and password by clearing the password; setting one again binds it back', async () => {
+    const seller = await createDiscordSeller()
+
+    await unbindSignInMethod(seller.db, 'email')
+
+    expect(await listSignInMethods(seller.db)).toEqual(['discord'])
+    expect(await readAccount(seller.db)).toMatchObject({ hasPassword: false })
+    const { error } = await createPublicClient().auth.signInWithPassword({
+      email: seller.email,
+      password: seller.password,
+    })
+    expect(error?.code).toBe('invalid_credentials')
+
+    await setFirstPassword(seller.db, 'a-new-password')
+    expect(await listSignInMethods(seller.db)).toEqual(['email', 'discord'])
+  })
+
+  it('keeps the password in the database unless Discord is bound, whoever calls', async () => {
+    const seller = await createSeller()
+
+    const { error } = await seller.db.rpc('seller_clear_password')
+
+    expect(error?.message).toBe('no other way to sign in')
+    await signIn(seller.email, seller.password)
+  })
+
+  it('adds no email identity in the database to a Seller without a password', async () => {
+    const seller = await createDiscordOnlySeller()
+
+    const { error } = await seller.db.rpc('seller_add_email_identity')
+
+    expect(error).toBeNull()
+    expect(await identityProviders(seller.id)).toEqual(['discord'])
   })
 })

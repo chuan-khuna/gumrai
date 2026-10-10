@@ -1,13 +1,24 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { currentSeller } from '@/server/auth/auth'
-import { finishOAuth, oauthCallbackUrl, oauthFailureMessage, startDiscordSignIn } from '@/server/auth/oauth'
+import {
+  finishOAuth,
+  oauthCallbackUrl,
+  oauthFailureMessage,
+  refuseAutomaticLink,
+  startDiscordBind,
+  startDiscordSignIn,
+} from '@/server/auth/oauth'
 import { listCostCategories } from '@/server/costs/cost-categories'
 import { createSessionClient, type Db } from '@/server/db/supabase'
 import {
+  attachDiscordIdentity,
+  backdateSeller,
   createDiscordSeller,
   createSeller,
   discordUser,
+  identityProviders,
   removeSellers,
+  signIn,
   signInAgainWithDiscord,
 } from '@/server/testing/test-sellers'
 
@@ -200,5 +211,149 @@ describe("The header's avatar", () => {
     if (error) throw error
 
     expect(await currentSeller(seller.db)).toMatchObject({ discordAvatarUrl: null })
+  })
+})
+
+describe('Binding Discord from /me', () => {
+  it('goes to Discord, back through Supabase Auth to the callback, keeping the code verifier in a cookie', async () => {
+    const seller = await createSeller()
+    const { db, jar } = cookieClient()
+    const { error } = await db.auth.signInWithPassword({ email: seller.email, password: seller.password })
+    if (error) throw error
+
+    const url = new URL(await startDiscordBind(db, 'http://127.0.0.1:3000'))
+
+    // Supabase Auth hands back Discord's own consent URL, coming back to Supabase Auth first.
+    expect(`${url.origin}${url.pathname}`).toBe('https://discord.com/api/oauth2/authorize')
+    expect(url.searchParams.get('redirect_uri')).toBe(`${process.env.SUPABASE_URL}/auth/v1/callback`)
+    const back = new URL(url.searchParams.get('redirect_to') ?? '')
+    expect(`${back.origin}${back.pathname}`).toBe('http://127.0.0.1:3000/auth/callback')
+    expect(back.searchParams.get('flow')).toBe('bind')
+    expect(back.searchParams.get('next')).toBe('/me?bound=discord')
+    expect([...jar.keys()].some((name) => name.endsWith('-code-verifier'))).toBe(true)
+  })
+
+  it('needs a signed-in Seller', async () => {
+    const { db } = cookieClient()
+
+    await expect(startDiscordBind(db, 'http://127.0.0.1:3000')).rejects.toThrow()
+  })
+
+  it('comes back to /me with a Thai message when the Discord account belongs to another Seller', async () => {
+    const { db } = cookieClient()
+
+    const to = await finishOAuth(
+      db,
+      callback({
+        flow: 'bind',
+        next: '/me?bound=discord',
+        error: 'invalid_request',
+        error_code: 'identity_already_exists',
+        error_description: 'Identity is already linked to another user',
+      }),
+    )
+
+    expect(to).toBe('/me?error=discord_taken')
+    const message = oauthFailureMessage(errorOf(to), 'bind') ?? ''
+    expect(message).toContain('ผูกกับบัญชีอื่นอยู่แล้ว')
+    expect(message).toContain('ลบบัญชีนั้น')
+    expect(message).toContain('ไม่ถูกรวมกัน')
+  })
+
+  it('says so when the Discord account is already bound to this Seller', async () => {
+    const { db } = cookieClient()
+
+    const to = await finishOAuth(
+      db,
+      callback({
+        flow: 'bind',
+        error: 'invalid_request',
+        error_code: 'identity_already_exists',
+        error_description: 'Identity is already linked',
+      }),
+    )
+
+    expect(to).toBe('/me?error=already_bound')
+    expect(oauthFailureMessage('already_bound', 'bind')).toBe('บัญชี Discord นี้ผูกกับบัญชีนี้อยู่แล้ว')
+  })
+
+  it('comes back to /me with binding wording when cancelled or failed', async () => {
+    const { db } = cookieClient()
+
+    expect(await finishOAuth(db, callback({ flow: 'bind', error: 'access_denied' }))).toBe('/me?error=cancelled')
+    expect(await finishOAuth(db, callback({ flow: 'bind' }))).toBe('/me?error=failed')
+    expect(oauthFailureMessage('cancelled', 'bind')).toBe('ยกเลิกการผูก Discord แล้ว')
+    expect(oauthFailureMessage('failed', 'bind')).toBe('ผูก Discord ไม่สำเร็จ ลองอีกครั้ง')
+    // Each page shows only its own flow's failures.
+    expect(oauthFailureMessage('discord_taken')).toBeNull()
+    expect(oauthFailureMessage('email_in_use', 'bind')).toBeNull()
+  })
+})
+
+// Supabase Auth's automatic linking by email cannot run in a test (it needs Discord), so each
+// test leaves auth.users and auth.identities as a Discord sign-in would have, and checks what
+// finishOAuth does with the session it was handed (refuseAutomaticLink).
+describe('A Discord sign-in that Supabase Auth linked to an existing Seller by email', () => {
+  async function existingSellerJustLinked() {
+    const seller = await createSeller('ร้านเดิม')
+    await backdateSeller(seller.id, '1 day')
+    await attachDiscordIdentity(seller.id, discordUser(), seller.email)
+    return seller
+  }
+
+  it('is refused: the Discord identity is unlinked and the session signed out', async () => {
+    const seller = await existingSellerJustLinked()
+
+    expect(await refuseAutomaticLink(seller.db, null)).toBe(true)
+
+    expect(await identityProviders(seller.id)).toEqual(['email'])
+    expect(await currentSeller(seller.db)).toBeNull()
+    // The Seller is untouched otherwise and still signs in with email and password.
+    const again = await signIn(seller.email, seller.password)
+    expect(await currentSeller(again)).toMatchObject({ displayName: 'ร้านเดิม', discordAvatarUrl: null })
+  })
+
+  it('sends the visitor to the login page with a Thai message to sign in with email and bind at /me', () => {
+    expect(oauthFailureMessage('email_in_use')).toBe(
+      'อีเมลของบัญชี Discord นี้มีบัญชีอยู่แล้ว เข้าสู่ระบบด้วยอีเมลและรหัสผ่านก่อน แล้วผูก Discord ที่หน้าบัญชีของฉัน',
+    )
+  })
+
+  it('is refused even when the callback claims to be binding, if another Seller was signed in', async () => {
+    const other = await createSeller()
+    const seller = await existingSellerJustLinked()
+
+    expect(await refuseAutomaticLink(seller.db, other.id)).toBe(true)
+    expect(await identityProviders(seller.id)).toEqual(['email'])
+  })
+
+  it('is allowed when binding from /me: the same Seller was signed in before', async () => {
+    const seller = await existingSellerJustLinked()
+
+    expect(await refuseAutomaticLink(seller.db, seller.id)).toBe(false)
+    expect(await identityProviders(seller.id)).toEqual(['discord', 'email'])
+    expect(await currentSeller(seller.db)).not.toBeNull()
+  })
+
+  it('does not stop a first Discord sign-in, which makes a new Seller', async () => {
+    const seller = await createDiscordSeller()
+
+    expect(await refuseAutomaticLink(seller.db, null)).toBe(false)
+    expect(await currentSeller(seller.db)).not.toBeNull()
+  })
+
+  it('does not stop a later Discord sign-in by a Seller who bound Discord before', async () => {
+    const seller = await createSeller()
+    await backdateSeller(seller.id, '2 days')
+    await attachDiscordIdentity(seller.id, discordUser(), seller.email, '1 day')
+
+    expect(await refuseAutomaticLink(seller.db, null)).toBe(false)
+    expect(await identityProviders(seller.id)).toEqual(['discord', 'email'])
+  })
+
+  it('does nothing without a session', async () => {
+    const { db } = cookieClient()
+
+    expect(await refuseAutomaticLink(db, null)).toBe(false)
   })
 })

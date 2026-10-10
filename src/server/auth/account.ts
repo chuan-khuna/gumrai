@@ -190,3 +190,60 @@ export async function deleteAccount(db: Db, confirmation: string): Promise<void>
   // 403 for that; it still clears the session, and on a request client the cookies.
   await db.auth.signOut({ scope: 'local' })
 }
+
+/**
+ * A way the Seller can sign in. `email` is email and password: the Seller has a password (a
+ * password set later adds no `email` identity, so the identities cannot say). `discord` is a
+ * Discord account bound to them: a `discord` identity.
+ */
+export type SignInMethod = 'email' | 'discord'
+
+const LAST_METHOD = 'ต้องเหลือวิธีเข้าสู่ระบบอย่างน้อยหนึ่งวิธี จึงเลิกใช้วิธีนี้ไม่ได้'
+
+async function identities(db: Db) {
+  const { data, error } = await db.auth.getUserIdentities()
+  if (error) throw error
+  return data.identities
+}
+
+/** The ways the signed-in Seller can sign in, email and password first. */
+export async function listSignInMethods(db: Db): Promise<SignInMethod[]> {
+  await signedIn(db)
+  const [password, bound] = await Promise.all([hasPassword(db), identities(db)])
+  const methods: SignInMethod[] = []
+  if (password) methods.push('email')
+  if (bound.some((identity) => identity.provider === 'discord')) methods.push('discord')
+  return methods
+}
+
+/**
+ * Stops the Seller signing in with `method`. Refused when it is not one of their ways to sign
+ * in, or when it is the only one left (deleting the account is how to drop the last one).
+ *
+ * - `discord`: unlinks the Discord identity (Supabase Auth's unlinkIdentity). Supabase Auth
+ *   refuses to unlink a user's only identity, which is the case for a Seller who signed up with
+ *   Discord and set a password later, so their `email` identity is added first
+ *   (seller_add_email_identity).
+ * - `email`: clears the password (seller_clear_password). Setting a password again binds it back.
+ */
+export async function unbindSignInMethod(db: Db, method: SignInMethod): Promise<void> {
+  const methods = await listSignInMethods(db)
+  if (!methods.includes(method)) throw new AccountError('บัญชีนี้ไม่ได้ใช้วิธีนี้เข้าสู่ระบบ')
+  if (methods.length === 1) throw new AccountError(LAST_METHOD)
+
+  if (method === 'email') {
+    const { error } = await db.rpc('seller_clear_password')
+    if (error) throw error
+    return
+  }
+
+  if ((await identities(db)).length === 1) {
+    const { error } = await db.rpc('seller_add_email_identity')
+    if (error) throw error
+  }
+  for (const identity of await identities(db)) {
+    if (identity.provider !== 'discord') continue
+    const { error } = await db.auth.unlinkIdentity(identity)
+    if (error) rejectAuthError(error)
+  }
+}

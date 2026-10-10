@@ -8,8 +8,11 @@ import {
   deleteAccount,
   renameDisplayName,
   setFirstPassword,
+  unbindSignInMethod,
 } from '@/server/auth/account'
+import { startDiscordBind } from '@/server/auth/oauth'
 import { requestClient } from '@/server/db/request-client'
+import { requestOrigin } from '@/server/db/request-origin'
 
 // Wiring only: the rules live in @/server/auth/account. The request client writes the
 // session cookies when Supabase Auth hands back a new session after a password change.
@@ -76,4 +79,26 @@ export async function deleteAccountAction(confirmation: string): Promise<void> {
   await deleteAccount(db, String(confirmation))
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+// Sends the Seller to Discord to bind it (through Supabase Auth). They come back through
+// /auth/callback to /me, with ?bound=discord or ?error=.
+export async function bindDiscordAction(): Promise<void> {
+  const db = await requestClient()
+  const url = await startDiscordBind(db, await requestOrigin())
+  redirect(url)
+}
+
+// Unbinding a way to sign in. The page offers it only when another way remains; the account
+// module refuses otherwise. Every page is revalidated: the header's avatar follows Discord.
+export async function unbindDiscordAction(): Promise<void> {
+  const db = await requestClient()
+  await unbindSignInMethod(db, 'discord')
+  revalidatePath('/', 'layout')
+}
+
+export async function unbindEmailAction(): Promise<void> {
+  const db = await requestClient()
+  await unbindSignInMethod(db, 'email')
+  revalidatePath('/', 'layout')
 }

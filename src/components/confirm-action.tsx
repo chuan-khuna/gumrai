@@ -26,6 +26,8 @@ type ConfirmActionProps = {
   title: string
   description?: string
   confirmLabel: string
+  /** The confirm button's text while the action runs. */
+  pendingLabel?: string
   size?: 'sm' | 'default'
 } & (
   | { typeToConfirm?: undefined; action: () => Promise<void> }
@@ -33,7 +35,7 @@ type ConfirmActionProps = {
 )
 
 export function ConfirmAction(props: ConfirmActionProps) {
-  const { trigger, title, description, confirmLabel, typeToConfirm, size = 'sm' } = props
+  const { trigger, title, description, confirmLabel, pendingLabel = 'กำลังลบ…', typeToConfirm, size = 'sm' } = props
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
   const [pending, startTransition] = useTransition()
@@ -87,7 +89,7 @@ export function ConfirmAction(props: ConfirmActionProps) {
               })
             }}
           >
-            {pending ? 'กำลังลบ…' : confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

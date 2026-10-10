@@ -105,12 +105,56 @@ export async function createDiscordSeller(user: DiscordUser = discordUser()): Pr
   })
   if (error) throw error
   made.push(data.user.id)
+  await attachDiscordIdentity(data.user.id, user, email)
+  return { id: data.user.id, email, password, db: await signIn(email, password) }
+}
+
+/**
+ * A Seller who signed up with Discord, as a first Discord sign-in leaves one: a `discord`
+ * identity only (the admin API also adds an `email` identity, which is deleted here). With
+ * `password: false` their password hash is empty too, as Supabase Auth leaves it; otherwise
+ * they have one, as after setting one at /me. Signed in.
+ */
+export async function createDiscordOnlySeller(
+  user: DiscordUser = discordUser(),
+  { password = false }: { password?: boolean } = {},
+): Promise<TestSeller> {
+  const seller = await createDiscordSeller(user)
+  await runSql(`delete from auth.identities where user_id = '${uuid(seller.id)}' and provider = 'email'`)
+  if (password) return seller
+  await runSql(`update auth.users set encrypted_password = '' where id = '${uuid(seller.id)}'`)
+  return { ...seller, password: '' }
+}
+
+/**
+ * Inserts a `discord` identity for `user` on the existing auth user `sellerId`, as Supabase
+ * Auth does when it attaches one (a first sign-in, a bind, or linking by email). It was made
+ * `createdAgo` (a Postgres interval; '0' is now) and last updated now: with '0', untouched
+ * since Supabase Auth inserted it; with more, as after a later sign-in with it.
+ */
+export async function attachDiscordIdentity(
+  sellerId: string,
+  user: DiscordUser,
+  email: string,
+  createdAgo = '0',
+): Promise<void> {
   await runSql(
     `insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-     values (${literal(user.id)}, '${uuid(data.user.id)}', ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
-             'discord', now(), now(), now())`,
+     values (${literal(user.id)}, '${uuid(sellerId)}', ${literal(JSON.stringify(discordMetadata(user, email)))}::jsonb,
+             'discord', now(), now() - ${literal(createdAgo)}::interval, now())`,
   )
-  return { id: data.user.id, email, password, db: await signIn(email, password) }
+}
+
+/** Moves when the Seller's auth user was made `ago` (a Postgres interval) into the past. */
+export async function backdateSeller(sellerId: string, ago: string): Promise<void> {
+  await runSql(`update auth.users set created_at = now() - ${literal(ago)}::interval where id = '${uuid(sellerId)}'`)
+}
+
+/** The providers of the Seller's identities, as Supabase Auth stores them, sorted. */
+export async function identityProviders(sellerId: string): Promise<string[]> {
+  const { data, error } = await admin.auth.admin.getUserById(sellerId)
+  if (error) throw error
+  return (data.user.identities ?? []).map((identity) => identity.provider).sort()
 }
 
 /**

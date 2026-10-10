@@ -179,7 +179,10 @@ enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
+# On: /me binds Discord with linkIdentity and unbinds with unlinkIdentity, and the OAuth callback
+# unlinks a Discord identity that Supabase Auth attached to an existing Seller by email
+# (docs/documents/sign-in.md, "Binding and unbinding ways to sign in").
+enable_manual_linking = true
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
 minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
