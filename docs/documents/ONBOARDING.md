@@ -4,7 +4,7 @@ Follow this guide from top to bottom to go from a fresh clone to a running app, 
 
 ## What you are setting up
 
-Gumrai (กำไร, "profit") is a Thai-language web app. A small seller, such as a café, uses it to work out what each thing they sell costs and how much profit it leaves. Everything runs on your machine. A Next.js dev server serves the app, and a local Supabase stack runs Postgres inside Docker. There is no login, no deployment, and no cloud account to request.
+Gumrai (กำไร, "profit") is a Thai-language web app. A small seller, such as a café, uses it to work out what each thing they sell costs and how much profit it leaves. Everything runs on your machine. A Next.js dev server serves the app, and a local Supabase stack runs Postgres inside Docker. Sellers sign in with email and password through the local Supabase Auth. There is no deployment and no cloud account to request.
 
 ```mermaid
 flowchart LR
@@ -12,6 +12,7 @@ flowchart LR
 	next --> api["Supabase API<br/>127.0.0.1:54321"]
 	subgraph docker["Docker Desktop: bun run db:start"]
 		api --> db[("Postgres 17<br/>127.0.0.1:54322")]
+		api --> auth["Supabase Auth<br/>sign-in and sessions"]
 		studio["Supabase Studio<br/>127.0.0.1:54323"] --> db
 	end
 ```
@@ -82,7 +83,7 @@ Keep about 5 GB of disk space free for the Supabase images. Keep port 3000 and p
 
    In Windows PowerShell, run `Copy-Item .env.example .env.local` instead.
 
-6. Add the local secret key to `.env.local`. Run `bunx supabase status`, and find the secret key in its output. The key is labelled `SECRET_KEY` and starts with `sb_secret_`. Paste it after `SUPABASE_SECRET_KEY=`. `SUPABASE_URL` already has the right value. The key works only against your local Docker stack, and git ignores `.env.local`.
+6. Add the local secret key to `.env.local`. Run `bunx supabase status`, and find the secret key in its output. The key is labelled `SECRET_KEY` and starts with `sb_secret_`. Paste it after `SUPABASE_SECRET_KEY=`. `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` already have the right values; the publishable key is the CLI's fixed local `PUBLISHABLE_KEY`, and the app signs Sellers in with it. Only tests use the secret key. The key works only against your local Docker stack, and git ignores `.env.local`.
 
 7. Load the sample data.
 
@@ -90,7 +91,15 @@ Keep about 5 GB of disk space free for the Supabase images. Keep port 3000 and p
    bun run db:reset
    ```
 
-   The command rebuilds the database from the migrations and then runs `supabase/seed.sql`. The seed adds eight sample Cost Items and one sample Cost Sheet. The reset deletes all local data, but a new database has none yet.
+   The command rebuilds the database from the migrations and then runs `supabase/seed.sql`. The seed adds a test Seller who owns eight sample Cost Items and one sample Cost Sheet. The reset deletes all local data, but a new database has none yet.
+
+   | Test Seller | |
+   | --- | --- |
+   | Email | `seller@gumrai.test` |
+   | Password | `gumrai-test-1234` |
+   | Display Name | ร้านทดสอบ |
+
+   The reset also deletes any Seller you signed up yourself.
 
 8. Start the app.
 
@@ -105,9 +114,10 @@ Open each URL, and compare the page with the expected result.
 | URL | Expected result |
 | --- | --- |
 | http://localhost:3000 | The title กำไร, a green dot, and "เชื่อมต่อฐานข้อมูลแล้ว", which means "database connected" |
+| http://localhost:3000/sheets | The login page, because no one is signed in. Sign in with the test Seller above. You return to the Cost Sheets page, and the header shows ร้านทดสอบ and ออกจากระบบ. |
 | http://localhost:3000/cost-list | The ลิสต์ต้นทุน page with eight sample items, such as มัทฉะเกรดพิธีชง at 4.5 ฿/g |
-| http://localhost:3000/sheets | One sheet, "มัทฉะลาเต้เย็น (แอปส่งอาหาร)". Open it and type a new Selling Price. The profit figures change as you type. |
-| http://127.0.0.1:54323 | Supabase Studio. Open **Table Editor** to see `cost_item`, `cost_sheet`, and the other tables. |
+| http://localhost:3000/sheets, again | One sheet, "มัทฉะลาเต้เย็น (แอปส่งอาหาร)". Open it and type a new Selling Price. The profit figures change as you type. |
+| http://127.0.0.1:54323 | Supabase Studio. Open **Table Editor** to see `cost_item`, `cost_sheet`, and the other tables, and **Authentication** to see the Sellers. Studio uses the secret key, so it shows every Seller's rows. |
 
 Then run the type check and the tests. Both pass with no errors on a correct setup.
 
@@ -150,7 +160,7 @@ If every check passes, your setup is complete.
 
 - Use bun for every package command. If you run `npm install` by mistake, delete `node_modules` and run `bun install`.
 - `bunfig.toml` rejects any package version published less than 7 days ago. If an install fails for that reason, choose an older version. Ask the project owner before you lower the limit.
-- Only code in `src/server/` talks to the database. Pages call its functions.
+- Only code in `src/server/` talks to the database. Pages call its functions with the client from `requestClient()`, which acts as the signed-in Seller. [Sign-in](sign-in.md) explains sessions and row-level security.
 - To change the schema, add a new migration, run `bun run db:types`, and commit both files. Never edit a migration that is already committed.
 - Import with the `@/` alias, never with a relative path.
 - Write all UI text in Thai.
@@ -161,11 +171,12 @@ If every check passes, your setup is complete.
 | Problem | Cause and fix |
 | --- | --- |
 | `db:start` hangs, or says it cannot connect to the Docker API | Docker Desktop is not running. Start it, wait for the engine, and run `bun run db:start` again. |
-| The home page shows "SUPABASE_URL and SUPABASE_SECRET_KEY must be set" | `.env.local` is missing, or its key is empty. Repeat setup steps 5 and 6, then restart `bun run dev`. |
+| A page shows "SUPABASE_PUBLISHABLE_KEY must be set" or "SUPABASE_SECRET_KEY must be set" | `.env.local` is missing, or a key is empty. Compare it with `.env.example`. Repeat setup steps 5 and 6, then restart `bun run dev`. |
 | The home page shows an error about an invalid API key | The key in `.env.local` belongs to another Supabase stack. Copy it again from `bunx supabase status`. |
 | Tests fail with connection errors | Local Supabase is not running. Run `bun run db:start`. |
 | `db:start` fails because a port is in use | Another Supabase project is running. Stop it with `bunx supabase stop --project-id <id>`, or stop its containers in Docker Desktop. |
 | `bun install` rejects a package version as too new | The 7-day rule in `bunfig.toml` blocks it. Use an older version of that package. |
+| Signing in as the test Seller fails, or the Cost List is empty after signing in | You are signed in as another Seller, or the seed has not run. Run `bun run db:reset` and sign in as `seller@gumrai.test`. |
 | The sample data is gone, or the database looks wrong | Run `bun run db:reset` to rebuild everything from the migrations and the seed. |
 | Port 3000 is in use | Next.js picks the next free port and prints it. Open that URL instead. |
 

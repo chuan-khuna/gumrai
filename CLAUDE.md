@@ -56,7 +56,7 @@ The Supabase CLI is a bun devDependency, so run it as `bunx supabase …`. It wa
 
 ## Code layout
 
-- `src/server/` is the server-side business rules module (ADR 0001), the only code that talks to Supabase. `supabase.ts` makes the client. Every operation takes the client as its first argument; pages and actions get it from `requestClient()` (`request-client.ts`) and pass it in, and never import `supabase.ts` or the Supabase library.
+- `src/server/` is the server-side business rules module (ADR 0001), the only code that talks to Supabase. `supabase.ts` makes the client. Every operation takes the client as its first argument; pages and actions get it from `requestClient()` (`request-client.ts`), which acts as the signed-in Seller from the request's cookies, and pass it in, and never import `supabase.ts` or the Supabase libraries. Row-level security, not an `owner` filter in code, keeps each Seller to their own rows. The secret key (`createSecretClient()`) is for tests and admin-only operations only.
 - `src/app/` holds the pages. They do no business logic and no database calls of their own.
 - Design tokens (colours, fonts, radii, shadows, easings) live in the active theme preset, `src/styles/presets/bubblegum.css`, which `src/styles/globals.css` imports. Colours are OKLCH. The preset is where the app reads them, and `DESIGN.md` (Stitch DESIGN.md format) mirrors them token for token in its front matter: change a value in both. Nowhere else writes a colour. `DESIGN.html` illustrates the system.
 - UI is built from shadcn/ui components (Radix base) in `src/components/ui`, restyled to `DESIGN.md`. Components use role utilities (`bg-primary`, `text-muted-foreground`, `text-profit`), never palette ones (`bg-gum`). Add a component with `bunx shadcn@<version> add <name>`, pinning a CLI version at least 7 days old, then restyle it before use. Dropdowns go through `OptionSelect`, deletes through `ConfirmAction`.
@@ -65,7 +65,7 @@ The Supabase CLI is a bun devDependency, so run it as `bunx supabase …`. It wa
 ## Tests
 
 - Test behaviour through a module's public interface. Do not test React components or chart rendering.
-- Tests of `src/server/` run against the real local Supabase, never a mock, and each test sets up and isolates its own data.
+- Tests of `src/server/` run against the real local Supabase, never a mock. Each test runs as a Seller of its own from `createSeller()` (`src/server/test-sellers.ts`) and removes it in `afterEach` with `removeSellers`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -6,21 +6,29 @@ This page describes the Postgres schema in `supabase/migrations/`, the rule that
 
 ```mermaid
 erDiagram
+	auth_users ||--|| seller_profile : "has (delete cascades)"
+	auth_users ||--o{ cost_category : "owns"
+	auth_users ||--o{ cost_item : "owns"
+	auth_users ||--o{ cost_sheet : "owns"
 	cost_sheet ||--o{ cost_line : "has (delete cascades)"
 	cost_item |o--o{ cost_line : "Linked Line refers to (no cascade)"
 	cost_category |o--o{ cost_item : "groups (delete sets null)"
 	cost_category |o--o{ cost_line : "Manual Line in (delete sets null)"
 
+	seller_profile {
+		uuid id PK "= auth.users.id"
+		text display_name
+	}
 	cost_category {
 		uuid id PK
-		uuid owner "null until login"
+		uuid owner "default auth.uid()"
 		text name
 		smallint colour_slot
 		int sort_order
 	}
 	cost_item {
 		uuid id PK
-		uuid owner
+		uuid owner "default auth.uid()"
 		text name "unique ignoring case and spaces"
 		numeric unit_cost
 		text unit
@@ -28,7 +36,7 @@ erDiagram
 	}
 	cost_sheet {
 		uuid id PK
-		uuid owner
+		uuid owner "default auth.uid()"
 		text name
 		text sale_unit "default ชิ้น"
 		numeric selling_price
@@ -38,6 +46,7 @@ erDiagram
 	}
 	cost_line {
 		uuid id PK
+		uuid owner "the sheet's owner"
 		uuid sheet_id FK
 		int position "unique per sheet"
 		numeric quantity_used
@@ -51,28 +60,41 @@ erDiagram
 
 | Table | Holds | Notes |
 | --- | --- | --- |
-| `cost_category` | A group the seller names | `colour_slot` is an index into the fixed colour palette. `sort_order` is the list order. A migration inserts three rows (วัตถุดิบ, บรรจุภัณฑ์, and อื่น ๆ), because they are part of the product and not sample data. |
+| `seller_profile` | A Seller's Display Name | One row per auth user, made by the `create_seller` trigger. A Seller reads and changes only their own. |
+| `cost_category` | A group the seller names | `colour_slot` is an index into the fixed colour palette. `sort_order` is the list order. Each new Seller gets three (วัตถุดิบ, บรรจุภัณฑ์, and อื่น ๆ) from `create_seller`, because they are part of the product and not sample data. |
 | `cost_item` | One entry in the Cost List | `unit_cost` is `numeric`. `unit` is free text. `cost_category_id` is nullable. |
 | `cost_sheet` | One costing of a thing the seller sells | `sale_unit` defaults to ชิ้น, `gp_percent` to 0, and `vat_percent` to 7. |
 | `cost_line` | One cost on a sheet | `position` starts at 0. A line has either `cost_item_id` or its own `name`, `unit_cost`, `unit`, and `cost_category_id`. |
-| `app_status` | One row that the home page reads | A test table from the project scaffold, outside the domain. It is removed once nothing reads it. |
+| `app_status` | One row that the home page reads | A test table from the project scaffold, outside the domain. Anyone may read it, signed in or not. It is removed once nothing reads it. |
 
-Every owned table has `owner uuid references auth.users`. The value is always null until login exists.
+Every owned table (`cost_category`, `cost_item`, `cost_sheet`, `cost_line`) has a required `owner`, the Seller's `auth.users` id. It defaults to `auth.uid()`, the signed-in Seller, so the app never sends it. Row-level security lets a Seller read and change only rows they own; [Sign-in](sign-in.md) describes the policies. Deleting a Seller deletes everything they own.
+
+The `seller_sign_in` migration deleted every row that had no owner, including the old ownerless starting categories.
+
+## Triggers on `auth.users`
+
+| Trigger | When | Behaviour |
+| --- | --- | --- |
+| `create_seller_on_signup` → `create_seller()` | After a user is inserted | Inserts the `seller_profile` row and the three starting Cost Categories, in the same transaction as the user. The Display Name is `raw_user_meta_data.display_name`, else `full_name`, else `name`, else the part of the email before `@`. |
+| `delete_seller_sheets_on_user_delete` → `delete_seller_sheets()` | Before a user is deleted | Deletes the Seller's sheets, and so their lines, first. Postgres cascades the owner keys one table at a time, and a line still linked to a Cost Item would block the item's delete. |
+
+Both run `security definer`, because Supabase Auth inserts and deletes users with no Seller session.
 
 ## Constraints that enforce rules
 
 | Constraint | Rule |
 | --- | --- |
-| `cost_item_owner_name_key`, a unique index on `(owner, lower(btrim(name))) nulls not distinct` | Cost Item names are unique, ignoring case and surrounding spaces. Every row has a null owner today, and without `nulls not distinct` no two names would ever clash. |
+| `cost_item_owner_name_key`, a unique index on `(owner, lower(btrim(name)))` | Cost Item names are unique per Seller, ignoring case and surrounding spaces. Two Sellers may each have the same name. |
+| Foreign keys that include `owner`: `(owner, cost_category_id)`, `(owner, cost_item_id)`, and `(owner, sheet_id)`, each pointing at the target's `unique (owner, id)` | A reference never crosses Sellers. Postgres checks a foreign key without row-level security, so a plain `cost_item_id` would let Seller B link to Seller A's item by id. With `owner` in the key, it only matches a row of the same owner, and B gets the usual `23503`, as for an item that does not exist. The constraint names are unchanged, because `src/server/` reads them from the error. |
 | `cost_line_linked_or_manual` | A Linked Line has only `cost_item_id`. A Manual Line has `name`, `unit_cost`, and `unit`, and no `cost_item_id`. A Linked Line stores no copy of the item's values. |
 | `cost_line.cost_item_id` with no `on delete` action | A Cost Item that a line links to cannot be deleted directly. `delete_cost_item` unlinks the lines first, as [ADR 0002](../adr/0002-cost-lines-link-to-the-cost-list.md) requires. |
-| `cost_category_id ... on delete set null`, on items and on lines | Deleting a category moves its costs to ไม่มีหมวด in the same statement. |
+| `... on delete set null (cost_category_id)`, on items and on lines | Deleting a category moves its costs to ไม่มีหมวด in the same statement. The column list clears only the category, never `owner`. |
 | `unique (sheet_id, position)` | Lines keep their order. `save_cost_sheet` rewrites the positions from 0 each time. |
 | `check (... >= 0)` and `check (btrim(x) <> '')` | Money and quantities are never negative. Names and units are never blank. |
 
 ## Postgres functions
 
-Each function runs as one transaction, uses `search_path = ''`, and is executable only by `service_role`. The app calls them with `rpc()`.
+Each function runs as one transaction and uses `search_path = ''`. The app calls them with `rpc()`. They are executable by `authenticated` (a signed-in Seller) and `service_role`, never by `anon`. They run as the caller (security invoker), so row-level security applies inside them: another Seller's sheet or item is simply not found. `save_cost_sheet` and `duplicate_cost_sheet` write each line's `owner` from its sheet.
 
 | Function | Caller | Behaviour |
 | --- | --- | --- |
