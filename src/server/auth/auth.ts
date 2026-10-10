@@ -1,7 +1,7 @@
-import type { Db } from '@/server/supabase'
+import type { Db } from '@/server/db/supabase'
 
 // Signing in (GLOSSARY.md: Seller, Display Name). These act on the client passed in: from a
-// server action it is the request's cookie client (@/server/request-client), so signing in
+// server action it is the request's cookie client (@/server/db/request-client), so signing in
 // or out writes the session cookies. See docs/documents/sign-in.md.
 
 /** The signed-in Seller, as the header shows them. */

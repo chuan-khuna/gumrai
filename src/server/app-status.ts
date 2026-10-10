@@ -1,4 +1,4 @@
-import type { Db } from '@/server/supabase'
+import type { Db } from '@/server/db/supabase'
 
 // Tracer-bullet operation for the scaffold (issue 01). Goes when app_status does.
 export async function getAppStatus(db: Db): Promise<string> {

@@ -8,8 +8,8 @@ import { CategoryNameForm, DeleteCategoryButton } from '@/app/cost-list/categori
 import { CategoryDot } from '@/app/cost-list/category-dot'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UNCATEGORISED } from '@/lib/category-colours'
-import { countCostItemsIn, listCostCategories } from '@/server/cost-categories'
-import { requestClient } from '@/server/request-client'
+import { countCostItemsIn, listCostCategories } from '@/server/costs/cost-categories'
+import { requestClient } from '@/server/db/request-client'
 
 // Read on every request, so the page always reflects the database.
 export const dynamic = 'force-dynamic'

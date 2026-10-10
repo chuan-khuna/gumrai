@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getAppStatus } from '@/server/app-status'
-import { createPublicClient } from '@/server/supabase'
+import { createPublicClient } from '@/server/db/supabase'
 
 // Signed out: the root page reads the status before anyone signs in.
 const db = createPublicClient()

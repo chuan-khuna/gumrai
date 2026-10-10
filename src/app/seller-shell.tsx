@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { signOutAction } from '@/app/login/actions'
 import { Button } from '@/components/ui/button'
-import { currentSeller } from '@/server/auth'
-import { requestClient } from '@/server/request-client'
+import { currentSeller } from '@/server/auth/auth'
+import { requestClient } from '@/server/db/request-client'
 
 // The frame around every page that needs a signed-in Seller: a header with their Display Name
 // and ออกจากระบบ. The proxy has already sent signed-out visitors to the login page; this check

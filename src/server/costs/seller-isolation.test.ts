@@ -6,7 +6,7 @@ import {
   listCostCategories,
   renameCostCategory,
   type CostCategory,
-} from '@/server/cost-categories'
+} from '@/server/costs/cost-categories'
 import {
   countSheetsUsingCostItem,
   createCostItem,
@@ -15,7 +15,7 @@ import {
   listCostItems,
   updateCostItem,
   type CostItem,
-} from '@/server/cost-items'
+} from '@/server/costs/cost-items'
 import {
   createCostSheet,
   deleteCostSheet,
@@ -25,9 +25,9 @@ import {
   renameCostSheet,
   saveCostSheet,
   type CostSheet,
-} from '@/server/cost-sheets'
-import type { Db } from '@/server/supabase'
-import { createSeller, removeSellers } from '@/server/test-sellers'
+} from '@/server/costs/cost-sheets'
+import type { Db } from '@/server/db/supabase'
+import { createSeller, removeSellers } from '@/server/testing/test-sellers'
 
 // Row-level security: Seller B cannot see or touch anything Seller A owns, through any
 // operation, even knowing its id.

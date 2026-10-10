@@ -36,7 +36,7 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
   )
 }
 
-// minPasswordLength is the rule from @/server/auth, passed in for the field hint.
+// minPasswordLength is the rule from @/server/auth/auth, passed in for the field hint.
 export function SignUpForm({ returnTo, minPasswordLength }: { returnTo: string; minPasswordLength: number }) {
   const [state, formAction, pending] = useActionState(signUpAction, {
     email: '',

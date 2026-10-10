@@ -97,7 +97,7 @@ npx skills add ./curated-skills
 | `bun run check` | Type-check with `tsc --noEmit` |
 | `bun run db:start` / `db:stop` | Start or stop local Supabase |
 | `bun run db:reset` | Recreate the local database from migrations, then apply the seed |
-| `bun run db:types` | Regenerate `src/server/database.types.ts` from the local schema |
+| `bun run db:types` | Regenerate `src/server/db/database.types.ts` from the local schema |
 
 ## Changing the database
 

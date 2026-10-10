@@ -10,7 +10,7 @@ import {
 import { ConfirmAction } from '@/components/confirm-action'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { CostSheetSummary } from '@/server/cost-sheets'
+import type { CostSheetSummary } from '@/server/costs/cost-sheets'
 
 // One Cost Sheet in the list: open it, rename it in place, duplicate it, or delete it after
 // asking.

@@ -6,7 +6,7 @@ import {
   CostListError,
   saveManualLineToCostList,
   type SavedManualLine,
-} from '@/server/cost-items'
+} from '@/server/costs/cost-items'
 import {
   CostSheetError,
   createCostSheet,
@@ -17,10 +17,10 @@ import {
   type CostSheet,
   type CostSheetInput,
   type ManualLineInput,
-} from '@/server/cost-sheets'
-import { requestClient } from '@/server/request-client'
+} from '@/server/costs/cost-sheets'
+import { requestClient } from '@/server/db/request-client'
 
-// Wiring only: the rules live in @/server/cost-sheets and @/server/cost-items.
+// Wiring only: the rules live in @/server/costs/cost-sheets and @/server/costs/cost-items.
 
 export type CreateSheetState = { name: string; error: string | null }
 

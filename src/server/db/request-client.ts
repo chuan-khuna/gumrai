@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createSessionClient, type Db } from '@/server/supabase'
+import { createSessionClient, type Db } from '@/server/db/supabase'
 
 // The client a page or server action passes to every operation it calls. Call it once per
 // page render or action and pass the result through.

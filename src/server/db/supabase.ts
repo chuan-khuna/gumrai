@@ -1,6 +1,6 @@
 import { createServerClient, type CookieMethodsServer } from '@supabase/ssr'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/server/database.types'
+import type { Database } from '@/server/db/database.types'
 
 // The Supabase client every operation in src/server/ takes as its first argument. Operations
 // never make one: the caller decides whose client it is.
@@ -8,7 +8,7 @@ export type Db = SupabaseClient<Database>
 
 // The only file that makes a Supabase client. Everything under src/server/ is server-side
 // business rules, kept apart from the UI (ADR 0001); pages and components never import
-// this file. They get their client from requestClient (@/server/request-client).
+// this file. They get their client from requestClient (@/server/db/request-client).
 
 function setting(name: 'SUPABASE_URL' | 'SUPABASE_PUBLISHABLE_KEY' | 'SUPABASE_SECRET_KEY') {
   const value = process.env[name]

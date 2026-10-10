@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { SignInForm, SignUpForm } from '@/app/login/login-forms'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { safeReturnTo } from '@/lib/return-to'
-import { currentSeller, MIN_PASSWORD_LENGTH } from '@/server/auth'
-import { requestClient } from '@/server/request-client'
+import { currentSeller, MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
+import { requestClient } from '@/server/db/request-client'
 
 // Sign in, or sign up, with email. ?next= is the page to go to afterwards.
 export default async function LoginPage({

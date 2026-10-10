@@ -8,9 +8,9 @@ This page explains how a Seller signs up and signs in with email, how their sess
 | --- | --- | --- |
 | Login page | `src/app/login/page.tsx`, `login-forms.tsx` | A sign-in form and a sign-up form. `?next=` is the page to go to afterwards. A signed-in Seller who opens it goes straight there. |
 | Auth actions | `src/app/login/actions.ts` | `signInAction`, `signUpAction` and `signOutAction`. Wiring only. |
-| Auth operations | `src/server/auth.ts` | `signUpWithEmail`, `signInWithEmail`, `signOut` and `currentSeller`, plus `SignInError`. |
-| Request client | `src/server/request-client.ts` | `requestClient()`: a new client per request, reading and writing the session cookies through `next/headers`. |
-| Proxy | `src/proxy.ts`, `src/server/session.ts` | Runs before every page. Refreshes the session and sends signed-out visitors from the Seller pages to the login page. |
+| Auth operations | `src/server/auth/auth.ts` | `signUpWithEmail`, `signInWithEmail`, `signOut` and `currentSeller`, plus `SignInError`. |
+| Request client | `src/server/db/request-client.ts` | `requestClient()`: a new client per request, reading and writing the session cookies through `next/headers`. |
+| Proxy | `src/proxy.ts`, `src/server/db/session.ts` | Runs before every page. Refreshes the session and sends signed-out visitors from the Seller pages to the login page. |
 | Seller frame | `src/app/seller-shell.tsx`, used by `src/app/sheets/layout.tsx` and `src/app/cost-list/layout.tsx` | Checks the Seller again and shows the header: Display Name and ออกจากระบบ. |
 | Return-to | `src/lib/return-to.ts` | `safeReturnTo` and `loginPath`. |
 | Database | `supabase/migrations/20261010075658_seller_sign_in.sql` | Owners, row-level security policies, `seller_profile`, and the triggers on `auth.users`. |
@@ -48,7 +48,7 @@ sequenceDiagram
 
 ### Errors the visitor sees
 
-`src/server/auth.ts` turns Supabase Auth's error codes into a `SignInError` with a Thai message. Any other error is unexpected and is thrown.
+`src/server/auth/auth.ts` turns Supabase Auth's error codes into a `SignInError` with a Thai message. Any other error is unexpected and is thrown.
 
 | Case | Auth code | Message |
 | --- | --- | --- |

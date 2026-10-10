@@ -11,14 +11,14 @@ flowchart LR
 	end
 	subgraph Server["Next.js server"]
 		proxy["src/proxy.ts<br/>refresh session, gate Seller pages"]
-		session["src/server/session.ts<br/>refreshSession()"]
+		session["src/server/db/session.ts<br/>refreshSession()"]
 		proxy --> session
 		session --> sb
 		pages["page.tsx<br/>server components"]
 		actions["actions.ts<br/>wiring only"]
-		rc["src/server/request-client.ts<br/>requestClient(), from cookies"]
-		rules["src/server/*.ts<br/>business rules"]
-		sb["src/server/supabase.ts<br/>the only client factory"]
+		rc["src/server/db/request-client.ts<br/>requestClient(), from cookies"]
+		rules["src/server/auth/, costs/, app-status.ts<br/>business rules"]
+		sb["src/server/db/supabase.ts<br/>the only client factory"]
 		pages -- "1. get the client" --> rc
 		actions -- "1. get the client" --> rc
 		rc --> sb
@@ -38,11 +38,11 @@ flowchart LR
 
 | Layer | Path | Imports | Job |
 | --- | --- | --- | --- |
-| Proxy | `src/proxy.ts` | `refreshSession` from `src/server/session.ts`, `src/lib/return-to.ts` | Before any page renders: refresh the Seller's session and send signed-out visitors from the Seller pages to `/login`. See [Sign-in](sign-in.md). |
+| Proxy | `src/proxy.ts` | `refreshSession` from `src/server/db/session.ts`, `src/lib/return-to.ts` | Before any page renders: refresh the Seller's session and send signed-out visitors from the Seller pages to `/login`. See [Sign-in](sign-in.md). |
 | Pages | `src/app/**/page.tsx` | `src/server/*` operations, `requestClient`, components, `src/lib` | Get the client from `requestClient()`, read data on the server with it, and render. No business logic and no Supabase import. |
 | Server actions | `src/app/**/actions.ts` | `src/server/*` operations, `requestClient` | Read the form or the arguments, get the client, call one operation with it, call `revalidatePath`, and turn a rule error into `{ error }`. |
 | Client components | `sheet-editor.tsx` and the forms | `src/lib`, actions, and types from `src/server` | Handle interaction. The sheet editor holds a draft and computes figures in the browser. |
-| Business rules | `src/server/*.ts` | the `Db` type from `src/server/supabase.ts` | Validate input, normalise it, and make every database call through the client the caller passed in. `auth.ts` signs in, signs up, signs out and reads the signed-in Seller the same way. |
+| Business rules | `src/server/auth/*.ts`, `src/server/costs/*.ts`, `src/server/app-status.ts` | the `Db` type from `src/server/db/supabase.ts` | Validate input, normalise it, and make every database call through the client the caller passed in. `auth.ts` signs in, signs up, signs out and reads the signed-in Seller the same way. |
 | Pure logic | `src/lib/*.ts` | nothing that does I/O | Sheet arithmetic in `sheet.ts` and `delivery.ts`, link and unlink in `cost-lines.ts`, and category colours. Runs on either side. |
 | Database | `supabase/migrations/` | none | Schema, constraints, and the operations that need several statements in one transaction. |
 
@@ -50,23 +50,35 @@ flowchart LR
 
 The original plan put FastAPI between Next.js and Supabase. [ADR 0001](../adr/0001-no-fastapi-next-talks-to-supabase.md) dropped it, because it would only relay calls and would double the deploys. `src/server/` took its place as the boundary. Every operation there takes plain values and returns plain values, never `FormData` and never React types. That rule matters more than it looks. If a Discord bot or a mobile app ever needs the same rules, `src/server/` is the code that moves into a separate service, and it can only move cleanly if nothing in it depends on the UI.
 
+## How `src/server/` is laid out
+
+| Folder | Files | Holds |
+| --- | --- | --- |
+| `db/` | `supabase.ts`, `request-client.ts`, `session.ts`, `database.types.ts` | Making Supabase clients, the request's client from cookies, the proxy's session refresh, and the types `bun run db:types` generates. |
+| `auth/` | `auth.ts` | Sign-up, sign-in, sign-out and the signed-in Seller. |
+| `costs/` | `cost-items.ts`, `cost-categories.ts`, `cost-sheets.ts` | The Cost List, Cost Categories and cost sheets. `seller-isolation.test.ts` lives here too. |
+| `testing/` | `test-sellers.ts` | Test-only helpers. The app never imports them. |
+| root | `app-status.ts` | The home page's status check. |
+
+Each test sits beside the file it tests. Imports always use the full alias path, such as `@/server/costs/cost-items`.
+
 ## How an operation gets its client
 
-Every exported operation in `src/server/` takes the Supabase client as its first argument, typed `Db` (`SupabaseClient<Database>`, exported by `supabase.ts`). No operation makes a client of its own. The caller decides whose client it is:
+Every exported operation in `src/server/` takes the Supabase client as its first argument, typed `Db` (`SupabaseClient<Database>`, exported by `db/supabase.ts`). No operation makes a client of its own. The caller decides whose client it is:
 
 | Caller | Gets the client from | Acts as |
 | --- | --- | --- |
-| A page or server action | `await requestClient()` in `src/server/request-client.ts`, called once per render or action and passed to each operation | The Seller whose session is in the request's cookies, or nobody (`anon`) |
-| The proxy | `refreshSession(request)` in `src/server/session.ts` makes its own, to refresh the session | The same Seller |
-| A test | `createSeller()` in `src/server/test-sellers.ts`, once per test | A real Seller made for that test |
-| Admin-only work (tests' setup and cleanup; deleting an account, later) | `createSecretClient()` in `src/server/supabase.ts` | `service_role`, which bypasses row-level security |
+| A page or server action | `await requestClient()` in `src/server/db/request-client.ts`, called once per render or action and passed to each operation | The Seller whose session is in the request's cookies, or nobody (`anon`) |
+| The proxy | `refreshSession(request)` in `src/server/db/session.ts` makes its own, to refresh the session | The same Seller |
+| A test | `createSeller()` in `src/server/testing/test-sellers.ts`, once per test | A real Seller made for that test |
+| Admin-only work (tests' setup and cleanup; deleting an account, later) | `createSecretClient()` in `src/server/db/supabase.ts` | `service_role`, which bypasses row-level security |
 
 ```ts
 const db = await requestClient()
 const [items, categories] = await Promise.all([listCostItems(db), listCostCategories(db)])
 ```
 
-Pages and actions never import `supabase.ts`, `@supabase/supabase-js` or `@supabase/ssr`. `requestClient` is the one function they use. It is async because it reads the request's cookies, and it makes a new client every time, because a client holds one Seller's session.
+Pages and actions never import `db/supabase.ts`, `@supabase/supabase-js` or `@supabase/ssr`. `requestClient` is the one function they use. It is async because it reads the request's cookies, and it makes a new client every time, because a client holds one Seller's session.
 
 ## Where a rule is enforced
 

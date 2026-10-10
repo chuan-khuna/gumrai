@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createSessionClient } from '@/server/supabase'
+import { createSessionClient } from '@/server/db/supabase'
 
 /**
  * For the proxy (src/proxy.ts), before any page renders: reads the request's session and,

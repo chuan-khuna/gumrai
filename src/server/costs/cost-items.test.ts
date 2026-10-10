@@ -11,22 +11,22 @@ import {
   CostListError,
   type CostItem,
   type CostItemInput,
-} from '@/server/cost-items'
+} from '@/server/costs/cost-items'
 import {
   createCostCategory,
   deleteCostCategory,
-} from '@/server/cost-categories'
+} from '@/server/costs/cost-categories'
 import {
   createCostSheet,
   getCostSheet,
   saveCostSheet,
   type CostSheetInput,
   type ManualLineInput,
-} from '@/server/cost-sheets'
+} from '@/server/costs/cost-sheets'
 import { linkLine } from '@/lib/cost-lines'
 import { computeSheet } from '@/lib/sheet'
-import type { Db } from '@/server/supabase'
-import { createSeller, removeSellers } from '@/server/test-sellers'
+import type { Db } from '@/server/db/supabase'
+import { createSeller, removeSellers } from '@/server/testing/test-sellers'
 
 // Each test runs as a new Seller of its own. Removing the Seller afterwards removes
 // everything the test made.

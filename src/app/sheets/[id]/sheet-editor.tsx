@@ -22,15 +22,15 @@ import {
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { linkLine, unlinkLine } from '@/lib/cost-lines'
 import { computeSheet, type Share } from '@/lib/sheet'
-import type { CostCategory } from '@/server/cost-categories'
-import type { CostItem } from '@/server/cost-items'
+import type { CostCategory } from '@/server/costs/cost-categories'
+import type { CostItem } from '@/server/costs/cost-items'
 import type {
   CostLineInput,
   CostSheet,
   CostSheetInput,
   LinkedLine,
   ManualLine,
-} from '@/server/cost-sheets'
+} from '@/server/costs/cost-sheets'
 
 // The sheet editor. Edits are held here until the seller presses save; the figures are
 // worked out in the browser on every keystroke, with no server round trip.

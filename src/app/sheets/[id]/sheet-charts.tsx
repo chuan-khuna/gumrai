@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { categoryColour, UNCATEGORISED } from '@/lib/category-colours'
 import type { PriceSegment, Share, SheetResult } from '@/lib/sheet'
-import type { CostCategory } from '@/server/cost-categories'
+import type { CostCategory } from '@/server/costs/cost-categories'
 
 // The sheet's two charts, drawn from the calculation module's output (@/lib/sheet) and nothing
 // else: costs ranked dearest first, and where the Selling Price goes, both in baht. Exact

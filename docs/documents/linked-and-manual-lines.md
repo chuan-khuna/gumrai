@@ -8,7 +8,7 @@ A Cost Line can follow the Cost List or hold its own values. This choice touches
 | --- | --- | --- |
 | Columns stored in `cost_line` | `cost_item_id`, `quantity_used` | `name`, `unit_cost`, `unit`, `cost_category_id`, `quantity_used` |
 | Source of the name, Unit Cost, Unit, and category | The Cost Item, read each time the sheet loads | The line itself |
-| Type in `src/server/cost-sheets.ts` | `LinkedLine { kind: 'linked', costItemId, … }` | `ManualLine { kind: 'manual', … }` |
+| Type in `src/server/costs/cost-sheets.ts` | `LinkedLine { kind: 'linked', costItemId, … }` | `ManualLine { kind: 'manual', … }` |
 | Type for a save | `LinkedLineInput { costItemId, quantityUsed }` | `ManualLineInput` |
 
 `readSheet` joins `cost_item` into each line and fills a Linked Line with the item's current values. The editor and the calculation never need to know where a value came from.

@@ -1,4 +1,4 @@
-import type { Db } from '@/server/supabase'
+import type { Db } from '@/server/db/supabase'
 
 // Cost Items (GLOSSARY.md): the Cost List's entries. Unit Cost travels as a decimal string,
 // never a JS number, so a value like 0.075 is stored and shown exactly as typed.

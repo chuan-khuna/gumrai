@@ -6,10 +6,10 @@ import {
   createCostCategory,
   deleteCostCategory,
   renameCostCategory,
-} from '@/server/cost-categories'
-import { requestClient } from '@/server/request-client'
+} from '@/server/costs/cost-categories'
+import { requestClient } from '@/server/db/request-client'
 
-// Wiring only: the rules live in @/server/cost-categories.
+// Wiring only: the rules live in @/server/costs/cost-categories.
 
 export type CategoryFormState = {
   name: string

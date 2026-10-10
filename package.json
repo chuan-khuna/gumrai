@@ -16,7 +16,7 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > src/server/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/server/db/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

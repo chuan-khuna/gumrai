@@ -3,10 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { safeReturnTo } from '@/lib/return-to'
-import { SignInError, signInWithEmail, signOut, signUpWithEmail } from '@/server/auth'
-import { requestClient } from '@/server/request-client'
+import { SignInError, signInWithEmail, signOut, signUpWithEmail } from '@/server/auth/auth'
+import { requestClient } from '@/server/db/request-client'
 
-// Wiring only: the rules live in @/server/auth. The request client writes the session
+// Wiring only: the rules live in @/server/auth/auth. The request client writes the session
 // cookies when signing in or out.
 
 export type SignInState = { email: string; error: string | null }

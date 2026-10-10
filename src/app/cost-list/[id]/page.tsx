@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation'
 import { deleteCostItemAction, updateCostItemAction } from '@/app/cost-list/actions'
 import { CostItemForm, DeleteCostItemButton } from '@/app/cost-list/cost-item-form'
 import { Card, CardContent } from '@/components/ui/card'
-import { listCostCategories } from '@/server/cost-categories'
-import { countSheetsUsingCostItem, getCostItem } from '@/server/cost-items'
-import { requestClient } from '@/server/request-client'
+import { listCostCategories } from '@/server/costs/cost-categories'
+import { countSheetsUsingCostItem, getCostItem } from '@/server/costs/cost-items'
+import { requestClient } from '@/server/db/request-client'
 
 export default async function EditCostItemPage({ params }: { params: Promise<{ id: string }> }) {
   const db = await requestClient()

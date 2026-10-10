@@ -1,7 +1,7 @@
 // Cost Line rules that need no database, so the sheet editor can apply them in the browser.
 
-import type { CostItem } from '@/server/cost-items'
-import type { LinkedLine, ManualLineInput } from '@/server/cost-sheets'
+import type { CostItem } from '@/server/costs/cost-items'
+import type { LinkedLine, ManualLineInput } from '@/server/costs/cost-sheets'
 
 /**
  * Unlinks a Linked Line (GLOSSARY.md): the Manual Line it becomes holds the values the line

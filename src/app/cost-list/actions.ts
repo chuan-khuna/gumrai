@@ -8,10 +8,10 @@ import {
   deleteCostItem,
   updateCostItem,
   type CostItemInput,
-} from '@/server/cost-items'
-import { requestClient } from '@/server/request-client'
+} from '@/server/costs/cost-items'
+import { requestClient } from '@/server/db/request-client'
 
-// Wiring only: the rules live in @/server/cost-items.
+// Wiring only: the rules live in @/server/costs/cost-items.
 
 export type CostItemFormState = {
   values: CostItemInput

@@ -7,7 +7,7 @@ This page describes what the tests cover, which interface each kind of test uses
 | Kind | Files | Method |
 | --- | --- | --- |
 | Pure logic | `src/lib/sheet.test.ts`, `src/lib/delivery.test.ts` and `src/lib/return-to.test.ts` | Input in, output checked. No database and no mocks. |
-| Business rules | `src/server/*.test.ts` | Integration tests against the real local Supabase. The database is never mocked. |
+| Business rules | `src/server/**/*.test.ts` | Integration tests against the real local Supabase. The database is never mocked. |
 
 Each test uses a module's public interface. It sets up inputs or stored data and checks the outputs or the resulting data. No test checks SQL text, internal helpers, or component structure.
 
@@ -36,7 +36,7 @@ beforeEach(async () => {
 afterEach(removeSellers)
 ```
 
-`src/server/test-sellers.ts` is the helper. It is test-only code and is never imported by the app.
+`src/server/testing/test-sellers.ts` is the helper. It is test-only code and is never imported by the app.
 
 1. `createSeller(displayName?)` makes a real auth user with the admin API (`createSecretClient()`), with a random email and password and its email already confirmed. The database gives the Seller a profile and the three starting Cost Categories, as for anyone signing up.
 2. It then signs that Seller in with email and password on a fresh client (`createPublicClient()`, the publishable key) and returns `{ id, email, password, db }`. Every operation in the test gets that `db`, so it runs exactly as the app does for a signed-in Seller. Nothing is mocked.

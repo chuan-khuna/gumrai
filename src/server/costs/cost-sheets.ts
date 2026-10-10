@@ -1,4 +1,4 @@
-import type { Db } from '@/server/supabase'
+import type { Db } from '@/server/db/supabase'
 
 // Cost Sheets (GLOSSARY.md): one saved costing per thing the seller sells. Money, percentages
 // and quantities travel as decimal strings, never JS numbers, so what the seller typed is

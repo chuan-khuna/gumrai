@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { loginPath } from '@/lib/return-to'
-import { refreshSession } from '@/server/session'
+import { refreshSession } from '@/server/db/session'
 
 // Runs before every page (Next 16 renamed middleware to proxy). It keeps the Seller's session
 // fresh and sends signed-out visitors from a Seller's pages to the login page, remembering

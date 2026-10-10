@@ -138,7 +138,7 @@ If every check passes, your setup is complete.
 | `bun run db:start` | Starts the Supabase containers |
 | `bun run db:stop` | Stops the Supabase containers. Your data stays until the next reset. |
 | `bun run db:reset` | Rebuilds the local database from the migrations and the seed. **It deletes all local data.** |
-| `bun run db:types` | Regenerates `src/server/database.types.ts` after a schema change |
+| `bun run db:types` | Regenerates `src/server/db/database.types.ts` after a schema change |
 | `bun run test` | Runs the tests once |
 | `bun run test:watch` | Runs the tests again on every file save |
 | `bun run check` | Type-checks without building |

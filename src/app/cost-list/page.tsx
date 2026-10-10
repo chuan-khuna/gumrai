@@ -16,9 +16,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { UNCATEGORISED } from '@/lib/category-colours'
-import { listCostCategories, type CostCategory } from '@/server/cost-categories'
-import { listCostItems, type CostItem } from '@/server/cost-items'
-import { requestClient } from '@/server/request-client'
+import { listCostCategories, type CostCategory } from '@/server/costs/cost-categories'
+import { listCostItems, type CostItem } from '@/server/costs/cost-items'
+import { requestClient } from '@/server/db/request-client'
 
 // ?category= in the URL: a Cost Category's id, or this for ไม่มีหมวด.
 const NONE = 'none'

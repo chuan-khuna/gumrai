@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { createPublicClient, createSecretClient, type Db } from '@/server/supabase'
+import { createPublicClient, createSecretClient, type Db } from '@/server/db/supabase'
 
 // Test-only: real Sellers in the local Supabase, for tests that call operations as a Seller.
 // Not a mock: each one is an auth user made with the admin API, then signed in with email

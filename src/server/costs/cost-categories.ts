@@ -1,4 +1,4 @@
-import type { Db } from '@/server/supabase'
+import type { Db } from '@/server/db/supabase'
 
 // Cost Categories (GLOSSARY.md): groups the seller names themselves. Each has a colour slot,
 // an index into the fixed palette (@/lib/category-colours), assigned automatically: the

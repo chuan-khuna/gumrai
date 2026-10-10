@@ -8,8 +8,8 @@ import { OptionSelect } from '@/components/option-select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UNCATEGORISED } from '@/lib/category-colours'
-import type { CostCategory } from '@/server/cost-categories'
-import type { CostItemInput } from '@/server/cost-items'
+import type { CostCategory } from '@/server/costs/cost-categories'
+import type { CostItemInput } from '@/server/costs/cost-items'
 
 type Props = {
   action: (previous: CostItemFormState, formData: FormData) => Promise<CostItemFormState>

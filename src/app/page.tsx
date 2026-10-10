@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getAppStatus } from '@/server/app-status'
-import { requestClient } from '@/server/request-client'
+import { requestClient } from '@/server/db/request-client'
 
 // Read on every request, so the page always reflects the database.
 export const dynamic = 'force-dynamic'

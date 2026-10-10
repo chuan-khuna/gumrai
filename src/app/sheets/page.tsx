@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { CreateSheetForm } from '@/app/sheets/create-sheet-form'
 import { SheetRow } from '@/app/sheets/sheet-row'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { listCostSheets } from '@/server/cost-sheets'
-import { requestClient } from '@/server/request-client'
+import { listCostSheets } from '@/server/costs/cost-sheets'
+import { requestClient } from '@/server/db/request-client'
 
 // Read on every request, so the list always reflects the database.
 export const dynamic = 'force-dynamic'

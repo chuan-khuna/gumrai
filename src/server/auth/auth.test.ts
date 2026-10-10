@@ -6,12 +6,12 @@ import {
   signOut,
   signUpWithEmail,
   SignInError,
-} from '@/server/auth'
-import { listCostCategories } from '@/server/cost-categories'
-import { listCostItems } from '@/server/cost-items'
-import { listCostSheets } from '@/server/cost-sheets'
-import { createPublicClient, type Db } from '@/server/supabase'
-import { createSeller, removeSellers, trackSeller } from '@/server/test-sellers'
+} from '@/server/auth/auth'
+import { listCostCategories } from '@/server/costs/cost-categories'
+import { listCostItems } from '@/server/costs/cost-items'
+import { listCostSheets } from '@/server/costs/cost-sheets'
+import { createPublicClient, type Db } from '@/server/db/supabase'
+import { createSeller, removeSellers, trackSeller } from '@/server/testing/test-sellers'
 
 afterEach(removeSellers)
 
