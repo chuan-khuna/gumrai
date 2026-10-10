@@ -75,10 +75,15 @@ When you're done, `bun run db:stop` stops the Supabase containers.
 
 ## Install skills
 
-```
+The first three commands install skills from their GitHub repos. The last one installs the skills kept in this repo under [`curated-skills/`](curated-skills/README.md). That folder holds skills copied from other sources and skills written for this project. Its README lists where each skill came from and how to add one.
+
+```sh
 npx skills add mattpocock/skills#v1.3.1
 npx skills add nutlope/hallmark
 npx skills add pbakaus/impeccable
+
+# Curated and custom skills kept in this repo
+npx skills add ./curated-skills
 ```
 
 ## Commands
@@ -112,6 +117,8 @@ Sample data belongs only in `supabase/seed.sql`, never in a migration.
 | `supabase/migrations/` | Schema migrations |
 | `supabase/seed.sql` | Development sample data |
 | `docs/adr/` | Architecture decision records |
+| `docs/documents/` | How the app is built, and the onboarding guide. Start at [INDEX.md](docs/documents/INDEX.md). |
+| `curated-skills/` | Agent skills kept in this repo, copied from other sources or written here. See [its README](curated-skills/README.md). |
 
 The conventions contributors and coding agents must follow are in [CLAUDE.md](CLAUDE.md).
 
