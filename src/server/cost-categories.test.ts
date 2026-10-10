@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   CostCategoryError,
   createCostCategory,
@@ -7,48 +7,38 @@ import {
   listCostCategories,
   renameCostCategory,
   countCostItemsIn,
-  type CostCategory,
 } from '@/server/cost-categories'
-import { createCostItem, deleteCostItem, getCostItem, type CostItem } from '@/server/cost-items'
-import { createServerClient } from '@/server/supabase'
+import { createCostItem, getCostItem } from '@/server/cost-items'
+import type { Db } from '@/server/supabase'
+import { createSeller, removeSellers } from '@/server/test-sellers'
 
-// The secret-key client the app itself uses until sign-in lands (ticket 02).
-const db = createServerClient()
+// Each test runs as a new Seller of its own. Removing the Seller afterwards removes
+// everything the test made.
+let db: Db
+beforeEach(async () => {
+  db = (await createSeller()).db
+})
+afterEach(removeSellers)
 
-// Each test makes names no other test uses, and deletes what it made.
-const made: CostCategory[] = []
-const madeItems: CostItem[] = []
+// Random suffixes keep names apart within a test.
 function uniqueName(label: string) {
   return `${label} ${randomUUID()}`
 }
 async function make(name: string) {
   const category = await createCostCategory(db, name)
-  made.push(category)
   return category
 }
 
-afterEach(async () => {
-  for (const item of madeItems.splice(0)) {
-    await deleteCostItem(db, item.id).catch(() => {})
-  }
-  for (const category of made.splice(0)) {
-    await deleteCostCategory(db, category.id).catch(() => {})
-  }
-})
-
 describe('Cost Categories', () => {
-  // Holds on a database fresh from `bun run db:reset`: the migration makes these three.
-  it('starts with วัตถุดิบ, บรรจุภัณฑ์ and อื่น ๆ, in that order and in different colours', async () => {
-    const starting = (await listCostCategories(db)).filter((c) =>
-      ['วัตถุดิบ', 'บรรจุภัณฑ์', 'อื่น ๆ'].includes(c.name),
-    )
+  // The database makes these for every new Seller (create_seller).
+  it('gives a new Seller exactly วัตถุดิบ, บรรจุภัณฑ์ and อื่น ๆ, in that order and in different colours', async () => {
+    const starting = await listCostCategories(db)
 
     expect(starting.map((c) => c.name)).toEqual(['วัตถุดิบ', 'บรรจุภัณฑ์', 'อื่น ๆ'])
     expect(new Set(starting.map((c) => c.colourSlot)).size).toBe(3)
   })
 
-  // Other test files run at the same time and may add categories too, so these compare
-  // only with the categories that existed before.
+  // These compare with the categories that existed before, the Seller's starting three.
   it('creates a Cost Category listed after the ones before it, with its name trimmed', async () => {
     const before = await listCostCategories(db)
     const name = uniqueName('ท็อปปิ้ง')
@@ -96,11 +86,8 @@ describe('Cost Categories', () => {
     const empty = await make(uniqueName('ว่าง'))
     const toppings = await make(uniqueName('ท็อปปิ้ง'))
     const input = { unitCost: '2', unit: 'g' }
-    const items = [
-      await createCostItem(db, { ...input, name: uniqueName('ไข่มุก'), categoryId: toppings.id }),
-      await createCostItem(db, { ...input, name: uniqueName('วุ้น'), categoryId: toppings.id }),
-    ]
-    madeItems.push(...items)
+    await createCostItem(db, { ...input, name: uniqueName('ไข่มุก'), categoryId: toppings.id })
+    await createCostItem(db, { ...input, name: uniqueName('วุ้น'), categoryId: toppings.id })
 
     expect(await countCostItemsIn(db, toppings.id)).toBe(2)
     expect(await countCostItemsIn(db, empty.id)).toBe(0)
@@ -121,7 +108,6 @@ describe('Cost Categories', () => {
       unit: 'g',
       categoryId: keep.id,
     })
-    madeItems.push(strawberry, mango)
 
     await deleteCostCategory(db, fruit.id)
 

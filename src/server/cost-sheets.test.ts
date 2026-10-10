@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   createCostSheet,
   deleteCostSheet,
@@ -12,48 +12,36 @@ import {
   type CostSheet,
   type CostSheetInput,
 } from '@/server/cost-sheets'
-import {
-  createCostCategory,
-  deleteCostCategory,
-  type CostCategory,
-} from '@/server/cost-categories'
+import { createCostCategory } from '@/server/cost-categories'
 import {
   createCostItem,
-  deleteCostItem,
   updateCostItem,
-  type CostItem,
   type CostItemInput,
 } from '@/server/cost-items'
 import { unlinkLine } from '@/lib/cost-lines'
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
+import { createSeller, removeSellers } from '@/server/test-sellers'
 
-// The secret-key client the app itself uses until sign-in lands (ticket 02).
-const db = createServerClient()
+// Each test runs as a new Seller of its own. Removing the Seller afterwards removes
+// everything the test made.
+let db: Db
+beforeEach(async () => {
+  db = (await createSeller()).db
+})
+afterEach(removeSellers)
 
-// Each test makes sheets with names no other test (or the dev seed) uses, and deletes them.
-const made: CostSheet[] = []
+// Random suffixes keep names apart within a test.
 function uniqueName(label: string) {
   return `${label} ${randomUUID()}`
 }
 async function make(label: string) {
   const sheet = await createCostSheet(db, uniqueName(label))
-  made.push(sheet)
   return sheet
 }
-const madeCategories: CostCategory[] = []
-const madeItems: CostItem[] = []
 async function makeItem(input: CostItemInput) {
   const item = await createCostItem(db, { ...input, name: uniqueName(input.name) })
-  madeItems.push(item)
   return item
 }
-
-afterEach(async () => {
-  for (const sheet of made.splice(0)) await deleteCostSheet(db, sheet.id).catch(() => {})
-  // Sheets first: a Cost Item that a line still links to cannot be deleted.
-  for (const item of madeItems.splice(0)) await deleteCostItem(db, item.id).catch(() => {})
-  for (const c of madeCategories.splice(0)) await deleteCostCategory(db, c.id).catch(() => {})
-})
 
 const latte = (name: string): CostSheetInput => ({
   name,
@@ -71,7 +59,6 @@ describe('Cost Sheets', () => {
   it('creates a named sheet with ชิ้น as its Sale Unit, 0% GP, 7% VAT and no lines', async () => {
     const name = uniqueName('มัทฉะลาเต้')
     const sheet = await createCostSheet(db, name)
-    made.push(sheet)
 
     expect(sheet).toMatchObject({
       name,
@@ -151,7 +138,6 @@ describe('Cost Sheets', () => {
 
   it('keeps a Manual Line in its Cost Category', async () => {
     const category = await createCostCategory(db, uniqueName('บรรจุภัณฑ์'))
-    madeCategories.push(category)
     const sheet = await make('หมวด')
 
     await saveCostSheet(db, sheet.id, {
@@ -229,7 +215,6 @@ describe('Cost Sheets', () => {
   describe('Linked Lines', () => {
     it("saves a Linked Line, and a reload resolves it to its Cost Item's values", async () => {
       const category = await createCostCategory(db, uniqueName('วัตถุดิบ'))
-      madeCategories.push(category)
       const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g', categoryId: category.id })
       const sheet = await make('ลิงก์')
 
@@ -276,7 +261,6 @@ describe('Cost Sheets', () => {
 
     it('unlinks a Linked Line into a Manual Line holding its current values', async () => {
       const category = await createCostCategory(db, uniqueName('วัตถุดิบ'))
-      madeCategories.push(category)
       const matcha = await makeItem({ name: 'มัทฉะ', unitCost: '4', unit: 'g', categoryId: category.id })
       const sheet = await make('เลิกลิงก์')
       const saved = await saveCostSheet(db, sheet.id, {
@@ -357,7 +341,6 @@ describe('Cost Sheets', () => {
       })
 
       const copy = await duplicateCostSheet(db, sheet.id)
-      made.push(copy)
 
       expect(copy.id).not.toBe(original.id)
       expect(copy).toMatchObject({
@@ -385,7 +368,6 @@ describe('Cost Sheets', () => {
         ],
       })
       const copy = await duplicateCostSheet(db, sheet.id)
-      made.push(copy)
 
       await saveCostSheet(db, copy.id, {
         name: uniqueName('Grab'),
@@ -408,7 +390,6 @@ describe('Cost Sheets', () => {
         lines: [{ costItemId: matcha.id, quantityUsed: '4' }],
       })
       const copy = await duplicateCostSheet(db, sheet.id)
-      made.push(copy)
 
       await updateCostItem(db, matcha.id, { name: matcha.name, unitCost: '4.5', unit: 'g' })
 

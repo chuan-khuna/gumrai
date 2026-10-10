@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   countSheetsUsingCostItem,
   createCostItem,
@@ -15,53 +15,40 @@ import {
 import {
   createCostCategory,
   deleteCostCategory,
-  type CostCategory,
 } from '@/server/cost-categories'
 import {
   createCostSheet,
-  deleteCostSheet,
   getCostSheet,
   saveCostSheet,
-  type CostSheet,
   type CostSheetInput,
   type ManualLineInput,
 } from '@/server/cost-sheets'
 import { linkLine } from '@/lib/cost-lines'
 import { computeSheet } from '@/lib/sheet'
-import { createServerClient } from '@/server/supabase'
+import type { Db } from '@/server/supabase'
+import { createSeller, removeSellers } from '@/server/test-sellers'
 
-// The secret-key client the app itself uses until sign-in lands (ticket 02).
-const db = createServerClient()
+// Each test runs as a new Seller of its own. Removing the Seller afterwards removes
+// everything the test made.
+let db: Db
+beforeEach(async () => {
+  db = (await createSeller()).db
+})
+afterEach(removeSellers)
 
-// Each test makes names no other test (or the dev seed) uses, and deletes what it made.
-const made: CostItem[] = []
+// Random suffixes keep names apart within a test.
 function uniqueName(label: string) {
   return `${label} ${randomUUID()}`
 }
 async function make(input: CostItemInput) {
   const item = await createCostItem(db, input)
-  made.push(item)
   return item
 }
-const madeCategories: CostCategory[] = []
 async function makeCategory(label: string) {
   const category = await createCostCategory(db, uniqueName(label))
-  madeCategories.push(category)
   return category
 }
 
-const madeSheets: CostSheet[] = []
-
-afterEach(async () => {
-  // Sheets first: a Cost Item that a line still links to cannot be deleted.
-  for (const sheet of madeSheets.splice(0)) await deleteCostSheet(db, sheet.id).catch(() => {})
-  for (const item of made.splice(0)) {
-    await deleteCostItem(db, item.id).catch(() => {})
-  }
-  for (const category of madeCategories.splice(0)) {
-    await deleteCostCategory(db, category.id).catch(() => {})
-  }
-})
 
 describe('Cost Items', () => {
   it('creates a Cost Item that then appears in the list', async () => {
@@ -264,7 +251,6 @@ describe('Cost Items', () => {
   describe('counting the sheets that use an item', () => {
     async function sheetLinking(...items: CostItem[]) {
       const sheet = await createCostSheet(db, uniqueName('ชีต'))
-      madeSheets.push(sheet)
       await saveCostSheet(db, sheet.id, {
         name: sheet.name,
         saleUnit: 'แก้ว',
@@ -320,7 +306,6 @@ describe('Cost Items', () => {
 
     async function sheetWith(lines: CostSheetInput['lines']) {
       const sheet = await createCostSheet(db, uniqueName('ชีต'))
-      madeSheets.push(sheet)
       await saveCostSheet(db, sheet.id, {
         name: sheet.name,
         saleUnit: 'แก้ว',
@@ -404,7 +389,6 @@ describe('saving a Manual Line into the Cost List', () => {
   // Like make(), but through the save, so whatever it creates is cleaned up too.
   async function save(line: ManualLineInput) {
     const saved = await saveManualLineToCostList(db, line)
-    if (saved.outcome === 'created') made.push(saved.item)
     return saved
   }
 
@@ -431,7 +415,6 @@ describe('saving a Manual Line into the Cost List', () => {
 
     // The line's switch to a Linked Line is a sheet edit, kept when the sheet is saved.
     const sheet = await createCostSheet(db, uniqueName('ชีต'))
-    madeSheets.push(sheet)
     const linked = linkLine(line, saved.item)
     await saveCostSheet(db, sheet.id, {
       name: sheet.name,

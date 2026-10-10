@@ -38,76 +38,89 @@ export type Database = {
                   ]
                 },"cost_category": {
                   Row: {
-                    "colour_slot": number,"created_at": string,"id": string,"name": string,"owner": string | null,"sort_order": number
+                    "colour_slot": number,"created_at": string,"id": string,"name": string,"owner": string,"sort_order": number
                   }
                   Insert: {
-                    "colour_slot": number,"created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"sort_order": number
+                    "colour_slot": number,"created_at"?: string,"id"?: string,"name": string,"owner"?: string,"sort_order": number
                   }
                   Update: {
-                    "colour_slot"?: number,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"sort_order"?: number
+                    "colour_slot"?: number,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string,"sort_order"?: number
                   }
                   Relationships: [
                     
                   ]
                 },"cost_item": {
                   Row: {
-                    "cost_category_id": string | null,"created_at": string,"id": string,"name": string,"owner": string | null,"unit": string,"unit_cost": number
+                    "cost_category_id": string | null,"created_at": string,"id": string,"name": string,"owner": string,"unit": string,"unit_cost": number
                   }
                   Insert: {
-                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner"?: string | null,"unit": string,"unit_cost": number
+                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name": string,"owner"?: string,"unit": string,"unit_cost": number
                   }
                   Update: {
-                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string | null,"unit"?: string,"unit_cost"?: number
+                    "cost_category_id"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"owner"?: string,"unit"?: string,"unit_cost"?: number
                   }
                   Relationships: [
                     {
       foreignKeyName: "cost_item_cost_category_id_fkey"
-      columns: ["cost_category_id"]
+      columns: ["owner","cost_category_id"]
 isOneToOne: false
       referencedRelation: "cost_category"
-      referencedColumns: ["id"]
+      referencedColumns: ["owner","id"]
     }
                   ]
                 },"cost_line": {
                   Row: {
-                    "cost_category_id": string | null,"cost_item_id": string | null,"id": string,"name": string | null,"position": number,"quantity_used": number,"sheet_id": string,"unit": string | null,"unit_cost": number | null
+                    "cost_category_id": string | null,"cost_item_id": string | null,"id": string,"name": string | null,"owner": string,"position": number,"quantity_used": number,"sheet_id": string,"unit": string | null,"unit_cost": number | null
                   }
                   Insert: {
-                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"position": number,"quantity_used": number,"sheet_id": string,"unit"?: string | null,"unit_cost"?: number | null
+                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"owner"?: string,"position": number,"quantity_used": number,"sheet_id": string,"unit"?: string | null,"unit_cost"?: number | null
                   }
                   Update: {
-                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"position"?: number,"quantity_used"?: number,"sheet_id"?: string,"unit"?: string | null,"unit_cost"?: number | null
+                    "cost_category_id"?: string | null,"cost_item_id"?: string | null,"id"?: string,"name"?: string | null,"owner"?: string,"position"?: number,"quantity_used"?: number,"sheet_id"?: string,"unit"?: string | null,"unit_cost"?: number | null
                   }
                   Relationships: [
                     {
       foreignKeyName: "cost_line_cost_category_id_fkey"
-      columns: ["cost_category_id"]
+      columns: ["owner","cost_category_id"]
 isOneToOne: false
       referencedRelation: "cost_category"
-      referencedColumns: ["id"]
+      referencedColumns: ["owner","id"]
     },{
       foreignKeyName: "cost_line_cost_item_id_fkey"
-      columns: ["cost_item_id"]
+      columns: ["owner","cost_item_id"]
 isOneToOne: false
       referencedRelation: "cost_item"
-      referencedColumns: ["id"]
+      referencedColumns: ["owner","id"]
     },{
       foreignKeyName: "cost_line_sheet_id_fkey"
-      columns: ["sheet_id"]
+      columns: ["owner","sheet_id"]
 isOneToOne: false
       referencedRelation: "cost_sheet"
-      referencedColumns: ["id"]
+      referencedColumns: ["owner","id"]
     }
                   ]
                 },"cost_sheet": {
                   Row: {
-                    "created_at": string,"gp_percent": number,"id": string,"name": string,"owner": string | null,"sale_unit": string,"selling_price": number,"updated_at": string,"vat_percent": number
+                    "created_at": string,"gp_percent": number,"id": string,"name": string,"owner": string,"sale_unit": string,"selling_price": number,"updated_at": string,"vat_percent": number
                   }
                   Insert: {
-                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name": string,"owner"?: string | null,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
+                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name": string,"owner"?: string,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
                   }
                   Update: {
-                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name"?: string,"owner"?: string | null,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
+                    "created_at"?: string,"gp_percent"?: number,"id"?: string,"name"?: string,"owner"?: string,"sale_unit"?: string,"selling_price"?: number,"updated_at"?: string,"vat_percent"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"seller_profile": {
+                  Row: {
+                    "created_at": string,"display_name": string,"id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"display_name": string,"id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"display_name"?: string,"id"?: string
                   }
                   Relationships: [
                     

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { getAppStatus } from '@/server/app-status'
-import { createServerClient } from '@/server/supabase'
+import { createPublicClient } from '@/server/supabase'
 
-// The secret-key client the app itself uses until sign-in lands (ticket 02).
-const db = createServerClient()
+// Signed out: the root page reads the status before anyone signs in.
+const db = createPublicClient()
 
 describe('getAppStatus', () => {
-  it('reads the status row seeded by the first migration', async () => {
+  it('reads the status row seeded by the first migration, with no one signed in', async () => {
     expect(await getAppStatus(db)).toBe('เชื่อมต่อฐานข้อมูลแล้ว')
   })
 })
