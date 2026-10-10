@@ -1,6 +1,6 @@
 # Sign-in, sessions and row-level security
 
-This page explains how a Seller signs up and signs in with email, how their session travels with each request, and how the database keeps each Seller to their own data. Seller and Display Name are defined in [GLOSSARY.md](../../GLOSSARY.md). Discord sign-in, the `/me` page and account deletion come in later tickets under `.scratch/auth/issues/`.
+This page explains how a Seller signs up and signs in with email, how their session travels with each request, how they change their Display Name and password at `/me`, and how the database keeps each Seller to their own data. Seller and Display Name are defined in [GLOSSARY.md](../../GLOSSARY.md). Discord sign-in, binding sign-in methods and account deletion come in later tickets under `.scratch/auth/issues/`.
 
 ## The parts
 
@@ -11,7 +11,9 @@ This page explains how a Seller signs up and signs in with email, how their sess
 | Auth operations | `src/server/auth/auth.ts` | `signUpWithEmail`, `signInWithEmail`, `signOut` and `currentSeller`, plus `SignInError`. |
 | Request client | `src/server/db/request-client.ts` | `requestClient()`: a new client per request, reading and writing the session cookies through `next/headers`. |
 | Proxy | `src/proxy.ts`, `src/server/db/session.ts` | Runs before every page. Refreshes the session and sends signed-out visitors from the Seller pages to the login page. |
-| Seller frame | `src/app/seller-shell.tsx`, used by `src/app/sheets/layout.tsx` and `src/app/cost-list/layout.tsx` | Checks the Seller again and shows the header: Display Name and ออกจากระบบ. |
+| Seller frame | `src/app/seller-shell.tsx`, used by the layouts of `src/app/sheets/`, `src/app/cost-list/` and `src/app/me/` | Checks the Seller again and shows the header: the Display Name, which links to `/me`, and ออกจากระบบ. |
+| Account page | `src/app/me/page.tsx`, `account-forms.tsx`, `actions.ts` | `/me`: rename the Display Name, change or set the password, ออกจากระบบ. |
+| Account operations | `src/server/auth/account.ts` | `readAccount`, `renameDisplayName`, `changePassword` and `setFirstPassword`, plus `AccountError`. |
 | Return-to | `src/lib/return-to.ts` | `safeReturnTo` and `loginPath`. |
 | Database | `supabase/migrations/20261010075658_seller_sign_in.sql` | Owners, row-level security policies, `seller_profile`, and the triggers on `auth.users`. |
 | Auth settings | `supabase/config.toml`, `[auth]` and `[auth.email]` | `minimum_password_length = 8`, `enable_confirmations = false`. |
@@ -72,7 +74,7 @@ Supabase Auth's session (an access token and a refresh token) lives in `sb-<proj
 
 ## Which pages need a Seller
 
-`/sheets` and `/cost-list`, and every page under them, need a signed-in Seller. Two checks guard them:
+`/sheets`, `/cost-list` and `/me`, and every page under them, need a signed-in Seller (`SELLER_PAGES` in `src/proxy.ts`). Two checks guard them:
 
 1. The proxy, before the page renders. A signed-out visitor is redirected to `loginPath(pathname + search)`, which is `/login?next=…`. It is quick and runs on every navigation, including server action calls.
 2. `SellerShell`, in the layout of each Seller section, calls `currentSeller`. If there is no Seller it redirects to `/login`. This is the check that verifies the session itself.
@@ -83,9 +85,49 @@ Neither check is what keeps data apart. Row-level security does that, so even a 
 
 The root page `/` is the public landing page. It needs no sign-in and is not in `SELLER_PAGES`, and it never redirects a signed-in Seller away. It calls `currentSeller` only to choose its main button: เริ่มใช้งาน to `/login` for a visitor, ไปที่ชีตต้นทุน to `/sheets` for a Seller.
 
+## The account page, /me
+
+`/me` shows the Seller's email and has one card for the Display Name and one for the password, then an ออกจากระบบ button. The header's Display Name links here. Every operation in `src/server/auth/account.ts` acts on the Seller whose session `db` holds, and refuses with ต้องเข้าสู่ระบบก่อน when there is none.
+
+- **Display Name.** `renameDisplayName(db, name)` trims the name, refuses a blank one, and updates the Seller's own `seller_profile` row with their session client; the row-level security policy allows only that row. The check constraint `btrim(display_name) <> ''` refuses a blank name again in the database. The action revalidates every page, so the header shows the new name.
+- **Has a password or not.** `readAccount` asks the database through `seller_has_password()` ([Data model](data-model.md#postgres-functions)). A Seller who only signed in with Discord has an empty password hash. Supabase Auth's identities cannot answer this, because setting a password later adds no `email` identity.
+- **Changing the password** (เปลี่ยนรหัสผ่าน, shown when the Seller has one). The current password is checked by signing in with it on a throwaway client (`createPublicClient()`), so the request's session is never touched, and that extra session is signed out at once. Then `updateUser({ password })` on the Seller's own client saves the new one. Supabase Auth signs out the Seller's other sessions and keeps this one.
+- **Setting a first password** (ตั้งรหัสผ่าน, shown instead when the Seller has none). No current password is asked for. Afterwards the Seller can also sign in on the login page with their email (the one Discord gave) and this password. `setFirstPassword` refuses a Seller who already has a password, so it can never be used to skip the current-password check.
+
+```mermaid
+flowchart TD
+	open["/me"] --> has{"seller_has_password()"}
+	has -- yes --> change["เปลี่ยนรหัสผ่าน<br/>current + new"]
+	has -- no --> set["ตั้งรหัสผ่าน<br/>new only"]
+	change --> len{"new ≥ 8?"}
+	set --> len2{"new ≥ 8?"}
+	len -- no --> short["รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร"]
+	len2 -- no --> short
+	len -- yes --> check["signInWithPassword(email, current)<br/>on a throwaway client"]
+	check -- invalid_credentials --> wrong["รหัสผ่านปัจจุบันไม่ถูกต้อง"]
+	check -- ok --> drop["sign the throwaway session out"]
+	drop --> save["updateUser({ password }) as the Seller"]
+	len2 -- yes --> save
+	save -- same_password --> same["รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม"]
+	save -- ok --> done["saved; other sessions signed out"]
+```
+
+### Errors on /me
+
+| Case | Message |
+| --- | --- |
+| Blank Display Name | ต้องใส่ชื่อที่แสดง |
+| Wrong current password (`invalid_credentials`) | รหัสผ่านปัจจุบันไม่ถูกต้อง |
+| Blank current password | ต้องใส่รหัสผ่านปัจจุบัน |
+| New password shorter than 8 (checked first; `weak_password`) | รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร |
+| New password equals the current one (`same_password`) | รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม |
+| Changing when there is no password | บัญชีนี้ยังไม่มีรหัสผ่าน ตั้งรหัสผ่านแทน |
+| Setting a first password when there is one | บัญชีนี้มีรหัสผ่านอยู่แล้ว เปลี่ยนรหัสผ่านแทน |
+| Too many attempts (`over_request_rate_limit`) | ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่ |
+
 ## Signing out
 
-The ออกจากระบบ button in the header posts to `signOutAction`. It calls `signOut(db)` with `scope: 'local'`, which ends this session at Supabase Auth and clears the cookies, then redirects to `/`. The refresh token stops working at once. An access token copied before signing out still verifies until it expires (`jwt_expiry`, one hour), because `getClaims` checks its signature locally rather than asking Supabase Auth.
+The ออกจากระบบ button in the header, and the one on `/me`, posts to `signOutAction`. It calls `signOut(db)` with `scope: 'local'`, which ends this session at Supabase Auth and clears the cookies, then redirects to `/`. The refresh token stops working at once. An access token copied before signing out still verifies until it expires (`jwt_expiry`, one hour), because `getClaims` checks its signature locally rather than asking Supabase Auth.
 
 ## Row-level security
 

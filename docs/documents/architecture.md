@@ -55,7 +55,7 @@ The original plan put FastAPI between Next.js and Supabase. [ADR 0001](../adr/00
 | Folder | Files | Holds |
 | --- | --- | --- |
 | `db/` | `supabase.ts`, `request-client.ts`, `session.ts`, `database.types.ts` | Making Supabase clients, the request's client from cookies, the proxy's session refresh, and the types `bun run db:types` generates. |
-| `auth/` | `auth.ts` | Sign-up, sign-in, sign-out and the signed-in Seller. |
+| `auth/` | `auth.ts`, `account.ts` | Sign-up, sign-in, sign-out and the signed-in Seller (`auth.ts`); the Seller's own account as /me shows and changes it (`account.ts`). |
 | `costs/` | `cost-items.ts`, `cost-categories.ts`, `cost-sheets.ts` | The Cost List, Cost Categories and cost sheets. `seller-isolation.test.ts` lives here too. |
 | `testing/` | `test-sellers.ts` | Test-only helpers. The app never imports them. |
 
@@ -96,6 +96,7 @@ Each server module exports one error class:
 - `CostCategoryError` in `cost-categories.ts`
 - `CostSheetError` in `cost-sheets.ts`
 - `SignInError` in `auth.ts`, which also turns Supabase Auth's error codes into Thai
+- `AccountError` in `account.ts`, for /me, which does the same for changing a password
 
 The `message` of each is in Thai, and the UI shows it to the seller unchanged. A missing record is usually an error. The exceptions are the reads that expect absence: `getCostItem` and `getCostSheet` return `null`. A delete of a record that is already gone does nothing.
 

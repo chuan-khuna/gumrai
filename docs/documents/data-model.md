@@ -101,6 +101,12 @@ Each function runs as one transaction and uses `search_path = ''`. The app calls
 | `delete_cost_item(p_id)` | `deleteCostItem` | Locks the item, copies its name, Unit Cost, Unit, and category into every line that links to it, and then deletes it. Those lines become Manual Lines, so no sheet's figures change. |
 | `duplicate_cost_sheet(p_sheet_id, p_name)` | `duplicateCostSheet` | Inserts a copy of the sheet and of all its lines, and returns the new id. Linked Lines in the copy link to the same items. |
 
+One more function is not a transaction but a narrow window into `auth.users`:
+
+| Function | Caller | Behaviour |
+| --- | --- | --- |
+| `seller_has_password()` | `readAccount`, `changePassword`, `setFirstPassword` | Whether the signed-in Seller has a password: `true` when their `auth.users.encrypted_password` is neither null nor empty. It is `security definer`, because the app cannot read `auth.users`, and it reads only the caller's own row and returns only a yes or no. Executable by `authenticated` only. |
+
 The `linked_lines` migration redefines `save_cost_sheet` with `create or replace`. A later migration redefines a function instead of editing the migration that created it.
 
 ## Numbers in the app are decimal strings
