@@ -1,5 +1,5 @@
 import { MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
-import { createPublicClient, type Db } from '@/server/db/supabase'
+import { createPublicClient, createSecretClient, type Db } from '@/server/db/supabase'
 
 // The signed-in Seller's own account, as /me shows and changes it (GLOSSARY.md: Seller,
 // Display Name). Every operation acts on the Seller whose session `db` holds; from a server
@@ -146,4 +146,47 @@ export async function setFirstPassword(db: Db, newPassword: string): Promise<voi
     throw new AccountError('บัญชีนี้มีรหัสผ่านอยู่แล้ว เปลี่ยนรหัสผ่านแทน')
   }
   await savePassword(db, newPassword)
+}
+
+/** What deleting the account would lose, for the confirmation /me shows. */
+export type AccountData = { costSheets: number; costItems: number }
+
+/** How many Cost Sheets and Cost Items the signed-in Seller has. */
+export async function countAccountData(db: Db): Promise<AccountData> {
+  await signedIn(db)
+  // Row-level security limits both counts to the Seller's own rows.
+  const [sheets, items] = await Promise.all([
+    db.from('cost_sheet').select('id', { count: 'exact', head: true }),
+    db.from('cost_item').select('id', { count: 'exact', head: true }),
+  ])
+  if (sheets.error) throw sheets.error
+  if (items.error) throw items.error
+  return { costSheets: sheets.count ?? 0, costItems: items.count ?? 0 }
+}
+
+/** The text a Seller must type, exactly, to delete their account. */
+export const DELETE_CONFIRMATION = 'delete'
+
+/**
+ * Deletes the signed-in Seller and everything they own: profile, Cost Categories, Cost Items,
+ * Cost Sheets and their lines. Refused unless `confirmation` is exactly DELETE_CONFIRMATION.
+ * Afterwards `db`'s session is cleared, so the Seller is signed out.
+ *
+ * Deleting an auth user is admin-only, so this is the one operation outside tests that uses
+ * the secret key. It deletes only the id the verified session names.
+ */
+export async function deleteAccount(db: Db, confirmation: string): Promise<void> {
+  if (confirmation !== DELETE_CONFIRMATION) {
+    throw new AccountError(`พิมพ์ ${DELETE_CONFIRMATION} เพื่อยืนยันการลบบัญชี`)
+  }
+  const { id } = await signedIn(db)
+
+  // The delete_seller_sheets trigger deletes the sheets and lines first; the owner keys
+  // cascade to the profile, categories and items (docs/documents/data-model.md).
+  const { error } = await createSecretClient().auth.admin.deleteUser(id)
+  if (error) throw error
+
+  // The user and their sessions are already gone, and signOut ignores Supabase Auth's 404 or
+  // 403 for that; it still clears the session, and on a request client the cookies.
+  await db.auth.signOut({ scope: 'local' })
 }

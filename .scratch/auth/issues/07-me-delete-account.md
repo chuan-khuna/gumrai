@@ -4,10 +4,10 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The account module offers deleting the signed-in Seller, refusing unless the confirmation text is exactly `delete`; deleting the user is an admin-only operation and is the only place the secret key is used outside tests.
-- [ ] Deleting removes the Seller's profile, Cost Categories, Cost Items and Cost Sheets with their lines.
-- [ ] The confirmation shows the counts and the rest of its text in Thai.
-- [ ] Tests cover: wrong confirmation text deletes nothing; a deletion removes all of the Seller's data; another Seller's data is untouched.
-- [ ] The sign-in and Data model documents are updated.
+- [x] The account module offers deleting the signed-in Seller, refusing unless the confirmation text is exactly `delete`; deleting the user is an admin-only operation and is the only place the secret key is used outside tests.
+- [x] Deleting removes the Seller's profile, Cost Categories, Cost Items and Cost Sheets with their lines.
+- [x] The confirmation shows the counts and the rest of its text in Thai.
+- [x] Tests cover: wrong confirmation text deletes nothing; a deletion removes all of the Seller's data; another Seller's data is untouched.
+- [x] The sign-in and Data model documents are updated.

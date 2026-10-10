@@ -1,19 +1,22 @@
 import { redirect } from 'next/navigation'
 import { ChangePasswordForm, DisplayNameForm, SetPasswordForm } from '@/app/me/account-forms'
 import { signOutAction } from '@/app/login/actions'
+import { deleteAccountAction } from '@/app/me/actions'
+import { ConfirmAction } from '@/components/confirm-action'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { readAccount } from '@/server/auth/account'
+import { countAccountData, DELETE_CONFIRMATION, readAccount } from '@/server/auth/account'
 import { MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
 import { requestClient } from '@/server/db/request-client'
 
-// The signed-in Seller's account: Display Name, password, and signing out. Tickets 06 and 07
-// add the ways of signing in and deleting the account as further cards.
+// The signed-in Seller's account: Display Name, password, deleting the account, and signing
+// out. Ticket 06 adds the ways of signing in as a further card, before the delete card.
 export default async function MePage() {
   const db = await requestClient()
   const account = await readAccount(db)
   // The layout has already checked; this only narrows the type.
   if (!account) redirect('/login')
+  const data = await countAccountData(db)
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
@@ -53,6 +56,24 @@ export default async function MePage() {
             </CardContent>
           </>
         )}
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>ลบบัญชี</CardTitle>
+          <CardDescription>ลบบัญชีและข้อมูลทั้งหมดของคุณ ลบแล้วกู้คืนไม่ได้</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConfirmAction
+            action={deleteAccountAction}
+            trigger="ลบบัญชี"
+            size="default"
+            title="ลบบัญชีนี้?"
+            description={`ชีตต้นทุน ${data.costSheets} ชีต รายการต้นทุน ${data.costItems} รายการ หมวดต้นทุน และชื่อที่แสดงของคุณจะถูกลบทั้งหมด ลบแล้วกู้คืนไม่ได้`}
+            confirmLabel="ลบบัญชี"
+            typeToConfirm={DELETE_CONFIRMATION}
+          />
+        </CardContent>
       </Card>
 
       <form action={signOutAction} className="mt-8">

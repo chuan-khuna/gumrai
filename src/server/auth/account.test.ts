@@ -2,13 +2,19 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   AccountError,
   changePassword,
+  countAccountData,
+  deleteAccount,
   readAccount,
   renameDisplayName,
   setFirstPassword,
 } from '@/server/auth/account'
 import { currentSeller } from '@/server/auth/auth'
+import { createCostCategory } from '@/server/costs/cost-categories'
+import { createCostItem } from '@/server/costs/cost-items'
+import { createCostSheet, saveCostSheet } from '@/server/costs/cost-sheets'
 import { createPublicClient } from '@/server/db/supabase'
 import {
+  adminClient,
   createSeller,
   createSellerWithoutPassword,
   removeSellers,
@@ -161,5 +167,107 @@ describe('Setting a first password', () => {
 
     expect(message).toBe('บัญชีนี้มีรหัสผ่านอยู่แล้ว เปลี่ยนรหัสผ่านแทน')
     await expect(signIn(seller.email, seller.password)).resolves.toBeDefined()
+  })
+})
+
+describe('Deleting the account', () => {
+  // A Seller with one of everything they can own: a Cost Category, a Cost Item and a Cost
+  // Sheet whose line links to the item (the case that needs delete_seller_sheets).
+  async function sellerWithData(displayName: string) {
+    const seller = await createSeller(displayName)
+    const category = await createCostCategory(seller.db, 'หมวดทดสอบ')
+    const item = await createCostItem(seller.db, { name: 'มัทฉะ', unitCost: '4', unit: 'g', categoryId: category.id })
+    const sheet = await createCostSheet(seller.db, 'ชีตทดสอบ')
+    await saveCostSheet(seller.db, sheet.id, {
+      name: sheet.name,
+      saleUnit: 'แก้ว',
+      sellingPrice: '65',
+      gpPercent: '0',
+      vatPercent: '7',
+      lines: [
+        { costItemId: item.id, quantityUsed: '4' },
+        { name: 'แก้ว', unitCost: '3', unit: 'ใบ', categoryId: null, quantityUsed: '1' },
+      ],
+    })
+    return seller
+  }
+
+  // Every row the Seller owns, looked at past row-level security.
+  async function rowsOwnedBy(id: string) {
+    const admin = adminClient()
+    const count = async (table: 'cost_category' | 'cost_item' | 'cost_sheet' | 'cost_line') => {
+      const { count, error } = await admin.from(table).select('id', { count: 'exact', head: true }).eq('owner', id)
+      if (error) throw error
+      return count
+    }
+    const profile = await admin.from('seller_profile').select('id', { count: 'exact', head: true }).eq('id', id)
+    if (profile.error) throw profile.error
+    const user = await admin.auth.admin.getUserById(id)
+    return {
+      user: user.data.user ? 1 : 0,
+      seller_profile: profile.count,
+      cost_category: await count('cost_category'),
+      cost_item: await count('cost_item'),
+      cost_sheet: await count('cost_sheet'),
+      cost_line: await count('cost_line'),
+    }
+  }
+
+  const ONE_OF_EACH = {
+    user: 1,
+    seller_profile: 1,
+    // The three starting categories and the one made above.
+    cost_category: 4,
+    cost_item: 1,
+    cost_sheet: 1,
+    cost_line: 2,
+  }
+
+  it('counts the Cost Sheets and Cost Items that would be lost', async () => {
+    const seller = await sellerWithData('ร้าน')
+
+    expect(await countAccountData(seller.db)).toEqual({ costSheets: 1, costItems: 1 })
+  })
+
+  it('refuses any text but exactly "delete", in Thai, and deletes nothing', async () => {
+    const seller = await sellerWithData('ร้าน')
+
+    for (const text of ['', 'Delete', ' delete', 'delete ', 'ลบ']) {
+      expect(await failure(deleteAccount(seller.db, text))).toBe('พิมพ์ delete เพื่อยืนยันการลบบัญชี')
+    }
+
+    expect(await rowsOwnedBy(seller.id)).toEqual(ONE_OF_EACH)
+    expect(await currentSeller(seller.db)).toMatchObject({ id: seller.id })
+  })
+
+  it('removes the Seller and all their data, and signs them out', async () => {
+    const seller = await sellerWithData('ร้าน')
+
+    await deleteAccount(seller.db, 'delete')
+
+    expect(await rowsOwnedBy(seller.id)).toEqual({
+      user: 0,
+      seller_profile: 0,
+      cost_category: 0,
+      cost_item: 0,
+      cost_sheet: 0,
+      cost_line: 0,
+    })
+    expect(await currentSeller(seller.db)).toBeNull()
+    await expect(signIn(seller.email, seller.password)).rejects.toThrow()
+  })
+
+  it("leaves another Seller's data untouched", async () => {
+    const leaving = await sellerWithData('ร้านที่ลบ')
+    const staying = await sellerWithData('ร้านที่อยู่')
+
+    await deleteAccount(leaving.db, 'delete')
+
+    expect(await rowsOwnedBy(staying.id)).toEqual(ONE_OF_EACH)
+    expect(await countAccountData(staying.db)).toEqual({ costSheets: 1, costItems: 1 })
+  })
+
+  it('refuses when no one is signed in', async () => {
+    expect(await failure(deleteAccount(createPublicClient(), 'delete'))).toBe('ต้องเข้าสู่ระบบก่อน')
   })
 })

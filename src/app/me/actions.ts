@@ -1,9 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import {
   AccountError,
   changePassword,
+  deleteAccount,
   renameDisplayName,
   setFirstPassword,
 } from '@/server/auth/account'
@@ -65,4 +67,13 @@ export async function setFirstPasswordAction(
   // The page now shows the change form instead of ตั้งรหัสผ่าน.
   revalidatePath('/me')
   return { error: null, saved: true }
+}
+
+// Deletes the Seller and everything they own, signs them out, and goes to the landing page.
+// The dialog only lets `delete` through; deleteAccount refuses anything else again here.
+export async function deleteAccountAction(confirmation: string): Promise<void> {
+  const db = await requestClient()
+  await deleteAccount(db, String(confirmation))
+  revalidatePath('/', 'layout')
+  redirect('/')
 }
