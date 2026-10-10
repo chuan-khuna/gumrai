@@ -66,7 +66,7 @@ erDiagram
 | `cost_sheet` | One costing of a thing the seller sells | `sale_unit` defaults to ชิ้น, `gp_percent` to 0, and `vat_percent` to 7. |
 | `cost_line` | One cost on a sheet | `position` starts at 0. A line has either `cost_item_id` or its own `name`, `unit_cost`, `unit`, and `cost_category_id`. |
 
-Every owned table (`cost_category`, `cost_item`, `cost_sheet`, `cost_line`) has a required `owner`, the Seller's `auth.users` id. It defaults to `auth.uid()`, the signed-in Seller, so the app never sends it. Row-level security lets a Seller read and change only rows they own; [Sign-in](sign-in.md) describes the policies. Deleting a Seller deletes everything they own.
+Every owned table (`cost_category`, `cost_item`, `cost_sheet`, `cost_line`) has a required `owner`, the Seller's `auth.users` id. It defaults to `auth.uid()`, the signed-in Seller, so the app never sends it. Row-level security lets a Seller read and change only rows they own; [Sign-in](sign-in.md) describes the policies. Deleting a Seller deletes everything they own. A Seller does that from `/me` with `deleteAccount` ([Sign-in](sign-in.md#deleting-the-account)), which deletes their `auth.users` row with the secret key and lets the trigger and the cascades below do the rest.
 
 The `seller_sign_in` migration deleted every row that had no owner, including the old ownerless starting categories.
 
@@ -75,7 +75,7 @@ The `seller_sign_in` migration deleted every row that had no owner, including th
 | Trigger | When | Behaviour |
 | --- | --- | --- |
 | `create_seller_on_signup` → `create_seller()` | After a user is inserted | Inserts the `seller_profile` row and the three starting Cost Categories, in the same transaction as the user. The Display Name is `raw_user_meta_data.display_name`, else `full_name`, else `name`, else the part of the email before `@`. |
-| `delete_seller_sheets_on_user_delete` → `delete_seller_sheets()` | Before a user is deleted | Deletes the Seller's sheets, and so their lines, first. Postgres cascades the owner keys one table at a time, and a line still linked to a Cost Item would block the item's delete. |
+| `delete_seller_sheets_on_user_delete` → `delete_seller_sheets()` | Before a user is deleted | Deletes the Seller's sheets, and so their lines, first. Postgres cascades the owner keys one table at a time, and a line still linked to a Cost Item would block the item's delete. The owner keys then cascade to `seller_profile`, `cost_category` and `cost_item`. This is how deleting an account (`deleteAccount`) removes all of a Seller's data. |
 
 Both run `security definer`, because Supabase Auth inserts and deletes users with no Seller session.
 

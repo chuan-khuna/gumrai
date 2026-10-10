@@ -70,7 +70,7 @@ Every exported operation in `src/server/` takes the Supabase client as its first
 | A page or server action | `await requestClient()` in `src/server/db/request-client.ts`, called once per render or action and passed to each operation | The Seller whose session is in the request's cookies, or nobody (`anon`) |
 | The proxy | `refreshSession(request)` in `src/server/db/session.ts` makes its own, to refresh the session | The same Seller |
 | A test | `createSeller()` in `src/server/testing/test-sellers.ts`, once per test | A real Seller made for that test |
-| Admin-only work (tests' setup and cleanup; deleting an account, later) | `createSecretClient()` in `src/server/db/supabase.ts` | `service_role`, which bypasses row-level security |
+| Admin-only work (tests' setup and cleanup; `deleteAccount`) | `createSecretClient()` in `src/server/db/supabase.ts` | `service_role`, which bypasses row-level security |
 
 ```ts
 const db = await requestClient()
@@ -96,7 +96,7 @@ Each server module exports one error class:
 - `CostCategoryError` in `cost-categories.ts`
 - `CostSheetError` in `cost-sheets.ts`
 - `SignInError` in `auth.ts`, which also turns Supabase Auth's error codes into Thai
-- `AccountError` in `account.ts`, for /me, which does the same for changing a password
+- `AccountError` in `account.ts`, for /me, which does the same for changing a password and refuses a wrong delete confirmation
 
 The `message` of each is in Thai, and the UI shows it to the seller unchanged. A missing record is usually an error. The exceptions are the reads that expect absence: `getCostItem` and `getCostSheet` return `null`. A delete of a record that is already gone does nothing.
 

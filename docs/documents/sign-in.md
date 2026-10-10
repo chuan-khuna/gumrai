@@ -12,8 +12,8 @@ This page explains how a Seller signs up and signs in with email, how their sess
 | Request client | `src/server/db/request-client.ts` | `requestClient()`: a new client per request, reading and writing the session cookies through `next/headers`. |
 | Proxy | `src/proxy.ts`, `src/server/db/session.ts` | Runs before every page. Refreshes the session and sends signed-out visitors from the Seller pages to the login page. |
 | Seller frame | `src/app/seller-shell.tsx`, used by the layouts of `src/app/sheets/`, `src/app/cost-list/` and `src/app/me/` | Checks the Seller again and shows the header: the Display Name, which links to `/me`, and ออกจากระบบ. |
-| Account page | `src/app/me/page.tsx`, `account-forms.tsx`, `actions.ts` | `/me`: rename the Display Name, change or set the password, ออกจากระบบ. |
-| Account operations | `src/server/auth/account.ts` | `readAccount`, `renameDisplayName`, `changePassword` and `setFirstPassword`, plus `AccountError`. |
+| Account page | `src/app/me/page.tsx`, `account-forms.tsx`, `actions.ts` | `/me`: rename the Display Name, change or set the password, delete the account, ออกจากระบบ. |
+| Account operations | `src/server/auth/account.ts` | `readAccount`, `renameDisplayName`, `changePassword`, `setFirstPassword`, `countAccountData` and `deleteAccount`, plus `AccountError`. |
 | Return-to | `src/lib/return-to.ts` | `safeReturnTo` and `loginPath`. |
 | Database | `supabase/migrations/20261010075658_seller_sign_in.sql` | Owners, row-level security policies, `seller_profile`, and the triggers on `auth.users`. |
 | Auth settings | `supabase/config.toml`, `[auth]` and `[auth.email]` | `minimum_password_length = 8`, `enable_confirmations = false`. |
@@ -87,7 +87,7 @@ The root page `/` is the public landing page. It needs no sign-in and is not in 
 
 ## The account page, /me
 
-`/me` shows the Seller's email and has one card for the Display Name and one for the password, then an ออกจากระบบ button. The header's Display Name links here. Every operation in `src/server/auth/account.ts` acts on the Seller whose session `db` holds, and refuses with ต้องเข้าสู่ระบบก่อน when there is none.
+`/me` shows the Seller's email and has one card for the Display Name, one for the password and one for deleting the account, then an ออกจากระบบ button. The header's Display Name links here. Every operation in `src/server/auth/account.ts` acts on the Seller whose session `db` holds, and refuses with ต้องเข้าสู่ระบบก่อน when there is none.
 
 - **Display Name.** `renameDisplayName(db, name)` trims the name, refuses a blank one, and updates the Seller's own `seller_profile` row with their session client; the row-level security policy allows only that row. The check constraint `btrim(display_name) <> ''` refuses a blank name again in the database. The action revalidates every page, so the header shows the new name.
 - **Has a password or not.** `readAccount` asks the database through `seller_has_password()` ([Data model](data-model.md#postgres-functions)). A Seller who only signed in with Discord has an empty password hash. Supabase Auth's identities cannot answer this, because setting a password later adds no `email` identity.
@@ -123,7 +123,36 @@ flowchart TD
 | New password equals the current one (`same_password`) | รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม |
 | Changing when there is no password | บัญชีนี้ยังไม่มีรหัสผ่าน ตั้งรหัสผ่านแทน |
 | Setting a first password when there is one | บัญชีนี้มีรหัสผ่านอยู่แล้ว เปลี่ยนรหัสผ่านแทน |
+| Deleting the account with any text but exactly `delete` | พิมพ์ delete เพื่อยืนยันการลบบัญชี |
 | Too many attempts (`over_request_rate_limit`) | ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่ |
+
+### Deleting the account
+
+The last card on `/me`, before ออกจากระบบ, is ลบบัญชี. Its button opens a `ConfirmAction` dialog whose text, in Thai, states how many Cost Sheets and Cost Items will be lost (`countAccountData(db)`, which counts through row-level security, so only the Seller's own rows). The dialog has a field, and its ลบบัญชี button stays disabled until the Seller types exactly `delete`. What they typed is sent to `deleteAccountAction`, and `deleteAccount(db, confirmation)` checks it again: anything but exactly `delete` (no trimming, no other case) is refused with พิมพ์ delete เพื่อยืนยันการลบบัญชี and nothing is deleted.
+
+Deleting an auth user is admin-only in Supabase Auth, so `deleteAccount` is the one operation outside tests that uses the secret key. It takes the id from the verified session (`getClaims`), never from the request, and calls `auth.admin.deleteUser(id)`. The `delete_seller_sheets` trigger deletes the sheets and their lines first; the owner keys cascade to the profile, Cost Categories and Cost Items ([Data model](data-model.md#triggers-on-authusers)). Supabase Auth deletes the user's sessions and identities with it. Then `signOut` on the request client clears the session cookies (Supabase Auth's 404 or 403 for the already-gone session is ignored by supabase-js), and the action revalidates every page and redirects to `/`.
+
+```mermaid
+sequenceDiagram
+	participant S as Seller
+	participant D as ConfirmAction dialog
+	participant A as deleteAccountAction
+	participant M as deleteAccount
+	participant Auth as Supabase Auth (secret key)
+	participant PG as Postgres
+	S->>D: ลบบัญชี, sees N sheets / M items
+	S->>D: types delete
+	D->>A: deleteAccountAction("delete")
+	A->>M: deleteAccount(db, "delete")
+	M->>M: confirmation === "delete"? getClaims → id
+	M->>Auth: admin.deleteUser(id)
+	Auth->>PG: delete auth.users row
+	PG->>PG: delete_seller_sheets (sheets, lines)<br/>owner keys cascade (profile, categories, items)
+	M->>M: signOut (clears cookies)
+	A-->>S: redirect to /
+```
+
+A crafted request with the wrong text gets the `AccountError` thrown from the action, as other delete actions throw; the dialog never sends it.
 
 ## Signing out
 
@@ -167,7 +196,7 @@ A Seller therefore never exists without them. Deleting a Seller's auth user dele
 
 ## The secret key
 
-`createSecretClient()` has the `service_role`, which bypasses row-level security. Nothing a Seller does runs through it. Tests use it to create and delete Sellers, and admin-only operations, such as deleting an account, will use it. The app's pages and actions use the publishable key with the Seller's session.
+`createSecretClient()` has the `service_role`, which bypasses row-level security. Nothing else a Seller does runs through it. Tests use it to create and delete Sellers. Outside tests only `deleteAccount` uses it, because deleting an auth user is admin-only; it deletes only the id the Seller's verified session names. The app's pages and actions use the publishable key with the Seller's session.
 
 ## The test Seller
 
