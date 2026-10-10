@@ -1,22 +1,25 @@
 # Sign-in, sessions and row-level security
 
-This page explains how a Seller signs up and signs in with email, how their session travels with each request, how they change their Display Name and password at `/me`, and how the database keeps each Seller to their own data. Seller and Display Name are defined in [GLOSSARY.md](../../GLOSSARY.md). Discord sign-in, binding sign-in methods and account deletion come in later tickets under `.scratch/auth/issues/`.
+This page explains how a Seller signs up and signs in with email or Discord, how their session travels with each request, how they change their Display Name and password and delete their account at `/me`, and how the database keeps each Seller to their own data. Seller and Display Name are defined in [GLOSSARY.md](../../GLOSSARY.md). Binding and unbinding sign-in methods at `/me` comes in a later ticket under `.scratch/auth/issues/`.
 
 ## The parts
 
 | Part | Path | Job |
 | --- | --- | --- |
-| Login page | `src/app/login/page.tsx`, `login-forms.tsx` | A sign-in form and a sign-up form. `?next=` is the page to go to afterwards. A signed-in Seller who opens it goes straight there. |
-| Auth actions | `src/app/login/actions.ts` | `signInAction`, `signUpAction` and `signOutAction`. Wiring only. |
+| Login page | `src/app/login/page.tsx`, `login-forms.tsx` | A เข้าสู่ระบบด้วย Discord button, a sign-in form and a sign-up form. `?next=` is the page to go to afterwards; `?error=` is a Discord failure to explain. A signed-in Seller who opens it goes straight there. |
+| Auth actions | `src/app/login/actions.ts` | `signInAction`, `signUpAction`, `discordSignInAction` and `signOutAction`. Wiring only. |
 | Auth operations | `src/server/auth/auth.ts` | `signUpWithEmail`, `signInWithEmail`, `signOut` and `currentSeller`, plus `SignInError`. |
+| OAuth operations | `src/server/auth/oauth.ts` | `startDiscordSignIn`, `finishOAuth`, `oauthCallbackUrl` and `oauthFailureMessage`. |
+| OAuth callback | `src/app/auth/callback/route.ts` | A Route Handler: `GET /auth/callback` calls `finishOAuth` and redirects where it says. Wiring only. |
+| Header avatar | `src/app/seller-avatar.tsx`, `src/lib/avatar.ts` | The Discord avatar, or the Display Name's first letter (`sellerAvatar`). |
 | Request client | `src/server/db/request-client.ts` | `requestClient()`: a new client per request, reading and writing the session cookies through `next/headers`. |
 | Proxy | `src/proxy.ts`, `src/server/db/session.ts` | Runs before every page. Refreshes the session and sends signed-out visitors from the Seller pages to the login page. |
-| Seller frame | `src/app/seller-shell.tsx`, used by the layouts of `src/app/sheets/`, `src/app/cost-list/` and `src/app/me/` | Checks the Seller again and shows the header: the Display Name, which links to `/me`, and ออกจากระบบ. |
+| Seller frame | `src/app/seller-shell.tsx`, used by the layouts of `src/app/sheets/`, `src/app/cost-list/` and `src/app/me/` | Checks the Seller again and shows the header: the avatar and Display Name, which link to `/me`, and ออกจากระบบ. |
 | Account page | `src/app/me/page.tsx`, `account-forms.tsx`, `actions.ts` | `/me`: rename the Display Name, change or set the password, delete the account, ออกจากระบบ. |
 | Account operations | `src/server/auth/account.ts` | `readAccount`, `renameDisplayName`, `changePassword`, `setFirstPassword`, `countAccountData` and `deleteAccount`, plus `AccountError`. |
 | Return-to | `src/lib/return-to.ts` | `safeReturnTo` and `loginPath`. |
-| Database | `supabase/migrations/20261010075658_seller_sign_in.sql` | Owners, row-level security policies, `seller_profile`, and the triggers on `auth.users`. |
-| Auth settings | `supabase/config.toml`, `[auth]` and `[auth.email]` | `minimum_password_length = 8`, `enable_confirmations = false`. |
+| Database | `supabase/migrations/20261010075658_seller_sign_in.sql`, `20261010083051_discord_sign_in.sql` | Owners, row-level security policies, `seller_profile`, the triggers on `auth.users`, and `seller_discord_avatar()`. |
+| Auth settings | `supabase/config.toml`, `[auth]`, `[auth.email]` and `[auth.external.discord]` | `minimum_password_length = 8`, `enable_confirmations = false`, the callback in `additional_redirect_urls`, and the Discord provider with its client ID and secret from the environment. |
 
 ## Signing up and signing in
 
@@ -61,6 +64,62 @@ sequenceDiagram
 | Too many attempts | `over_request_rate_limit` | ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่ |
 | Blank email, password or Display Name | checked first | ต้องใส่อีเมล, ต้องใส่รหัสผ่าน, ต้องใส่ชื่อที่แสดง |
 
+## Signing in with Discord
+
+Supabase Auth runs the OAuth flow with Discord, with PKCE. The app never sees a Discord token; it gets a Supabase session like an email sign-in does. Setting up the Discord Application is in [Onboarding](ONBOARDING.md#set-up-discord-sign-in).
+
+```mermaid
+sequenceDiagram
+	actor V as Visitor
+	participant L as /login
+	participant A as discordSignInAction
+	participant S as Supabase Auth<br/>127.0.0.1:54321
+	participant D as Discord
+	participant C as /auth/callback
+	participant DB as Postgres
+	V->>L: GET /login?next=/sheets/abc
+	V->>A: เข้าสู่ระบบด้วย Discord (form post, next)
+	A->>A: startDiscordSignIn: signInWithOAuth<br/>redirectTo = origin/auth/callback?flow=sign-in&next=/sheets/abc
+	A-->>V: Set-Cookie code verifier, redirect to S /authorize
+	V->>S: GET /auth/v1/authorize?provider=discord
+	S-->>V: redirect to Discord, scopes identify email
+	V->>D: consent
+	D-->>V: redirect to S /auth/v1/callback?code=... (or ?error=access_denied)
+	V->>S: GET /auth/v1/callback
+	S->>D: exchange code, GET /users/@me
+	S->>DB: first time: insert auth.users + discord identity
+	DB->>DB: create_seller: profile (Discord name) + 3 starting Cost Categories
+	S-->>V: redirect to /auth/callback?flow=...&next=...&code=... (or &error=...)
+	V->>C: GET /auth/callback
+	C->>S: finishOAuth: exchangeCodeForSession(code, verifier cookie)
+	C-->>V: Set-Cookie session, redirect to /sheets/abc<br/>or /login?next=...&error=...
+```
+
+- **Starting.** `discordSignInAction` takes the site's origin from the form post's `Origin` header and calls `startDiscordSignIn(db, origin, next)`. It must run in a server action: `signInWithOAuth` keeps the PKCE code verifier in a cookie (`sb-…-auth-token-code-verifier`) until the callback, and a page cannot write cookies.
+- **The callback is a Route Handler**, `src/app/auth/callback/route.ts`, for the same reason: exchanging the code writes the session cookies. It calls `finishOAuth(db, searchParams)`, revalidates every page and redirects to the path `finishOAuth` returns.
+- **The callback URL carries the flow and the return-to page**: `/auth/callback?flow=sign-in&next=…`, built by `oauthCallbackUrl`. `next` goes through `safeReturnTo` both when the URL is built and when it is read. `flow` says where a failure goes back to: for `sign-in`, the login page as `/login?next=…&error=<failure>`. An unknown `flow` is treated as `sign-in`. Binding Discord from `/me` (ticket 06) adds a flow that fails back to `/me`.
+- **Supabase Auth checks the callback URL.** It accepts a `redirectTo` on the host of `site_url` (`http://127.0.0.1:3000`) or one matching `additional_redirect_urls` (`http://127.0.0.1:3000/auth/callback**`). Any other one is silently replaced by `site_url`, so the visitor lands on `/` with nothing to finish the flow.
+- **The app must be opened at 127.0.0.1, not localhost.** Cookies belong to a host, so the code verifier set on `localhost:3000` is not sent to `127.0.0.1:3000`. Worse, a `localhost` callback URL is not allowed (above), so Supabase Auth sends the visitor to `http://127.0.0.1:3000/` instead. Either way the sign-in fails.
+- **A first Discord sign-in makes a new Seller.** Supabase Auth inserts the auth user with Discord's profile as its metadata, and `create_seller` makes the profile and the starting Cost Categories ([A new Seller](#a-new-seller)). Supabase Auth does not ask for email confirmation here (`enable_confirmations = false`). A later sign-in with the same Discord account finds the `discord` identity and signs into the same Seller. After that Seller deletes their account, the identity is gone too, so the next Discord sign-in makes a new Seller from scratch.
+- **A Discord email that already belongs to a Seller.** Supabase Auth links identities by email automatically (`DetermineAccountLinking` in supabase/auth `internal/models/linking.go`): a first Discord sign-in whose email matches an existing Seller signs into that Seller and adds a `discord` identity to them, rather than making a second Seller. It counts an email as verified when Discord says so **or when email confirmations are off**, which they are here (`mailer_autoconfirm`), so locally even a Discord account with an unverified email is linked. Turning on manual linking (`enable_manual_linking`) does not stop this. Whether to accept this is still open (ticket 06, `.scratch/auth/issues/06-me-bound-sign-in-methods.md`).
+
+### Discord errors the visitor sees
+
+Supabase Auth puts what went wrong on the callback URL as `error`, `error_code` and `error_description` (in the query and again in the fragment; the Route Handler reads the query). `finishOAuth` turns it into an `OAuthFailure`, which goes to the login page as `?error=`, and the page shows `oauthFailureMessage(error)`. Any other `?error=` shows nothing.
+
+| Case | What Supabase Auth sends | `?error=` | Message |
+| --- | --- | --- | --- |
+| The visitor pressed Cancel on Discord's consent screen | `error=access_denied`, no `error_code` | `cancelled` | ยกเลิกการเข้าสู่ระบบด้วย Discord แล้ว ลองอีกครั้ง หรือเข้าสู่ระบบด้วยอีเมลแทน |
+| The Discord account has no email (`email_optional = false`) | `error=server_error`, `error_description=Error getting user email from external provider` | `no_email` | บัญชี Discord นี้ไม่มีอีเมล เพิ่มอีเมลในบัญชี Discord ก่อน แล้วลองอีกครั้ง |
+| The Discord email is not verified (only if email confirmations are turned on) | `error_code=provider_email_needs_verification` | `unverified_email` | อีเมลในบัญชี Discord นี้ยังไม่ได้ยืนยัน ยืนยันอีเมลใน Discord ก่อน แล้วลองอีกครั้ง |
+| Anything else: no code, an expired state, or a code that cannot be exchanged (no code verifier cookie, used twice) | anything | `failed` | เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง |
+
+A failed code exchange is also logged on the server with Supabase Auth's error code.
+
+### The header's avatar
+
+The header shows the Seller's Discord avatar when they have Discord bound, and the first letter of the Display Name otherwise (`sellerAvatar` in `src/lib/avatar.ts`: the first letter or digit without the marks over or under it, so ร้านทดสอบ gives ร). `currentSeller` returns `discordAvatarUrl` from `seller_discord_avatar()`, which reads the avatar from the Seller's own `discord` identity ([Data model](data-model.md#postgres-functions)). The identity, not the user's metadata, because Supabase Auth refreshes the identity on every Discord sign-in and when Discord is bound later, but binding does not touch the metadata, and a Seller can write their own metadata. Only a URL on `https://cdn.discordapp.com/` is shown. The avatar follows Discord; the Display Name does not.
+
 ## The session
 
 Supabase Auth's session (an access token and a refresh token) lives in `sb-<project>-auth-token` cookies, written by `@supabase/ssr`. Nothing else stores it.
@@ -84,6 +143,8 @@ Neither check is what keeps data apart. Row-level security does that, so even a 
 `safeReturnTo` accepts only a path on this site. It rejects `//host`, `/\host`, control characters, anything not starting with `/`, and the login page itself, and falls back to `/sheets`.
 
 The root page `/` is the public landing page. It needs no sign-in and is not in `SELLER_PAGES`, and it never redirects a signed-in Seller away. It calls `currentSeller` only to choose its main button: เริ่มใช้งาน to `/login` for a visitor, ไปที่ชีตต้นทุน to `/sheets` for a Seller.
+
+`/login` and the OAuth callback `/auth/callback` are public too: a visitor reaches both before they have a session.
 
 ## The account page, /me
 
@@ -189,10 +250,12 @@ The Postgres functions `save_cost_sheet`, `duplicate_cost_sheet` and `delete_cos
 
 The `create_seller` trigger runs after Supabase Auth inserts a user, in the same transaction. It makes:
 
-- the `seller_profile` row, with the Display Name from the sign-up metadata (`display_name`, else `full_name`, else `name`, else the part of the email before `@`);
+- the `seller_profile` row, with the Display Name from the user's metadata: `display_name` (what an email sign-up typed), else `custom_claims.global_name` (the display name chosen on Discord), else `full_name` (the Discord username), else `name`, else the part of the email before `@`;
 - the three starting Cost Categories, วัตถุดิบ, บรรจุภัณฑ์ and อื่น ๆ, owned by the new Seller.
 
-A Seller therefore never exists without them. Deleting a Seller's auth user deletes the profile and all their data: `delete_seller_sheets` deletes their sheets first, and the owner keys cascade to the rest.
+A Seller therefore never exists without them.
+
+Supabase Auth's Discord provider (`internal/api/provider/discord.go` in supabase/auth) stores the Discord user's username as `full_name`, `<username>#<discriminator>` as `name`, and their chosen display name only under `custom_claims.global_name` (an empty string when they have none). That is why `global_name` comes before `full_name`. The trigger runs only when the auth user is inserted. Supabase Auth rewrites the metadata on every later Discord sign-in, but nothing copies it to `seller_profile` again, so a Discord name changed later never changes the Display Name. Deleting a Seller's auth user deletes the profile and all their data: `delete_seller_sheets` deletes their sheets first, and the owner keys cascade to the rest.
 
 ## The secret key
 

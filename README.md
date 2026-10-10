@@ -59,9 +59,9 @@ bun run dev
 
 | URL | Where it goes |
 | --- | --- |
-| http://localhost:3000 | Gumrai |
-| http://localhost:3000/cost-list | Cost List |
-| http://localhost:3000/sheets | Cost Sheets |
+| http://127.0.0.1:3000 | Gumrai |
+| http://127.0.0.1:3000/cost-list | Cost List |
+| http://127.0.0.1:3000/sheets | Cost Sheets |
 | http://127.0.0.1:54323 | Supabase Studio, to browse the database |
 
 ### 5. Run the checks

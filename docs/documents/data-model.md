@@ -74,7 +74,7 @@ The `seller_sign_in` migration deleted every row that had no owner, including th
 
 | Trigger | When | Behaviour |
 | --- | --- | --- |
-| `create_seller_on_signup` → `create_seller()` | After a user is inserted | Inserts the `seller_profile` row and the three starting Cost Categories, in the same transaction as the user. The Display Name is `raw_user_meta_data.display_name`, else `full_name`, else `name`, else the part of the email before `@`. |
+| `create_seller_on_signup` → `create_seller()` | After a user is inserted | Inserts the `seller_profile` row and the three starting Cost Categories, in the same transaction as the user. The Display Name is `raw_user_meta_data.display_name` (an email sign-up), else `custom_claims.global_name` (the display name chosen on Discord), else `full_name` (the Discord username), else `name`, else the part of the email before `@`. It runs only on insert, so a later change on Discord never reaches the Display Name. The `discord_sign_in` migration redefines it to add `global_name`. |
 | `delete_seller_sheets_on_user_delete` → `delete_seller_sheets()` | Before a user is deleted | Deletes the Seller's sheets, and so their lines, first. Postgres cascades the owner keys one table at a time, and a line still linked to a Cost Item would block the item's delete. The owner keys then cascade to `seller_profile`, `cost_category` and `cost_item`. This is how deleting an account (`deleteAccount`) removes all of a Seller's data. |
 
 Both run `security definer`, because Supabase Auth inserts and deletes users with no Seller session.
@@ -101,11 +101,12 @@ Each function runs as one transaction and uses `search_path = ''`. The app calls
 | `delete_cost_item(p_id)` | `deleteCostItem` | Locks the item, copies its name, Unit Cost, Unit, and category into every line that links to it, and then deletes it. Those lines become Manual Lines, so no sheet's figures change. |
 | `duplicate_cost_sheet(p_sheet_id, p_name)` | `duplicateCostSheet` | Inserts a copy of the sheet and of all its lines, and returns the new id. Linked Lines in the copy link to the same items. |
 
-One more function is not a transaction but a narrow window into `auth.users`:
+Two more functions are not transactions but narrow windows into the `auth` schema:
 
 | Function | Caller | Behaviour |
 | --- | --- | --- |
 | `seller_has_password()` | `readAccount`, `changePassword`, `setFirstPassword` | Whether the signed-in Seller has a password: `true` when their `auth.users.encrypted_password` is neither null nor empty. It is `security definer`, because the app cannot read `auth.users`, and it reads only the caller's own row and returns only a yes or no. Executable by `authenticated` only. |
+| `seller_discord_avatar()` | `currentSeller` (the header) | The avatar URL in the signed-in Seller's own `discord` identity (`auth.identities.identity_data.avatar_url`), or null when they have none. `security definer`, reads only the caller's identity, executable by `authenticated` only. It reads the identity rather than the user's metadata because binding Discord later does not write the metadata, and a Seller can write their own. |
 
 The `linked_lines` migration redefines `save_cost_sheet` with `create or replace`. A later migration redefines a function instead of editing the migration that created it.
 

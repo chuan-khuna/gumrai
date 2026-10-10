@@ -4,11 +4,11 @@ Follow this guide from top to bottom to go from a fresh clone to a running app, 
 
 ## What you are setting up
 
-Gumrai (กำไร, "profit") is a Thai-language web app. A small seller, such as a café, uses it to work out what each thing they sell costs and how much profit it leaves. Everything runs on your machine. A Next.js dev server serves the app, and a local Supabase stack runs Postgres inside Docker. Sellers sign in with email and password through the local Supabase Auth. There is no deployment and no cloud account to request.
+Gumrai (กำไร, "profit") is a Thai-language web app. A small seller, such as a café, uses it to work out what each thing they sell costs and how much profit it leaves. Everything runs on your machine. A Next.js dev server serves the app, and a local Supabase stack runs Postgres inside Docker. Sellers sign in with email and password, or with Discord, through the local Supabase Auth. There is no deployment and no cloud account to request.
 
 ```mermaid
 flowchart LR
-	you["Browser<br/>localhost:3000"] --> next["Next.js dev server<br/>bun run dev"]
+	you["Browser<br/>127.0.0.1:3000"] --> next["Next.js dev server<br/>bun run dev"]
 	next --> api["Supabase API<br/>127.0.0.1:54321"]
 	subgraph docker["Docker Desktop: bun run db:start"]
 		api --> db[("Postgres 17<br/>127.0.0.1:54322")]
@@ -107,16 +107,68 @@ Keep about 5 GB of disk space free for the Supabase images. Keep port 3000 and p
    bun run dev
    ```
 
+   Open it at **http://127.0.0.1:3000**, not http://localhost:3000. Both reach the same server, but Supabase Auth only sends a sign-in back to `127.0.0.1`, and cookies set on one host are not sent to the other. Email sign-in happens to work on `localhost`; Discord sign-in does not.
+
+## Set up Discord sign-in
+
+This part is optional. Without it, everything but the เข้าสู่ระบบด้วย Discord button works. Each developer registers their own Discord Application, because its secret must never be committed. It takes about 5 minutes and needs a Discord account.
+
+```mermaid
+flowchart LR
+	app["Gumrai<br/>127.0.0.1:3000"] -- "1 เข้าสู่ระบบด้วย Discord" --> auth["Supabase Auth<br/>127.0.0.1:54321"]
+	auth -- "2 authorize" --> discord["Discord"]
+	discord -- "3 the redirect you register:<br/>127.0.0.1:54321/auth/v1/callback" --> auth
+	auth -- "4 127.0.0.1:3000/auth/callback" --> app
+```
+
+1. **Create the application.** Go to https://discord.com/developers/applications and sign in. Choose **New Application**, name it (for example `Gumrai Local`), tick the box to accept Discord's terms, and click **Create**.
+2. **Copy the Client ID.** Open **OAuth2** in the left menu. Under **Client information**, copy the **Client ID**. Keep it for step 5.
+3. **Copy the Client Secret.** On the same page, click **Reset Secret** and confirm. Copy the **Client Secret** that appears. Discord shows it only once: if you lose it, click **Reset Secret** again, which gives a new secret and makes the old one stop working, so you then update `.env.local` too.
+4. **Register the redirect.** Still on **OAuth2**, under **Redirects**, click **Add Redirect** and enter exactly:
+
+   ```text
+   http://127.0.0.1:54321/auth/v1/callback
+   ```
+
+   Click **Save Changes**. 54321 is the local Supabase API port (`[api] port` in `supabase/config.toml`). This URL is Supabase Auth's callback, not the app's: Discord sends the visitor there, and Supabase Auth then sends them on to the app's own `/auth/callback`. Discord compares it character for character, so use `http`, `127.0.0.1` and no trailing slash.
+5. **Put the two values in `.env.local`.** Add these lines at the end, with the names exactly as `.env.example` lists them:
+
+   ```sh
+   SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID=<the Client ID>
+   SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET=<the Client Secret>
+   ```
+
+   git ignores `.env.local`. Never commit the values, and never write them into `supabase/config.toml`, which reads them with `env(...)` under `[auth.external.discord]`.
+6. **Restart local Supabase** so that Auth picks up the `[auth.external.discord]` settings and the two values:
+
+   ```sh
+   bun run db:stop
+   bun run db:start
+   ```
+
+   `bun run db:reset` alone is not enough; any change under `[auth]` needs this restart. Run the commands through `bun run`, from the repo folder: bun loads `.env.local` and passes it to the Supabase CLI. A bare `bunx supabase start` does not, and Auth then gets the literal text `env(SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID)` as the client ID.
+7. **Open the app at http://127.0.0.1:3000, not http://localhost:3000.** Both reach the same server, but Discord sign-in only works on `127.0.0.1`, for two reasons. Supabase Auth only sends a sign-in back to the host of its `site_url` (`http://127.0.0.1:3000`); a `localhost` callback is replaced by `http://127.0.0.1:3000/`, where nothing finishes the sign-in. And the app keeps a one-time code verifier in a cookie when the sign-in starts, and a cookie set on `localhost` is never sent to `127.0.0.1`. Then go to http://127.0.0.1:3000/login and choose เข้าสู่ระบบด้วย Discord. Discord asks you to authorize your application. Accept, and you land on the Cost Sheets page as a new Seller whose Display Name is your Discord name, with your Discord avatar in the header.
+
+### When Discord sign-in fails
+
+| What you see | Cause and fix |
+| --- | --- |
+| Discord shows "Invalid OAuth2 redirect_uri" | The redirect registered in step 4 is not exactly `http://127.0.0.1:54321/auth/v1/callback`. Correct it under **OAuth2 → Redirects**, and click **Save Changes**. |
+| Discord shows "Invalid OAuth2 client_id", or after Discord the login page says เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง | The Client ID or Client Secret is wrong, or never reached Supabase Auth. A secret stops working when it is reset. Copy both again (reset the secret if you lost it), fix `.env.local`, and run `bun run db:stop` and `bun run db:start`. |
+| The login page says บัญชี Discord นี้ไม่มีอีเมล … | Your Discord account has no email, and every Seller needs one. Add and verify an email in Discord (**User Settings → My Account**), then try again. |
+| The login page says ยกเลิกการเข้าสู่ระบบด้วย Discord แล้ว … | You clicked **Cancel** on Discord's authorize screen. Choose เข้าสู่ระบบด้วย Discord again and click **Authorize**. |
+| After Discord you land on `/`, or the login page says เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง | You opened the app at `localhost`. Open http://127.0.0.1:3000 and sign in again (step 7). |
+
 ## Check that the app runs
 
 Open each URL, and compare the page with the expected result.
 
 | URL | Expected result |
 | --- | --- |
-| http://localhost:3000 | The landing page: the title กำไร and a เริ่มใช้งาน button that opens the login page |
-| http://localhost:3000/sheets | The login page, because no one is signed in. Sign in with the test Seller above. You return to the Cost Sheets page, and the header shows ร้านทดสอบ and ออกจากระบบ. |
-| http://localhost:3000/cost-list | The ลิสต์ต้นทุน page with eight sample items, such as มัทฉะเกรดพิธีชง at 4.5 ฿/g |
-| http://localhost:3000/sheets, again | One sheet, "มัทฉะลาเต้เย็น (แอปส่งอาหาร)". Open it and type a new Selling Price. The profit figures change as you type. |
+| http://127.0.0.1:3000 | The landing page: the title กำไร and a เริ่มใช้งาน button that opens the login page |
+| http://127.0.0.1:3000/sheets | The login page, because no one is signed in. Sign in with the test Seller above. You return to the Cost Sheets page, and the header shows ร้านทดสอบ and ออกจากระบบ. |
+| http://127.0.0.1:3000/cost-list | The ลิสต์ต้นทุน page with eight sample items, such as มัทฉะเกรดพิธีชง at 4.5 ฿/g |
+| http://127.0.0.1:3000/sheets, again | One sheet, "มัทฉะลาเต้เย็น (แอปส่งอาหาร)". Open it and type a new Selling Price. The profit figures change as you type. |
 | http://127.0.0.1:54323 | Supabase Studio. Open **Table Editor** to see `cost_item`, `cost_sheet`, and the other tables, and **Authentication** to see the Sellers. Studio uses the secret key, so it shows every Seller's rows. |
 
 Then run the type check and the tests. Both pass with no errors on a correct setup.
@@ -178,6 +230,7 @@ If every check passes, your setup is complete.
 | `bun install` rejects a package version as too new | The 7-day rule in `bunfig.toml` blocks it. Use an older version of that package. |
 | Signing in as the test Seller fails, or the Cost List is empty after signing in | You are signed in as another Seller, or the seed has not run. Run `bun run db:reset` and sign in as `seller@gumrai.test`. |
 | The sample data is gone, or the database looks wrong | Run `bun run db:reset` to rebuild everything from the migrations and the seed. |
+| Discord sign-in fails | See [When Discord sign-in fails](#when-discord-sign-in-fails). |
 | Port 3000 is in use | Next.js picks the next free port and prints it. Open that URL instead. |
 
 ## Where to go next
