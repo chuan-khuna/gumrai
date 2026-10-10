@@ -425,7 +425,7 @@ An error alert is one line of `foreground` text on `loss-surface`, saying what h
 
 ### The bubble
 
-The one character is a gum bubble covering the circle of กำ in the wordmark. It chews slowly, and a click pops it with a grape star-burst and it grows back. It appears once per screen and is built in CSS.
+The one character is a gum bubble covering the circle of กำ in the wordmark. It chews slowly, and a click pops it with a grape star-burst and it grows back. It appears once per screen and is built in CSS: `Wordmark` in `src/components/wordmark.tsx`, with its keyframes as `--animate-*` tokens in the preset.
 
 ## Do's and Don'ts
 

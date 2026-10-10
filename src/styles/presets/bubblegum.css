@@ -91,6 +91,60 @@
   /* Motion: press, chew, pop. */
   --ease-press: cubic-bezier(0.2, 0.7, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* The bubble on the wordmark (src/components/wordmark.tsx): it chews, a click pops it with a
+     grape star-burst, and it grows back. Hover inflates it through `scale`, which composes
+     with these transforms. */
+  --animate-chew: chew 4s ease-in-out infinite;
+  --animate-bubble-pop: bubble-pop 420ms var(--ease-press) forwards;
+  --animate-bubble-regrow: bubble-regrow 520ms var(--ease-spring) both;
+  --animate-star-burst: star-burst 420ms var(--ease-press) forwards;
+
+  @keyframes chew {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
+  }
+  @keyframes bubble-pop {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    40% {
+      transform: scale(1.26);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(0);
+      opacity: 0;
+    }
+  }
+  @keyframes bubble-regrow {
+    from {
+      transform: scale(0);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes star-burst {
+    0% {
+      transform: scale(0) rotate(0deg);
+      opacity: 1;
+    }
+    60% {
+      transform: scale(1.2) rotate(35deg);
+      opacity: 0.9;
+    }
+    100% {
+      transform: scale(1.45) rotate(45deg);
+      opacity: 0;
+    }
+  }
 }
 
 /* Cost Category colours, indexed by a category's colour slot (src/lib/category-colours.ts
