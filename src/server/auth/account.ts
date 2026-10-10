@@ -1,4 +1,4 @@
-import { MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
+import { MIN_PASSWORD_LENGTH, sessionSeller } from '@/server/auth/auth'
 import { createPublicClient, createSecretClient, type Db } from '@/server/db/supabase'
 
 // The signed-in Seller's own account, as /me shows and changes it (GLOSSARY.md: Seller,
@@ -28,6 +28,7 @@ const WRONG_PASSWORD = 'รหัสผ่านปัจจุบันไม�
 const SAME_PASSWORD = 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม'
 const TOO_MANY_TRIES = 'ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่'
 const NOT_SIGNED_IN = 'ต้องเข้าสู่ระบบก่อน'
+const NO_CURRENT_PASSWORD = 'ต้องใส่รหัสผ่านปัจจุบัน'
 
 // Supabase Auth error codes (AuthError.code) and the Thai message each becomes. Any other
 // error is unexpected and is thrown as it is.
@@ -44,18 +45,8 @@ function rejectAuthError(error: { code?: string }): never {
   throw error
 }
 
-// The verified session's Seller id and email. getClaims checks the token; the cookie alone is
-// not trusted.
-async function session(db: Db): Promise<{ id: string; email: string | null } | null> {
-  const { data } = await db.auth.getClaims()
-  const id = data?.claims.sub
-  if (!id) return null
-  const email = data.claims.email
-  return { id, email: typeof email === 'string' && email !== '' ? email : null }
-}
-
 async function signedIn(db: Db) {
-  const seller = await session(db)
+  const seller = await sessionSeller(db)
   if (!seller) throw new AccountError(NOT_SIGNED_IN)
   return seller
 }
@@ -78,7 +69,7 @@ async function savePassword(db: Db, password: string) {
 
 /** The signed-in Seller's account, or null when no one is signed in. */
 export async function readAccount(db: Db): Promise<Account | null> {
-  const seller = await session(db)
+  const seller = await sessionSeller(db)
   if (!seller) return null
   const { data, error } = await db
     .from('seller_profile')
@@ -116,21 +107,27 @@ export async function renameDisplayName(db: Db, displayName: string): Promise<st
  * sessions are signed out by Supabase Auth; this one stays signed in.
  */
 export async function changePassword(db: Db, currentPassword: string, newPassword: string): Promise<void> {
-  if (currentPassword === '') throw new AccountError('ต้องใส่รหัสผ่านปัจจุบัน')
+  if (currentPassword === '') throw new AccountError(NO_CURRENT_PASSWORD)
   checkNewPassword(newPassword)
   const { email } = await signedIn(db)
   if (!email || !(await hasPassword(db))) {
     throw new AccountError('บัญชีนี้ยังไม่มีรหัสผ่าน ตั้งรหัสผ่านแทน')
   }
+  await checkCurrentPassword(email, currentPassword)
+  await savePassword(db, newPassword)
+}
 
-  // Check the current password by signing in with it on a throwaway client, so the request's
-  // own session is left alone, then end that extra session at once.
+// Checks the current password by signing in with it on a throwaway client, so the request's
+// own session is left alone, then ends that extra session at once. Supabase Auth rate-limits
+// these sign-ins. This is the app asking again, not Supabase Auth: with secure_password_change
+// off, Supabase Auth itself changes a password on the session alone (docs/documents/sign-in.md,
+// "Risks and decisions").
+async function checkCurrentPassword(email: string, password: string) {
+  if (password === '') throw new AccountError(NO_CURRENT_PASSWORD)
   const check = createPublicClient()
-  const { error } = await check.auth.signInWithPassword({ email, password: currentPassword })
+  const { error } = await check.auth.signInWithPassword({ email, password })
   if (error) rejectAuthError(error)
   await check.auth.signOut({ scope: 'local' })
-
-  await savePassword(db, newPassword)
 }
 
 /**
@@ -224,14 +221,18 @@ export async function listSignInMethods(db: Db): Promise<SignInMethod[]> {
  *   refuses to unlink a user's only identity, which is the case for a Seller who signed up with
  *   Discord and set a password later, so their `email` identity is added first
  *   (seller_add_email_identity).
- * - `email`: clears the password (seller_clear_password). Setting a password again binds it back.
+ * - `email`: clears the password (seller_clear_password), once `currentPassword` is shown to be
+ *   right, as for changePassword. Setting a password again binds it back.
  */
-export async function unbindSignInMethod(db: Db, method: SignInMethod): Promise<void> {
+export async function unbindSignInMethod(db: Db, method: SignInMethod, currentPassword = ''): Promise<void> {
   const methods = await listSignInMethods(db)
   if (!methods.includes(method)) throw new AccountError('บัญชีนี้ไม่ได้ใช้วิธีนี้เข้าสู่ระบบ')
   if (methods.length === 1) throw new AccountError(LAST_METHOD)
 
   if (method === 'email') {
+    const { email } = await signedIn(db)
+    if (!email) throw new AccountError('บัญชีนี้ไม่มีอีเมล')
+    await checkCurrentPassword(email, currentPassword)
     const { error } = await db.rpc('seller_clear_password')
     if (error) throw error
     return

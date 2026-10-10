@@ -22,6 +22,7 @@ import {
   createSeller,
   createSellerWithoutPassword,
   discordUser,
+  emailIdentityVerified,
   identityProviders,
   removeSellers,
   signIn,
@@ -336,6 +337,8 @@ describe('Ways to sign in', () => {
     await unbindSignInMethod(seller.db, 'discord')
 
     expect(await identityProviders(seller.id)).toEqual(['email'])
+    // Discord verified that email, so the email identity added before unlinking says so.
+    expect(await emailIdentityVerified(seller.id)).toBe(true)
     const { data } = await adminClient().auth.admin.getUserById(seller.id)
     expect(data.user?.email).toBe(seller.email)
     expect(await listSignInMethods(await signIn(seller.email, seller.password))).toEqual(['email'])
@@ -344,7 +347,7 @@ describe('Ways to sign in', () => {
   it('unbinds email and password by clearing the password; setting one again binds it back', async () => {
     const seller = await createDiscordSeller()
 
-    await unbindSignInMethod(seller.db, 'email')
+    await unbindSignInMethod(seller.db, 'email', seller.password)
 
     expect(await listSignInMethods(seller.db)).toEqual(['discord'])
     expect(await readAccount(seller.db)).toMatchObject({ hasPassword: false })
@@ -356,6 +359,26 @@ describe('Ways to sign in', () => {
 
     await setFirstPassword(seller.db, 'a-new-password')
     expect(await listSignInMethods(seller.db)).toEqual(['email', 'discord'])
+  })
+
+  it('needs the current password to unbind email and password, as changing it does', async () => {
+    const seller = await createDiscordSeller()
+
+    expect(await failure(unbindSignInMethod(seller.db, 'email'))).toBe('ต้องใส่รหัสผ่านปัจจุบัน')
+    expect(await failure(unbindSignInMethod(seller.db, 'email', 'not-the-password'))).toBe('รหัสผ่านปัจจุบันไม่ถูกต้อง')
+
+    expect(await listSignInMethods(seller.db)).toEqual(['email', 'discord'])
+    await signIn(seller.email, seller.password)
+  })
+
+  it('adds an email identity that does not claim the email is verified when nothing verified it', async () => {
+    const seller = await createDiscordOnlySeller(discordUser({ emailVerified: false }), { password: true })
+
+    const { error } = await seller.db.rpc('seller_add_email_identity')
+
+    expect(error).toBeNull()
+    expect(await identityProviders(seller.id)).toEqual(['discord', 'email'])
+    expect(await emailIdentityVerified(seller.id)).toBe(false)
   })
 
   it('keeps the password in the database unless Discord is bound, whoever calls', async () => {

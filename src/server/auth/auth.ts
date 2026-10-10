@@ -90,18 +90,44 @@ export async function signOut(db: Db): Promise<void> {
   if (error) throw error
 }
 
+/** Who the session in `db` belongs to, as its verified access token says. */
+export type SessionSeller = {
+  id: string
+  /** The email in the token, or null when Supabase Auth has none for them. */
+  email: string | null
+}
+
+/**
+ * The Seller the session in `db` names, or null when no one is signed in or the token cannot
+ * be verified. getClaims checks the token; the cookie alone is not trusted.
+ */
+export async function sessionSeller(db: Db): Promise<SessionSeller | null> {
+  const { data } = await db.auth.getClaims()
+  const id = data?.claims.sub
+  if (!id) return null
+  const email = data.claims.email
+  return { id, email: typeof email === 'string' && email !== '' ? email : null }
+}
+
+// The avatar URL in the Seller's own Discord identity, or null. The generated type of
+// seller_discord_avatar() says string, but the generator types every scalar function result as
+// non-null, and this one is null for a Seller without Discord.
+async function discordAvatar(db: Db): Promise<string | null> {
+  const { data, error } = await db.rpc('seller_discord_avatar')
+  if (error) throw error
+  const url: string | null = data
+  return url ?? null
+}
+
 /** The signed-in Seller, or null when no one is signed in. */
 export async function currentSeller(db: Db): Promise<Seller | null> {
-  // getClaims verifies the session's token; the cookie alone is not trusted.
-  const { data: auth } = await db.auth.getClaims()
-  const id = auth?.claims.sub
-  if (!id) return null
-  const [profile, avatar] = await Promise.all([
-    db.from('seller_profile').select('id, display_name').eq('id', id).maybeSingle(),
-    db.rpc('seller_discord_avatar'),
+  const session = await sessionSeller(db)
+  if (!session) return null
+  const [profile, discordAvatarUrl] = await Promise.all([
+    db.from('seller_profile').select('id, display_name').eq('id', session.id).maybeSingle(),
+    discordAvatar(db),
   ])
   if (profile.error) throw profile.error
-  if (avatar.error) throw avatar.error
   const data = profile.data
-  return data && { id: data.id, displayName: data.display_name, discordAvatarUrl: avatar.data ?? null }
+  return data && { id: data.id, displayName: data.display_name, discordAvatarUrl }
 }

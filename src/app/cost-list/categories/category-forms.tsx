@@ -75,6 +75,7 @@ export function DeleteCategoryButton({
           : `รายการต้นทุน ${itemCount} รายการในหมวดนี้จะกลายเป็นไม่มีหมวด (รายการไม่ถูกลบ)`
       }
       confirmLabel="ลบหมวด"
+      pendingLabel="กำลังลบ…"
     />
   )
 }

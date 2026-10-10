@@ -6,6 +6,7 @@ import { ConfirmAction } from '@/components/confirm-action'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { loginPath } from '@/lib/return-to'
 import {
   countAccountData,
   DELETE_CONFIRMATION,
@@ -29,7 +30,7 @@ export default async function MePage({
   const db = await requestClient()
   const account = await readAccount(db)
   // The layout has already checked; this only narrows the type.
-  if (!account) redirect('/login')
+  if (!account) redirect(loginPath('/me'))
   const [data, methods] = await Promise.all([countAccountData(db), listSignInMethods(db)])
 
   return (
@@ -91,6 +92,7 @@ export default async function MePage({
             title="ลบบัญชีนี้?"
             description={`ชีตต้นทุน ${data.costSheets} ชีต รายการต้นทุน ${data.costItems} รายการ หมวดต้นทุน และชื่อที่แสดงของคุณจะถูกลบทั้งหมด ลบแล้วกู้คืนไม่ได้`}
             confirmLabel="ลบบัญชี"
+            pendingLabel="กำลังลบ…"
             typeToConfirm={DELETE_CONFIRMATION}
           />
         </CardContent>
@@ -139,6 +141,7 @@ function SignInMethodsCard({
               trigger="เลิกใช้"
               title="เลิกเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน?"
               description="รหัสผ่านของบัญชีนี้จะถูกลบ หลังจากนี้เข้าสู่ระบบได้ด้วย Discord เท่านั้น ตั้งรหัสผ่านใหม่ได้ทุกเมื่อที่หน้านี้"
+              passwordLabel="รหัสผ่านปัจจุบัน"
               confirmLabel="เลิกใช้"
               pendingLabel="กำลังเลิกใช้…"
             />

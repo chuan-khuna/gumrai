@@ -97,8 +97,14 @@ export async function unbindDiscordAction(): Promise<void> {
   revalidatePath('/', 'layout')
 }
 
-export async function unbindEmailAction(): Promise<void> {
+// Needs the current password, as changing it does. Returns a Thai message when it is refused.
+export async function unbindEmailAction(currentPassword: string): Promise<string | void> {
   const db = await requestClient()
-  await unbindSignInMethod(db, 'email')
+  try {
+    await unbindSignInMethod(db, 'email', String(currentPassword))
+  } catch (error) {
+    if (error instanceof AccountError) return error.message
+    throw error
+  }
   revalidatePath('/', 'layout')
 }

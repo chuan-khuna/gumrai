@@ -45,6 +45,7 @@ export function SheetRow({ sheet }: { sheet: CostSheetSummary }) {
               title={`ลบชีต "${sheet.name}"?`}
               description="ลบแล้วกู้คืนไม่ได้"
               confirmLabel="ลบชีต"
+              pendingLabel="กำลังลบ…"
             />
           </div>
         </>
