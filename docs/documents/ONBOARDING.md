@@ -107,7 +107,7 @@ Keep about 5 GB of disk space free for the Supabase images. Keep port 3000 and p
    bun run dev
    ```
 
-   Open it at **http://127.0.0.1:3000**, not http://localhost:3000. Both reach the same server, but Supabase Auth only sends a sign-in back to `127.0.0.1`, and cookies set on one host are not sent to the other. Email sign-in happens to work on `localhost`; Discord sign-in does not.
+   Open it at **http://127.0.0.1:3000** or http://localhost:3000; both work. Stay on one host for a whole sign-in, because cookies set on one host are not sent to the other. Live reload on `127.0.0.1` needs `DEV_ALLOWED_ORIGINS=127.0.0.1` in `.env.local` (`.env.example` has it).
 
 ## Set up Discord sign-in
 
@@ -147,7 +147,7 @@ flowchart LR
    ```
 
    `bun run db:reset` alone is not enough; any change under `[auth]` needs this restart. Run the commands through `bun run`, from the repo folder: bun loads `.env.local` and passes it to the Supabase CLI. A bare `bunx supabase start` does not, and Auth then gets the literal text `env(SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID)` as the client ID.
-7. **Open the app at http://127.0.0.1:3000, not http://localhost:3000.** Both reach the same server, but Discord sign-in only works on `127.0.0.1`, for two reasons. Supabase Auth only sends a sign-in back to the host of its `site_url` (`http://127.0.0.1:3000`); a `localhost` callback is replaced by `http://127.0.0.1:3000/`, where nothing finishes the sign-in. And the app keeps a one-time code verifier in a cookie when the sign-in starts, and a cookie set on `localhost` is never sent to `127.0.0.1`. Then go to http://127.0.0.1:3000/login and choose เข้าสู่ระบบด้วย Discord. Discord asks you to authorize your application. Accept, and you land on the Cost Sheets page as a new Seller whose Display Name is your Discord name, with your Discord avatar in the header.
+7. **Open the app** at http://127.0.0.1:3000 or http://localhost:3000. Supabase Auth sends the sign-in back to whichever of the two you started on (both are in `additional_redirect_urls`), where the cookie holding the one-time code verifier waits. Go to `/login` and choose เข้าสู่ระบบด้วย Discord. Discord asks you to authorize your application. Accept, and you land on the Cost Sheets page as a new Seller whose Display Name is your Discord name, with your Discord avatar in the header.
 
 ### When Discord sign-in fails
 
@@ -157,7 +157,7 @@ flowchart LR
 | Discord shows "Invalid OAuth2 client_id", or after Discord the login page says เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง | The Client ID or Client Secret is wrong, or never reached Supabase Auth. A secret stops working when it is reset. Copy both again (reset the secret if you lost it), fix `.env.local`, and run `bun run db:stop` and `bun run db:start`. |
 | The login page says บัญชี Discord นี้ไม่มีอีเมล … | Your Discord account has no email, and every Seller needs one. Add and verify an email in Discord (**User Settings → My Account**), then try again. |
 | The login page says ยกเลิกการเข้าสู่ระบบด้วย Discord แล้ว … | You clicked **Cancel** on Discord's authorize screen. Choose เข้าสู่ระบบด้วย Discord again and click **Authorize**. |
-| After Discord you land on `/`, or the login page says เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง | You opened the app at `localhost`. Open http://127.0.0.1:3000 and sign in again (step 7). |
+| After Discord you land on `/`, or the login page says เข้าสู่ระบบด้วย Discord ไม่สำเร็จ ลองอีกครั้ง | Supabase Auth did not accept the callback URL, usually because it was not restarted after `additional_redirect_urls` changed, or the app was opened on a host or port it does not list. Run `bun run db:stop` and `bun run db:start`, open the app at 127.0.0.1:3000 or localhost:3000, and sign in again (step 7). |
 
 ## Check that the app runs
 
