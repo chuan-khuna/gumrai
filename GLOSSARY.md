@@ -4,6 +4,15 @@ Helps a seller work out cost, selling price and profit for each thing they sell,
 
 ## Language
 
+### People
+
+**Seller** (ผู้ขาย):
+A person who signs in, with email and password or with Discord, and keeps their own Cost List, Cost Categories and Cost Sheets. Both ways of signing in can be bound to the same Seller. No Seller sees another Seller's data.
+_Avoid_: user, account (alone)
+
+**Display Name** (ชื่อที่แสดง):
+The name a Seller is shown by, which they set themselves. It starts as their Discord name, or as what they typed when signing up with email, and never follows Discord afterwards.
+
 ### Costs
 
 **Cost List** (ลิสต์ต้นทุน):
