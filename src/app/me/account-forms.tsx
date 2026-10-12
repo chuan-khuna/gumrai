@@ -7,27 +7,12 @@ import {
   setFirstPasswordAction,
 } from '@/app/me/actions'
 import { Field } from '@/components/field'
-import { Button } from '@/components/ui/button'
+import { FormMessage } from '@/components/form-message'
+import { SubmitButton } from '@/components/submit-button'
 import { Input } from '@/components/ui/input'
 
-function FormMessage({ error, saved, savedText }: { error: string | null; saved: boolean; savedText: string }) {
-  if (error) {
-    return (
-      <p role="alert" className="text-sm text-loss">
-        {error}
-      </p>
-    )
-  }
-  if (!saved) return null
-  return (
-    <p role="status" className="text-sm text-muted-foreground">
-      {savedText}
-    </p>
-  )
-}
-
 export function DisplayNameForm({ displayName }: { displayName: string }) {
-  const [state, formAction, pending] = useActionState(renameDisplayNameAction, {
+  const [state, formAction] = useActionState(renameDisplayNameAction, {
     displayName,
     error: null,
     saved: false,
@@ -35,31 +20,27 @@ export function DisplayNameForm({ displayName }: { displayName: string }) {
   const invalid = state.error ? true : undefined
 
   return (
-    // One row from sm up: the field grows, the button keeps its size beside it.
-    <form action={formAction} className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-3">
-        {/* The section heading already reads ชื่อที่แสดง. */}
-        <Field label="ชื่อที่แสดง" hideLabel className="flex-1 basis-56">
-          <Input
-            name="displayName"
-            autoComplete="nickname"
-            required
-            defaultValue={state.displayName}
-            aria-invalid={invalid}
-          />
-        </Field>
-        <Button type="submit" variant="secondary" disabled={pending}>
-          {pending ? 'กำลังบันทึก…' : 'บันทึกชื่อ'}
-        </Button>
-      </div>
-      <FormMessage error={state.error} saved={state.saved} savedText="บันทึกชื่อที่แสดงแล้ว" />
+    // One field, so the button sits beside it, as in every one-field form.
+    <form action={formAction} className="flex flex-wrap items-end gap-3">
+      {/* The section heading already reads ชื่อที่แสดง. */}
+      <Field label="ชื่อที่แสดง" hideLabel className="flex-1 basis-56">
+        <Input
+          name="displayName"
+          autoComplete="nickname"
+          required
+          defaultValue={state.displayName}
+          aria-invalid={invalid}
+        />
+      </Field>
+      <SubmitButton pendingLabel="กำลังบันทึก…">บันทึกชื่อ</SubmitButton>
+      <FormMessage error={state.error} saved={state.saved ? 'บันทึกชื่อที่แสดงแล้ว' : null} />
     </form>
   )
 }
 
 // minPasswordLength is the rule from @/server/auth/auth, passed in for the field hint.
 export function ChangePasswordForm({ email, minPasswordLength }: { email: string; minPasswordLength: number }) {
-  const [state, formAction, pending] = useActionState(changePasswordAction, { error: null, saved: false })
+  const [state, formAction] = useActionState(changePasswordAction, { error: null, saved: false })
   const invalid = state.error ? true : undefined
 
   return (
@@ -79,16 +60,16 @@ export function ChangePasswordForm({ email, minPasswordLength }: { email: string
           aria-invalid={invalid}
         />
       </Field>
-      <FormMessage error={state.error} saved={state.saved} savedText="เปลี่ยนรหัสผ่านแล้ว" />
-      <Button type="submit" variant="secondary" disabled={pending} className="justify-self-start">
-        {pending ? 'กำลังเปลี่ยน…' : 'เปลี่ยนรหัสผ่าน'}
-      </Button>
+      <SubmitButton pendingLabel="กำลังเปลี่ยน…" className="justify-self-start">
+        เปลี่ยนรหัสผ่าน
+      </SubmitButton>
+      <FormMessage error={state.error} saved={state.saved ? 'เปลี่ยนรหัสผ่านแล้ว' : null} />
     </form>
   )
 }
 
 export function SetPasswordForm({ email, minPasswordLength }: { email: string; minPasswordLength: number }) {
-  const [state, formAction, pending] = useActionState(setFirstPasswordAction, { error: null, saved: false })
+  const [state, formAction] = useActionState(setFirstPasswordAction, { error: null, saved: false })
   const invalid = state.error ? true : undefined
 
   return (
@@ -104,10 +85,10 @@ export function SetPasswordForm({ email, minPasswordLength }: { email: string; m
           aria-invalid={invalid}
         />
       </Field>
-      <FormMessage error={state.error} saved={state.saved} savedText="ตั้งรหัสผ่านแล้ว" />
-      <Button type="submit" variant="secondary" disabled={pending} className="justify-self-start">
-        {pending ? 'กำลังตั้ง…' : 'ตั้งรหัสผ่าน'}
-      </Button>
+      <SubmitButton pendingLabel="กำลังตั้ง…" className="justify-self-start">
+        ตั้งรหัสผ่าน
+      </SubmitButton>
+      <FormMessage error={state.error} saved={state.saved ? 'ตั้งรหัสผ่านแล้ว' : null} />
     </form>
   )
 }

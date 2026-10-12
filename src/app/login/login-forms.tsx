@@ -3,20 +3,12 @@
 import { useActionState } from 'react'
 import { signInAction, signUpAction } from '@/app/login/actions'
 import { Field } from '@/components/field'
-import { Button } from '@/components/ui/button'
+import { FormMessage } from '@/components/form-message'
+import { SubmitButton } from '@/components/submit-button'
 import { Input } from '@/components/ui/input'
 
-function FormError({ error }: { error: string | null }) {
-  if (!error) return null
-  return (
-    <p role="alert" className="rounded-lg bg-loss-surface px-3 py-2 text-sm text-foreground">
-      {error}
-    </p>
-  )
-}
-
 export function SignInForm({ returnTo }: { returnTo: string }) {
-  const [state, formAction, pending] = useActionState(signInAction, { email: '', error: null })
+  const [state, formAction] = useActionState(signInAction, { email: '', error: null })
   const invalid = state.error ? true : undefined
 
   return (
@@ -28,17 +20,17 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
       <Field label="รหัสผ่าน">
         <Input name="password" type="password" autoComplete="current-password" required aria-invalid={invalid} />
       </Field>
-      <FormError error={state.error} />
-      <Button type="submit" disabled={pending}>
-        {pending ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
-      </Button>
+      <SubmitButton pendingLabel="กำลังเข้าสู่ระบบ…" className="justify-self-start">
+        เข้าสู่ระบบ
+      </SubmitButton>
+      <FormMessage error={state.error} />
     </form>
   )
 }
 
 // minPasswordLength is the rule from @/server/auth/auth, passed in for the field hint.
 export function SignUpForm({ returnTo, minPasswordLength }: { returnTo: string; minPasswordLength: number }) {
-  const [state, formAction, pending] = useActionState(signUpAction, {
+  const [state, formAction] = useActionState(signUpAction, {
     email: '',
     displayName: '',
     error: null,
@@ -71,10 +63,10 @@ export function SignUpForm({ returnTo, minPasswordLength }: { returnTo: string; 
           aria-invalid={invalid}
         />
       </Field>
-      <FormError error={state.error} />
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? 'กำลังสมัคร…' : 'สมัครใช้งาน'}
-      </Button>
+      <SubmitButton pendingLabel="กำลังสมัคร…" className="justify-self-start">
+        สมัครใช้งาน
+      </SubmitButton>
+      <FormMessage error={state.error} />
     </form>
   )
 }

@@ -38,6 +38,7 @@ export default async function EditCostItemPage({ params }: { params: Promise<{ i
             }}
             categories={categories}
             submitLabel="บันทึก"
+            pendingLabel="กำลังบันทึก…"
           />
         </CardContent>
       </Card>

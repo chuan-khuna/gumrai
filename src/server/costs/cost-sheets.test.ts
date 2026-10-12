@@ -86,6 +86,31 @@ describe('Cost Sheets', () => {
     expect(listed[0]).toMatchObject({ name: older.name, saleUnit: 'แก้ว' })
   })
 
+  it("lists each sheet's Selling Price, total cost and Net Profit, Linked Lines at today's Unit Cost", async () => {
+    const milk = await makeItem({ name: 'นมสด', unitCost: '0.05', unit: 'ml', categoryId: null })
+    const sheet = await make('ลาเต้')
+    const input = latte(sheet.name)
+    await saveCostSheet(db, sheet.id, {
+      ...input,
+      lines: [input.lines[0], { costItemId: milk.id, quantityUsed: '150' }],
+    })
+    // The milk's price goes up after the sheet was saved; the list follows the Cost List.
+    await updateCostItem(db, milk.id, { name: milk.name, unitCost: '0.075', unit: 'ml', categoryId: null })
+    const empty = await make('ว่าง')
+
+    const listed = await listCostSheets(db)
+    // 16 + 11.25 of cost; 65 less GP 33% with 7% VAT on it (22.9515) less the cost.
+    const latteRow = listed.find((s) => s.id === sheet.id)!
+    expect(latteRow.sellingPrice).toBe('65')
+    expect(latteRow.totalCost).toBeCloseTo(27.25, 10)
+    expect(latteRow.netProfit).toBeCloseTo(14.7985, 10)
+    expect(listed.find((s) => s.id === empty.id)).toMatchObject({
+      sellingPrice: '0',
+      totalCost: 0,
+      netProfit: 0,
+    })
+  })
+
   it('saves the sheet and its Manual Lines, and a reload shows them in order', async () => {
     const sheet = await make('ลาเต้')
     const input = latte(uniqueName('มัทฉะลาเต้'))

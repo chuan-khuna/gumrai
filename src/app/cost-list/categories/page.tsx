@@ -1,9 +1,4 @@
-import {
-  createCostCategoryAction,
-  deleteCostCategoryAction,
-  renameCostCategoryAction,
-} from '@/app/cost-list/categories/actions'
-import { CategoryNameForm, DeleteCategoryButton } from '@/app/cost-list/categories/category-forms'
+import { AddCategoryForm, CategoryRow } from '@/app/cost-list/categories/category-forms'
 import { CategoryDot } from '@/app/cost-list/category-dot'
 import { Composer } from '@/components/composer'
 import { Card } from '@/components/ui/card'
@@ -24,42 +19,17 @@ export default async function CostCategoriesPage() {
       <h1 className="text-3xl sm:text-4xl">หมวดต้นทุน</h1>
 
       <Composer className="mt-8">
-        <CategoryNameForm
-          action={createCostCategoryAction}
-          initialName=""
-          submitLabel="เพิ่ม"
-          label="ชื่อหมวด"
-          primary
-        />
+        <AddCategoryForm />
       </Composer>
 
       <Card className="mt-10 gap-0 py-2">
         <ul className="divide-y divide-dashed divide-border">
-          {/* Phones: dot and name on one line, the count and ลบ on the next. */}
           {categories.map((category, i) => (
-            <li key={category.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3">
-              <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
-                <CategoryDot colourSlot={category.colourSlot} />
-                <CategoryNameForm
-                  action={renameCostCategoryAction.bind(null, category.id)}
-                  initialName={category.name}
-                  submitLabel="เปลี่ยนชื่อ"
-                  label={`ชื่อหมวด ${category.name}`}
-                />
-              </div>
-              <div className="ml-auto flex items-center gap-3">
-                <span className="text-sm whitespace-nowrap text-muted-foreground tabular-nums">
-                  {counts[i]} รายการ
-                </span>
-                <DeleteCategoryButton
-                  action={deleteCostCategoryAction.bind(null, category.id)}
-                  name={category.name}
-                  itemCount={counts[i]}
-                />
-              </div>
-            </li>
+            <CategoryRow key={category.id} category={category} itemCount={counts[i]} />
           ))}
-          <li className="flex items-center gap-3 px-6 py-4 text-muted-foreground">
+          {/* ไม่มีหมวด can't be renamed or deleted, so it has no menu; min-h-15 keeps it as
+              tall as the rows that do. */}
+          <li className="flex min-h-15 items-center gap-3 px-6 py-3 text-muted-foreground">
             <CategoryDot colourSlot={null} />
             {UNCATEGORISED}
           </li>

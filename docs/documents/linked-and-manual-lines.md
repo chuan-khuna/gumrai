@@ -34,7 +34,7 @@ stateDiagram-v2
 
 ### Unlink
 
-`unlinkLine` in `src/lib/cost-lines.ts` turns a Linked Line into a Manual Line. The Manual Line holds the values that the line shows at that moment, so the figures stay the same and later changes to the item no longer reach it. Unlink is a draft edit, and the database sees it on the next sheet save. A seller unlinks to use a one-off figure, such as a supplier's promotional price, without changing the Cost Item.
+`unlinkLine` in `src/lib/cost-lines.ts` turns a Linked Line into a Manual Line. The Manual Line holds the values that the line shows at that moment, so the figures stay the same and later changes to the item no longer reach it. Unlink is a draft edit, and the database sees it on the next sheet save. Because the line then stops following the Cost List's price without any visible change, the editor's unlink icon asks first through `ConfirmAction`, naming the Unit Cost and unit the line will keep. A seller unlinks to use a one-off figure, such as a supplier's promotional price, without changing the Cost Item.
 
 ### Save a Manual Line into the Cost List
 

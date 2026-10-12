@@ -67,6 +67,7 @@ export default async function CostListPage({
           initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
           categories={categories}
           submitLabel="เพิ่ม"
+          pendingLabel="กำลังเพิ่ม…"
         />
       </Composer>
 

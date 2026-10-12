@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { discordSignInAction } from '@/app/login/actions'
 import { SignInForm, SignUpForm } from '@/app/login/login-forms'
 import { Composer } from '@/components/composer'
-import { Button } from '@/components/ui/button'
+import { SubmitButton } from '@/components/submit-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { safeReturnTo } from '@/lib/return-to'
 import { currentSeller, MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
@@ -46,9 +46,9 @@ export default async function LoginPage({
           <CardContent className="grid gap-5">
             <form action={discordSignInAction}>
               <input type="hidden" name="next" value={returnTo} />
-              <Button type="submit" variant="outline" className="w-full">
+              <SubmitButton variant="outline" pendingLabel="กำลังไปที่ Discord…">
                 เข้าสู่ระบบด้วย Discord
-              </Button>
+              </SubmitButton>
             </form>
             <p className="flex items-center gap-3 text-sm text-muted-foreground">
               <span aria-hidden="true" className="flex-1 border-t border-dashed border-border" />

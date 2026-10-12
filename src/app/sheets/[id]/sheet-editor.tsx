@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  Link2Icon,
+  ListPlusIcon,
+  LoaderCircleIcon,
+  PencilLineIcon,
+  Trash2Icon,
+  UnlinkIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { CategoryDot } from '@/app/cost-list/category-dot'
@@ -7,7 +15,8 @@ import { categoryLooks, CostRankingChart, PriceSplitChart } from '@/app/sheets/[
 import { saveCostSheetAction, saveManualLineToCostListAction } from '@/app/sheets/actions'
 import { Field } from '@/components/field'
 import { OptionSelect } from '@/components/option-select'
-import { Badge } from '@/components/ui/badge'
+import { ConfirmAction } from '@/components/confirm-action'
+import { IconAction, IconMark } from '@/components/icon-action'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -105,6 +114,8 @@ export function SheetEditor({
   const [lineNotices, setLineNotices] = useState<Record<string, LineNotice>>({})
   const setLineNotice = (key: string, notice: LineNotice | null) =>
     setLineNotices(({ [key]: _, ...rest }) => (notice ? { ...rest, [key]: notice } : rest))
+  // The Linked Line whose เลิกลิงก์ is waiting for the seller to confirm.
+  const [unlinking, setUnlinking] = useState<DraftLine | null>(null)
 
   const dirty = JSON.stringify(toInput(draft)) !== JSON.stringify(toInput(saved))
   const dirtyRef = useRef(dirty)
@@ -309,9 +320,9 @@ export function SheetEditor({
             <Table className="min-w-[54rem]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>ที่มา</TableHead>
+                  <TableHead className="w-0 pr-0">ที่มา</TableHead>
                   <TableHead>ชื่อ</TableHead>
-                  <TableHead>ต้นทุนต่อหน่วย (฿)</TableHead>
+                  <TableHead className="text-right">ต้นทุนต่อหน่วย (฿)</TableHead>
                   <TableHead>หน่วย</TableHead>
                   <TableHead>หมวด</TableHead>
                   <TableHead>ใช้ต่อ{unit}</TableHead>
@@ -328,17 +339,25 @@ export function SheetEditor({
                   return (
                     <Fragment key={line.key}>
                       <TableRow className={linked ? 'bg-linked/40 hover:bg-linked/60' : undefined}>
-                        <TableCell>
+                        <TableCell className="w-0 pr-0">
                           {linked ? (
-                            <Badge variant="linked">ลิงก์ลิสต์</Badge>
+                            <IconMark
+                              label="ลิงก์กับลิสต์ต้นทุน: ต้นทุนตามรายการในลิสต์"
+                              icon={<Link2Icon />}
+                              className="bg-linked text-link"
+                            />
                           ) : (
-                            <Badge variant="manual">พิมพ์เอง</Badge>
+                            <IconMark
+                              label="พิมพ์เอง: ต้นทุนเฉพาะชีตนี้"
+                              icon={<PencilLineIcon />}
+                              className="bg-muted text-muted-foreground"
+                            />
                           )}
                         </TableCell>
                         {linked ? (
                           <>
                             <TableCell>{line.name}</TableCell>
-                            <TableCell className="tabular-nums">{line.unitCost}</TableCell>
+                            <TableCell className="text-right tabular-nums">{line.unitCost}</TableCell>
                             <TableCell>{line.unit}</TableCell>
                             {/* A Linked Line's Cost Category is its Cost Item's. */}
                             <TableCell>
@@ -392,48 +411,56 @@ export function SheetEditor({
                           </>
                         )}
                         <TableCell>
-                          <Input
-                            aria-label={`ใช้ต่อ${unit}`}
-                            value={line.quantityUsed}
-                            onChange={(e) => setLine(line.key, { quantityUsed: e.target.value })}
-                            inputMode="decimal"
-                            className={`${cell} text-right tabular-nums`}
-                          />
+                          {/* The line's unit beside the amount, so 3 reads as 3 g. */}
+                          <span className="flex items-center gap-2">
+                            <Input
+                              aria-label={`ใช้ต่อ${unit} (${line.unit || 'หน่วย'})`}
+                              value={line.quantityUsed}
+                              onChange={(e) => setLine(line.key, { quantityUsed: e.target.value })}
+                              inputMode="decimal"
+                              className={`${cell} text-right tabular-nums`}
+                            />
+                            <span aria-hidden className="min-w-6 text-sm text-muted-foreground">
+                              {line.unit}
+                            </span>
+                          </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{baht.format(costed.cost)}</TableCell>
                         <TableCell className="text-right tabular-nums text-muted-foreground">
                           {formatShare(costed.shareOfCost)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {linked ? (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={() => unlink(line.key)}
-                              title="เปลี่ยนเป็นรายการพิมพ์เอง โดยเก็บค่าปัจจุบันไว้"
-                            >
-                              เลิกลิงก์
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={() => saveLineToList(line)}
-                              disabled={savingLineKey !== null}
-                              title="สร้างรายการในลิสต์ต้นทุนจากบรรทัดนี้ แล้วลิงก์บรรทัดนี้กับรายการนั้น"
-                              className="text-link"
-                            >
-                              {savingLineKey === line.key ? 'กำลังบันทึก…' : 'บันทึกเข้าลิสต์'}
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => removeLine(line.key)}
-                            className="text-destructive hover:bg-loss-surface"
-                          >
-                            ลบ
-                          </Button>
+                        <TableCell className="w-0">
+                          <span className="flex items-center justify-end gap-0.5">
+                            {linked ? (
+                              <IconAction
+                                label="เลิกลิงก์ (เปลี่ยนเป็นพิมพ์เอง)"
+                                icon={<UnlinkIcon />}
+                                onClick={() => setUnlinking(line)}
+                              />
+                            ) : savingLineKey === line.key ? (
+                              <IconAction
+                                label="กำลังบันทึกเข้าลิสต์…"
+                                icon={<LoaderCircleIcon className="animate-spin motion-reduce:animate-none" />}
+                                tone="link"
+                                disabled
+                                aria-busy
+                              />
+                            ) : (
+                              <IconAction
+                                label="บันทึกเข้าลิสต์ต้นทุน แล้วลิงก์บรรทัดนี้"
+                                icon={<ListPlusIcon />}
+                                tone="link"
+                                onClick={() => saveLineToList(line)}
+                                disabled={savingLineKey !== null}
+                              />
+                            )}
+                            <IconAction
+                              label="ลบบรรทัดนี้"
+                              icon={<Trash2Icon />}
+                              tone="destructive"
+                              onClick={() => removeLine(line.key)}
+                            />
+                          </span>
                         </TableCell>
                       </TableRow>
                       {notice && (
@@ -480,6 +507,23 @@ export function SheetEditor({
               </TableBody>
             </Table>
           )}
+          {/* Unlinking is a draft edit like any other, but it quietly stops the line following
+              the Cost List's price, so it asks first. */}
+          <ConfirmAction
+            open={unlinking !== null}
+            onOpenChange={(open) => !open && setUnlinking(null)}
+            action={async () => {
+              if (unlinking) unlink(unlinking.key)
+            }}
+            title={`เลิกลิงก์ "${unlinking?.name ?? ''}"?`}
+            description={
+              unlinking
+                ? `บรรทัดนี้จะเป็นรายการพิมพ์เอง เก็บต้นทุน ${unlinking.unitCost} ฿/${unlinking.unit} และหมวดเดิมไว้ แต่จะไม่เปลี่ยนตามราคาในลิสต์ต้นทุนอีก`
+                : undefined
+            }
+            confirmLabel="เลิกลิงก์"
+            pendingLabel="กำลังเลิกลิงก์…"
+          />
           <AddLine costItems={costItems} onPick={addLinkedLine} onAddManual={addManualLine} />
         </CardContent>
       </Card>

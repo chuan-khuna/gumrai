@@ -4,8 +4,9 @@ import { useActionState } from 'react'
 import type { CostItemFormState } from '@/app/cost-list/actions'
 import { ConfirmAction } from '@/components/confirm-action'
 import { Field } from '@/components/field'
+import { FormMessage } from '@/components/form-message'
 import { OptionSelect } from '@/components/option-select'
-import { Button } from '@/components/ui/button'
+import { SubmitButton } from '@/components/submit-button'
 import { Input } from '@/components/ui/input'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import type { CostCategory } from '@/server/costs/cost-categories'
@@ -16,11 +17,13 @@ type Props = {
   initial: CostItemInput
   categories: CostCategory[]
   submitLabel: string
+  /** The submit button's text while saving, such as กำลังเพิ่ม… */
+  pendingLabel: string
 }
 
 // One Cost Item's fields. Nothing is saved until the form is submitted.
-export function CostItemForm({ action, initial, categories, submitLabel }: Props) {
-  const [state, formAction, pending] = useActionState(action, { values: initial, error: null })
+export function CostItemForm({ action, initial, categories, submitLabel, pendingLabel }: Props) {
+  const [state, formAction] = useActionState(action, { values: initial, error: null })
 
   return (
     <form
@@ -55,14 +58,10 @@ export function CostItemForm({ action, initial, categories, submitLabel }: Props
           className="w-full"
         />
       </Field>
-      <Button type="submit" disabled={pending}>
+      <SubmitButton pendingLabel={pendingLabel} className="justify-self-start">
         {submitLabel}
-      </Button>
-      {state.error && (
-        <p role="alert" className="text-sm text-loss md:col-span-5">
-          {state.error}
-        </p>
-      )}
+      </SubmitButton>
+      <FormMessage error={state.error} className="md:col-span-5" />
     </form>
   )
 }

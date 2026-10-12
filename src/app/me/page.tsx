@@ -8,9 +8,9 @@ import {
 } from '@/app/me/actions'
 import { RevealOnArrival } from '@/app/me/reveal-on-arrival'
 import { ShuffleAvatarButton } from '@/app/me/shuffle-avatar-button'
-import { SubmitButton } from '@/app/me/submit-button'
 import { SellerAvatar } from '@/app/seller-avatar'
 import { ConfirmAction } from '@/components/confirm-action'
+import { SubmitButton } from '@/components/submit-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -101,6 +101,7 @@ export default async function MePage({
               confirmLabel="ลบบัญชี"
               pendingLabel="กำลังลบ…"
               typeToConfirm={DELETE_CONFIRMATION}
+              size="default"
             />
           </div>
         </Section>

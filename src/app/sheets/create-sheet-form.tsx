@@ -3,12 +3,13 @@
 import { useActionState } from 'react'
 import { createCostSheetAction } from '@/app/sheets/actions'
 import { Field } from '@/components/field'
-import { Button } from '@/components/ui/button'
+import { FormMessage } from '@/components/form-message'
+import { SubmitButton } from '@/components/submit-button'
 import { Input } from '@/components/ui/input'
 
 // Names a new Cost Sheet and opens it.
 export function CreateSheetForm() {
-  const [state, formAction, pending] = useActionState(createCostSheetAction, {
+  const [state, formAction] = useActionState(createCostSheetAction, {
     name: '',
     error: null,
   })
@@ -24,14 +25,8 @@ export function CreateSheetForm() {
           aria-invalid={state.error ? true : undefined}
         />
       </Field>
-      <Button type="submit" disabled={pending}>
-        {pending ? 'กำลังสร้าง…' : 'สร้าง'}
-      </Button>
-      {state.error && (
-        <p role="alert" className="w-full text-sm text-loss">
-          {state.error}
-        </p>
-      )}
+      <SubmitButton pendingLabel="กำลังสร้าง…">สร้าง</SubmitButton>
+      <FormMessage error={state.error} />
     </form>
   )
 }

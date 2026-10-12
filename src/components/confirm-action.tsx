@@ -26,8 +26,10 @@ import { Input } from '@/components/ui/input'
 //
 // An action may resolve to a Thai message: the dialog then stays open and shows it, as for a
 // wrong password.
+//
+// Opened from a row's action menu instead, it takes `open` and `onOpenChange` in place of
+// `trigger` and draws no button of its own.
 type ConfirmActionProps = {
-  trigger: string
   title: string
   description?: string
   confirmLabel: string
@@ -38,11 +40,17 @@ type ConfirmActionProps = {
   | { typeToConfirm?: undefined; passwordLabel?: undefined; action: () => Promise<string | void> }
   | { typeToConfirm: string; passwordLabel?: undefined; action: (typed: string) => Promise<string | void> }
   | { typeToConfirm?: undefined; passwordLabel: string; action: (password: string) => Promise<string | void> }
-)
+) &
+  (
+    | { trigger: string; open?: undefined; onOpenChange?: undefined }
+    | { trigger?: undefined; open: boolean; onOpenChange: (open: boolean) => void }
+  )
 
 export function ConfirmAction(props: ConfirmActionProps) {
   const { trigger, title, description, confirmLabel, pendingLabel, typeToConfirm, passwordLabel, size = 'sm' } = props
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const open = props.open ?? ownOpen
+  const setOpen = props.onOpenChange ?? setOwnOpen
   const [typed, setTyped] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -59,11 +67,13 @@ export function ConfirmAction(props: ConfirmActionProps) {
         setError(null)
       }}
     >
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive" size={size}>
-          {trigger}
-        </Button>
-      </AlertDialogTrigger>
+      {trigger !== undefined && (
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" size={size}>
+            {trigger}
+          </Button>
+        </AlertDialogTrigger>
+      )}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

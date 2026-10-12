@@ -376,7 +376,7 @@ Every screen must work at 320, 375, 414 and 768px. A form grid collapses to one 
 
 Chewy, not glossy. Depth comes from two quiet shadows and from tinted surfaces.
 
-- `shadow-card`: a 1px contact shadow plus a soft 30px ambient shadow, both in `ink` at low opacity. Cards, sheet rows, secondary buttons.
+- `shadow-card`: a 1px contact shadow plus a soft 30px ambient shadow, both in `ink` at low opacity. Cards and secondary buttons.
 - `shadow-lift`: a deeper version for a pressable card on hover, dialogs and select menus.
 - The push button's solid edge: `0 4px 0 0 primary-edge` (full width, never a negative spread). It grows to 6px on hover and shrinks to 1px on press.
 - Money cards and alerts sit on a tint (`profit-surface`, `loss-surface`) with no shadow. A composer (the form a new thing is added in) is a 2px dashed `border` with no fill and no shadow, and its border turns `primary` while focus is inside it.
@@ -388,7 +388,7 @@ The shadow values live in `src/styles/presets/bubblegum.css`.
 
 Everything is round, and nothing is square.
 
-- Cards, sheet rows, dialogs and money cards: `rounded-2xl` (20px).
+- Cards, dialogs and money cards: `rounded-2xl` (20px).
 - Select menus: `rounded-xl` (16px).
 - Inputs, select triggers, alerts and menu items: `rounded-lg` (12px).
 - Buttons, badges and category dots: `rounded-full`.
@@ -400,11 +400,30 @@ All of them are shadcn/ui components in `src/components/ui`, restyled to this sy
 
 ### Button
 
-- `default`: the pink push button for the main action. There is one per screen. Hover lifts it 2px and its edge grows. Pressing pushes it down 3px and its edge shrinks, so the press itself is the feedback. There is no scaling.
+- `default`: the pink push button. It is every form's submit, and nothing else (see § Forms). Hover lifts it 2px and its edge grows. Pressing pushes it down 3px and its edge shrinks, so the press itself is the feedback. There is no scaling.
 - `keep`: a mint push for "keep this" (ลิงก์กับรายการนี้แทน, บันทึกเข้าลิสต์ต้นทุน).
 - `secondary` (card plus shadow), `outline` (hairline that turns pink) and `ghost` are for everything else. `link` is blue raspberry text.
 - `destructive` (ลบ) is a cinnamon outline, never a filled button, and always goes through `ConfirmAction` (an `AlertDialog`) before anything is deleted.
 - Sizes: `default` 44px, `sm` 36px, `xs` 28px (inline table actions). Every button has default, hover, focus-visible (a 3px `ring` with an offset, shown instantly), active, disabled (50% opacity) and pending (its label changes to กำลัง…) states.
+
+### Forms
+
+Every form's buttons follow one pattern, in code through `SubmitButton` (`src/components/submit-button.tsx`) and `FormMessage` (`src/components/form-message.tsx`):
+
+- The submit is the pink push, 44px, and its label turns to กำลัง… (กำลังบันทึก…, กำลังเพิ่ม…) while it runs.
+- One field: the button sits beside it, lined up with the input's bottom. Several fields: the button sits under the last one at its own width, left-aligned, never stretched.
+- After sending, one line under the button: an error in `loss`, or a quiet `muted-foreground` confirmation (บันทึกชื่อที่แสดงแล้ว).
+- A form inside a list row (renaming in place) uses the same pink push at `sm`, with a `ghost` ยกเลิก.
+- An action that sends nothing typed (ผูก Discord, เข้าสู่ระบบด้วย Discord) is `outline`, `sm` inside a row. Undoing or removing is `destructive` through `ConfirmAction`, `sm` in a row and 44px as a section's own action (ลบบัญชี).
+- A search or filter form, which saves nothing, submits with `secondary` (ค้นหา).
+
+### Row actions
+
+A row in a list (a Cost Sheet, a Cost Category) shows what it is, and keeps its actions behind one `ghost` ⋯ button at its right end (`RowMenu`, `src/components/row-menu.tsx`). Opening the row stays one click; renaming, duplicating and deleting are one more. The menu is a `popover` card like the Select menu: everyday actions first, each with a muted line icon (เปลี่ยนชื่อ ✎, ทำสำเนา ⧉), then ลบ last in `destructive` under a dashed rule, with a `loss-surface` highlight. ลบ still opens `ConfirmAction`. เปลี่ยนชื่อ swaps the row for an inline field with บันทึกชื่อ and ยกเลิก, and Esc cancels. Facts about the row, such as a category's `12 รายการ`, sit as `muted-foreground` text before the ⋯, never between buttons.
+
+### Icon actions
+
+Where the same actions repeat on every line of a dense table (a sheet's cost lines), they are 36px `ghost` icon buttons (`IconAction`, `src/components/icon-action.tsx`) with the action named in a `Tooltip` on hover and keyboard focus and in the aria-label. The tooltip is an `ink` label with `paper` text, `rounded-lg`, after 150ms. Icons are lucide line icons at 16px in `muted-foreground`; ลบ turns `destructive` on a `loss-surface` hover, and บันทึกเข้าลิสต์ is `link` on a `linked` hover. เลิกลิงก์ asks first through `ConfirmAction`. Lists of whole things (sheets, categories) use the ⋯ menu instead (§ Row actions).
 
 ### Input, Select, Checkbox
 
@@ -416,11 +435,11 @@ Dropdowns are the shadcn `Select`, through `OptionSelect` (`src/components/optio
 
 ### Badge and dots
 
-`Badge` variant `linked` (ลิงก์ลิสต์) marks a Linked Line, and `manual` (พิมพ์เอง) is a hairline outline. A `CategoryDot` is a 10px gumball in the category's slot colour.
+`Badge` variant `linked` marks a way to sign in that is in use, and `manual` is a hairline outline. In a sheet's line table a line's source is an `IconMark` instead: a link in `link` on a `linked` circle for a Linked Line, a pencil in `muted-foreground` on a `muted` circle for a Manual Line. A `CategoryDot` is a 10px gumball in the category's slot colour.
 
 ### Card and money
 
-`Card` is the container for every section: `CardTitle` is Mitr. Dashed means "not made yet": every add-new form (สร้างชีต, เพิ่มรายการต้นทุน, เพิ่มหมวด, สมัคร) sits in a `Composer` (`src/components/composer.tsx`), always dashed, while saved things below it are solid cards. Its fields have visible labels above them, never a placeholder standing in for one, and the push button lines up with the bottom of the inputs. On first run the composer adds a title and a description saying what's missing; once there are things, the labels and the button say what it is for. The Net Profit is a `profit-surface` (or `loss-surface`) panel: a label (กำไรสุทธิต่อแก้ว or ขาดทุนต่อแก้ว) above the `number-display` figure and its share of the price. Sheet rows are cards that lift on hover.
+`Card` is the container for every section: `CardTitle` is Mitr. Dashed means "not made yet": every add-new form (สร้างชีต, เพิ่มรายการต้นทุน, เพิ่มหมวด, สมัคร) sits in a `Composer` (`src/components/composer.tsx`), always dashed, while saved things below it are solid cards. Its fields have visible labels above them, never a placeholder standing in for one, and the push button lines up with the bottom of the inputs. On first run the composer adds a title and a description saying what's missing; once there are things, the labels and the button say what it is for. The Net Profit is a `profit-surface` (or `loss-surface`) panel: a label (กำไรสุทธิต่อแก้ว or ขาดทุนต่อแก้ว) above the `number-display` figure and its share of the price. The Cost Sheets are a `Table` (ชื่อ with ต่อ{Sale Unit} under it, ราคาขาย, ต้นทุน, กำไรสุทธิ, ⋯); the Net Profit is `profit`, or `loss` when negative, and a sheet with no price shows ยังไม่ตั้งราคา and no profit. On phones the price and cost move under the name.
 
 ### Table
 

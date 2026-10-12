@@ -58,7 +58,11 @@ After a successful save, Linked Lines show their items' current values, and ever
 Two kinds of action change the database before the seller presses save:
 
 - **บันทึกเข้าลิสต์** on a Manual Line creates the Cost Item at once. The line becomes a Linked Line only when the sheet is saved. [Linked and Manual Lines](linked-and-manual-lines.md) explains this.
-- Rename, duplicate, and delete act on a whole sheet, from the sheet list at `/sheets`. Each is its own server action. Delete asks for confirmation through `ConfirmAction`.
+- Rename, duplicate, and delete act on a whole sheet, from each row's ⋯ menu in the sheet table at `/sheets`. Each is its own server action. Delete asks for confirmation through `ConfirmAction`.
+
+The sheet table shows each sheet's Selling Price, total cost and Net Profit per Sale Unit. `listCostSheets` reads every sheet with its lines in one query and runs the same `computeSheet` as the editor, so the table and the editor never disagree. A sheet whose Selling Price is 0 shows ยังไม่ตั้งราคา and no profit, rather than a loss equal to its cost.
+
+In the editor's line table, each line's source is an icon (a link for a Linked Line, a pencil for a Manual Line) and its actions are icon buttons (เลิกลิงก์, บันทึกเข้าลิสต์, ลบ). Each says what it is in a tooltip on hover or focus, and in its accessible name.
 
 ## Behaviour that surprises people
 

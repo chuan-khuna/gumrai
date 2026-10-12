@@ -1,6 +1,8 @@
 import { CreateSheetForm } from '@/app/sheets/create-sheet-form'
 import { SheetRow } from '@/app/sheets/sheet-row'
 import { Composer } from '@/components/composer'
+import { Card } from '@/components/ui/card'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { listCostSheets } from '@/server/costs/cost-sheets'
 import { requestClient } from '@/server/db/request-client'
 
@@ -25,11 +27,27 @@ export default async function SheetsPage() {
       </Composer>
 
       {sheets.length > 0 && (
-        <ul className="mt-10 grid gap-3 border-t border-dashed border-border pt-10">
-          {sheets.map((sheet) => (
-            <SheetRow key={sheet.id} sheet={sheet} />
-          ))}
-        </ul>
+        // Every figure is per Sale Unit, which each row names under the sheet's name.
+        <Card className="mt-10 gap-0 py-2">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">ชื่อ</TableHead>
+                <TableHead className="hidden text-right sm:table-cell">ราคาขาย (฿)</TableHead>
+                <TableHead className="hidden text-right sm:table-cell">ต้นทุน (฿)</TableHead>
+                <TableHead className="text-right">กำไรสุทธิ (฿)</TableHead>
+                <TableHead className="w-0 pr-4">
+                  <span className="sr-only">ตัวเลือก</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sheets.map((sheet) => (
+                <SheetRow key={sheet.id} sheet={sheet} />
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </main>
   )

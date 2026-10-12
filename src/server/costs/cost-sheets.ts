@@ -1,3 +1,4 @@
+import { computeSheet } from '@/lib/sheet'
 import type { Db } from '@/server/db/supabase'
 
 // Cost Sheets (GLOSSARY.md): one saved costing per thing the seller sells. Money, percentages
@@ -44,11 +45,16 @@ export type CostSheet = {
   lines: CostLine[]
 }
 
+/** A Cost Sheet as the list shows it. The figures are per Sale Unit; a negative Net Profit is a loss. */
 export type CostSheetSummary = {
   id: string
   name: string
   saleUnit: string
   updatedAt: string
+  /** As saved, never rounded. */
+  sellingPrice: string
+  totalCost: number
+  netProfit: number
 }
 
 export type ManualLineInput = Omit<ManualLine, 'id' | 'kind'>
@@ -98,18 +104,23 @@ const sheetName = (name: string) => required(name, 'ต้องใส่ชื�
 // Read numeric as text so PostgREST never turns it into a float.
 // One literal, not concatenated, so supabase-js can type the result from it.
 const columns =
-  'id, name, sale_unit, selling_price::text, gp_percent::text, vat_percent::text, cost_line(id, position, quantity_used::text, cost_item_id, name, unit_cost::text, unit, cost_category_id, cost_item(name, unit_cost::text, unit, cost_category_id))'
+  'id, name, sale_unit, selling_price::text, gp_percent::text, vat_percent::text, updated_at, cost_line(id, position, quantity_used::text, cost_item_id, name, unit_cost::text, unit, cost_category_id, cost_item(name, unit_cost::text, unit, cost_category_id))'
+
+// Sheets with their lines in order.
+function selectSheets(db: Db) {
+  return db.from('cost_sheet').select(columns).order('position', { referencedTable: 'cost_line' })
+}
+type SheetRow = NonNullable<Awaited<ReturnType<typeof selectSheets>>['data']>[number]
 
 async function readSheet(db: Db, id: string): Promise<CostSheet | null> {
-  const { data, error } = await db
-    .from('cost_sheet')
-    .select(columns)
-    .eq('id', id)
-    .order('position', { referencedTable: 'cost_line' })
-    .maybeSingle()
+  const { data, error } = await selectSheets(db).eq('id', id).maybeSingle()
   if (error?.code === INVALID_TEXT_REPRESENTATION) return null
   if (error) throw error
   if (!data) return null
+  return toCostSheet(data)
+}
+
+function toCostSheet(data: SheetRow): CostSheet {
   return {
     id: data.id,
     name: data.name,
@@ -147,19 +158,36 @@ async function readSheet(db: Db, id: string): Promise<CostSheet | null> {
   }
 }
 
-/** Every Cost Sheet, the most recently changed first. */
+/**
+ * Every Cost Sheet, the most recently changed first, with its figures per Sale Unit worked out
+ * as the editor does (docs/documents/sheet-calculation.md): Linked Lines at their Cost Item's
+ * current Unit Cost.
+ */
 export async function listCostSheets(db: Db): Promise<CostSheetSummary[]> {
-  const { data, error } = await db
-    .from('cost_sheet')
-    .select('id, name, sale_unit, updated_at')
-    .order('updated_at', { ascending: false })
+  const { data, error } = await selectSheets(db).order('updated_at', { ascending: false })
   if (error) throw error
-  return data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    saleUnit: row.sale_unit,
-    updatedAt: row.updated_at,
-  }))
+  return data.map((row) => {
+    const sheet = toCostSheet(row)
+    const result = computeSheet({
+      sellingPrice: Number(sheet.sellingPrice),
+      gpPercent: Number(sheet.gpPercent),
+      vatPercent: Number(sheet.vatPercent),
+      lines: sheet.lines.map((line) => ({
+        ...line,
+        unitCost: Number(line.unitCost),
+        quantityUsed: Number(line.quantityUsed),
+      })),
+    })
+    return {
+      id: sheet.id,
+      name: sheet.name,
+      saleUnit: sheet.saleUnit,
+      updatedAt: row.updated_at,
+      sellingPrice: sheet.sellingPrice,
+      totalCost: result.totalCost,
+      netProfit: result.netProfit,
+    }
+  })
 }
 
 /** One Cost Sheet with its lines in order, or null when there is no such sheet. */
