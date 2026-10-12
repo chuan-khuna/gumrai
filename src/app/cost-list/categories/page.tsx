@@ -5,7 +5,8 @@ import {
 } from '@/app/cost-list/categories/actions'
 import { CategoryNameForm, DeleteCategoryButton } from '@/app/cost-list/categories/category-forms'
 import { CategoryDot } from '@/app/cost-list/category-dot'
-import { Card, CardContent } from '@/components/ui/card'
+import { Composer } from '@/components/composer'
+import { Card } from '@/components/ui/card'
 import { UNCATEGORISED } from '@/lib/category-colours'
 import { countCostItemsIn, listCostCategories } from '@/server/costs/cost-categories'
 import { requestClient } from '@/server/db/request-client'
@@ -22,17 +23,15 @@ export default async function CostCategoriesPage() {
     <main className="mx-auto max-w-4xl px-4 py-12">
       <h1 className="text-3xl sm:text-4xl">หมวดต้นทุน</h1>
 
-      <Card className="mt-8">
-        <CardContent>
-          <CategoryNameForm
-            action={createCostCategoryAction}
-            initialName=""
-            submitLabel="เพิ่ม"
-            label="ชื่อหมวด"
-            primary
-          />
-        </CardContent>
-      </Card>
+      <Composer className="mt-8">
+        <CategoryNameForm
+          action={createCostCategoryAction}
+          initialName=""
+          submitLabel="เพิ่ม"
+          label="ชื่อหมวด"
+          primary
+        />
+      </Composer>
 
       <Card className="mt-10 gap-0 py-2">
         <ul className="divide-y divide-dashed divide-border">

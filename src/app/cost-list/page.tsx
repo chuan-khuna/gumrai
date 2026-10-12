@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { createCostItemAction } from '@/app/cost-list/actions'
 import { CategoryDot } from '@/app/cost-list/category-dot'
 import { CostItemForm } from '@/app/cost-list/cost-item-form'
+import { Composer } from '@/components/composer'
 import { OptionSelect } from '@/components/option-select'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -56,23 +57,18 @@ export default async function CostListPage({
     <main className="mx-auto max-w-4xl px-4 py-12">
       <h1 className="text-3xl sm:text-4xl">ลิสต์ต้นทุน</h1>
 
-      <Card className={firstRun ? 'mt-8 border-2 border-dashed bg-transparent shadow-none' : 'mt-8'}>
-        {/* Once there are items, the fields and เพิ่ม say what the card is for. */}
-        {firstRun && (
-          <CardHeader>
-            <CardTitle>เพิ่มรายการต้นทุนแรก</CardTitle>
-            <CardDescription>เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g</CardDescription>
-          </CardHeader>
-        )}
-        <CardContent>
-          <CostItemForm
-            action={createCostItemAction}
-            initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
-            categories={categories}
-            submitLabel="เพิ่ม"
-          />
-        </CardContent>
-      </Card>
+      <Composer
+        className="mt-8"
+        title={firstRun ? 'เพิ่มรายการต้นทุนแรก' : undefined}
+        description="เริ่มจากสิ่งที่ซื้อมาใช้ เช่น มัทฉะ 4 ฿/g"
+      >
+        <CostItemForm
+          action={createCostItemAction}
+          initial={{ name: '', unitCost: '', unit: '', categoryId: null }}
+          categories={categories}
+          submitLabel="เพิ่ม"
+        />
+      </Composer>
 
       {!firstRun && (
         <form

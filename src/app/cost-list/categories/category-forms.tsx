@@ -3,13 +3,14 @@
 import { useActionState } from 'react'
 import type { CategoryFormState } from '@/app/cost-list/categories/actions'
 import { ConfirmAction } from '@/components/confirm-action'
+import { Field } from '@/components/field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 type Action = (previous: CategoryFormState, formData: FormData) => Promise<CategoryFormState>
 
-// A Cost Category's name: for adding one (`primary`, the page's main action), or renaming one
-// in place.
+// A Cost Category's name: for adding one (`primary`, the page's main action, with its label
+// shown above like every add form), or renaming one in place.
 export function CategoryNameForm({
   action,
   initialName,
@@ -25,18 +26,35 @@ export function CategoryNameForm({
 }) {
   const [state, formAction, pending] = useActionState(action, { name: initialName, error: null })
 
+  const input = (
+    <Input
+      name="name"
+      required
+      aria-label={primary ? undefined : label}
+      placeholder={primary ? undefined : label}
+      defaultValue={state.name}
+      key={state.name}
+      aria-invalid={state.error ? true : undefined}
+      className={primary ? undefined : 'h-9 min-w-0 flex-1 basis-0'}
+    />
+  )
+
   return (
-    <form action={formAction} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <Input
-        name="name"
-        required
-        aria-label={label}
-        placeholder={label}
-        defaultValue={state.name}
-        key={state.name}
-        aria-invalid={state.error ? true : undefined}
-        className={primary ? 'min-w-0 flex-1 basis-0' : 'h-9 min-w-0 flex-1 basis-0'}
-      />
+    <form
+      action={formAction}
+      className={
+        primary
+          ? 'flex flex-wrap items-end gap-3'
+          : 'flex min-w-0 flex-1 flex-wrap items-center gap-2'
+      }
+    >
+      {primary ? (
+        <Field label={label} className="flex-1 basis-56">
+          {input}
+        </Field>
+      ) : (
+        input
+      )}
       <Button
         type="submit"
         variant={primary ? 'default' : 'outline'}

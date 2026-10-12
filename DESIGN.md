@@ -283,9 +283,9 @@ components:
     padding: 24px
   card-title:
     typography: "{typography.title-md}"
-  card-empty:
+  composer:
     backgroundColor: transparent
-    textColor: "{colors.muted-foreground}"
+    textColor: "{colors.foreground}"
     rounded: "{rounded.2xl}"
     padding: 24px
   net-profit:
@@ -379,7 +379,7 @@ Chewy, not glossy. Depth comes from two quiet shadows and from tinted surfaces.
 - `shadow-card`: a 1px contact shadow plus a soft 30px ambient shadow, both in `ink` at low opacity. Cards, sheet rows, secondary buttons.
 - `shadow-lift`: a deeper version for a pressable card on hover, dialogs and select menus.
 - The push button's solid edge: `0 4px 0 0 primary-edge` (full width, never a negative spread). It grows to 6px on hover and shrinks to 1px on press.
-- Money cards and alerts sit on a tint (`profit-surface`, `loss-surface`) with no shadow. An empty state is a 2px dashed `border` with no fill.
+- Money cards and alerts sit on a tint (`profit-surface`, `loss-surface`) with no shadow. A composer (the form a new thing is added in) is a 2px dashed `border` with no fill and no shadow, and its border turns `primary` while focus is inside it.
 - No glass, blur, glow or neon. The dialog overlay is a plain `foreground` wash at 20%, with no blur.
 
 The shadow values live in `src/styles/presets/bubblegum.css`.
@@ -420,7 +420,7 @@ Dropdowns are the shadcn `Select`, through `OptionSelect` (`src/components/optio
 
 ### Card and money
 
-`Card` is the container for every section: `CardTitle` is Mitr. A first-run card is dashed with no fill, and says what's missing above the one form to fill. The Net Profit is a `profit-surface` (or `loss-surface`) panel: a label (กำไรสุทธิต่อแก้ว or ขาดทุนต่อแก้ว) above the `number-display` figure and its share of the price. Sheet rows are cards that lift on hover.
+`Card` is the container for every section: `CardTitle` is Mitr. Dashed means "not made yet": every add-new form (สร้างชีต, เพิ่มรายการต้นทุน, เพิ่มหมวด, สมัคร) sits in a `Composer` (`src/components/composer.tsx`), always dashed, while saved things below it are solid cards. Its fields have visible labels above them, never a placeholder standing in for one, and the push button lines up with the bottom of the inputs. On first run the composer adds a title and a description saying what's missing; once there are things, the labels and the button say what it is for. The Net Profit is a `profit-surface` (or `loss-surface`) panel: a label (กำไรสุทธิต่อแก้ว or ขาดทุนต่อแก้ว) above the `number-display` figure and its share of the price. Sheet rows are cards that lift on hover.
 
 ### Table
 

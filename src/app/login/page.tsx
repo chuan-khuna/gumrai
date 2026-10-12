@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { discordSignInAction } from '@/app/login/actions'
 import { SignInForm, SignUpForm } from '@/app/login/login-forms'
+import { Composer } from '@/components/composer'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { safeReturnTo } from '@/lib/return-to'
 import { currentSeller, MIN_PASSWORD_LENGTH } from '@/server/auth/auth'
 import { oauthFailureMessage } from '@/server/auth/oauth'
@@ -58,18 +59,13 @@ export default async function LoginPage({
           </CardContent>
         </Card>
 
-        {/* A first-run card: dashed, no fill (DESIGN.md § Card and money). */}
-        <Card className="border-2 border-dashed border-border bg-transparent shadow-none">
-          <CardHeader>
-            <CardTitle>ยังไม่มีบัญชี</CardTitle>
-            <CardDescription>
-              สมัครด้วยอีเมลได้เลย ไม่ต้องยืนยันอีเมล หรือเข้าสู่ระบบด้วย Discord ครั้งแรกก็สร้างบัญชีให้เอง
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SignUpForm returnTo={returnTo} minPasswordLength={MIN_PASSWORD_LENGTH} />
-          </CardContent>
-        </Card>
+        {/* An account not made yet, so it's a composer (DESIGN.md § Card and money). */}
+        <Composer
+          title="ยังไม่มีบัญชี"
+          description="สมัครด้วยอีเมลได้เลย ไม่ต้องยืนยันอีเมล หรือเข้าสู่ระบบด้วย Discord ครั้งแรกก็สร้างบัญชีให้เอง"
+        >
+          <SignUpForm returnTo={returnTo} minPasswordLength={MIN_PASSWORD_LENGTH} />
+        </Composer>
       </div>
     </main>
   )
